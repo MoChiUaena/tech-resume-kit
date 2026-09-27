@@ -1,7 +1,7 @@
 {
   "scope": "Stage C: one- and two-page output with boundary cases",
   "modelSchemaVersion": "0.2.0",
-  "applicationVersion": "0.3.0",
+  "applicationVersion": "0.3.1",
   "visualReviewConfirmed": true,
   "counts": {
     "publicSamples": 3,
@@ -259,7 +259,7 @@
       "pageDetails": [
         {
           "page": 1,
-          "bodyCharacters": 1581,
+          "bodyCharacters": 1580,
           "bodyBoundsPt": {
             "left": 42.74999821875,
             "right": 552.9777611092587,
@@ -270,7 +270,7 @@
         },
         {
           "page": 2,
-          "bodyCharacters": 174,
+          "bodyCharacters": 175,
           "bodyBoundsPt": {
             "left": 42.74999821875,
             "right": 490.45937936419176,
@@ -300,7 +300,7 @@
       "pageDetails": [
         {
           "page": 1,
-          "bodyCharacters": 1486,
+          "bodyCharacters": 1485,
           "bodyBoundsPt": {
             "left": 42.74999821875,
             "right": 552.9777611092587,
@@ -339,7 +339,7 @@
       "pageDetails": [
         {
           "page": 1,
-          "bodyCharacters": 2322,
+          "bodyCharacters": 2321,
           "bodyBoundsPt": {
             "left": 42.74999821875,
             "right": 551.4119301495019,
@@ -380,7 +380,7 @@
       "pageDetails": [
         {
           "page": 1,
-          "bodyCharacters": 1430,
+          "bodyCharacters": 1429,
           "bodyBoundsPt": {
             "left": 42.74999821875,
             "right": 392.75695663512613,

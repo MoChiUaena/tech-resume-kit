@@ -78,7 +78,8 @@ test('edited input and copied assets work outside the repository; existing PDF i
   const project = await initializeProject(path.join(root, '我的 简历'));
   await assert.rejects(initializeProject(project), /文件已存在/);
   const input = path.join(project, 'resume.md');
-  const edited = (await readFile(input, 'utf8')).replaceAll('林知夏', '周予宁');
+  const edited = (await readFile(input, 'utf8')).replaceAll('奶龙', '周予宁');
+  assert.notEqual(edited, await readFile(input, 'utf8'));
   await writeFile(input, edited);
   const output = path.join(root, '我的输出.pdf');
   const built = await exec(process.execPath, [cli, 'build', input, '--out', output], { cwd: root, windowsHide: true });

@@ -6,6 +6,7 @@
   "contentHeightPx": 1001.5748031496064,
   "pageCount": 1,
   "maxPages": 1,
+  "warnings": [],
   "pageSizesPt": [
     {
       "width": 594.95996,
@@ -31,6 +32,48 @@
   "images": [],
   "overlap": false,
   "outOfBounds": [],
+  "headingGroups": [
+    {
+      "label": "陈以安2027 届硕士\n  AI / Agent 应用开发实习生意向城市：上海 / 杭州 · 每周 4 天 · 可实习 ",
+      "height": 173.54964999999999
+    },
+    {
+      "label": "专业技能",
+      "height": 73.909025
+    },
+    {
+      "label": "项目经历",
+      "height": 73.909025
+    },
+    {
+      "label": "PaperTrail 论文检索与证据问答助手独立开发2026.03 - 2026.07",
+      "height": 88.721525
+    },
+    {
+      "label": "FlowNote 带人工确认的任务执行助手后端开发 · 2 人协作2026.07 - 2026.09",
+      "height": 88.721525
+    },
+    {
+      "label": "实习经历",
+      "height": 73.909025
+    },
+    {
+      "label": "星涧软件AI 应用开发实习生 · 企业知识服务组2026.06 - 2026.08",
+      "height": 88.721525
+    },
+    {
+      "label": "教育背景",
+      "height": 73.909025
+    },
+    {
+      "label": "海岑大学软件工程 · 硕士2024.09 - 2027.06（预计）",
+      "height": 72.7684
+    },
+    {
+      "label": "荣誉与其他",
+      "height": 73.909025
+    }
+  ],
   "sections": [
     {
       "title": "专业技能",

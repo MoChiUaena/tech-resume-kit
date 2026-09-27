@@ -46,7 +46,7 @@ boundary = [gather(boundary_directory, stem) for stem in accepted]
 report = {
     'scope': 'Stage C: one- and two-page output with boundary cases',
     'modelSchemaVersion': '0.2.0',
-    'applicationVersion': '0.3.0',
+    'applicationVersion': json.loads((root / 'package.json').read_text(encoding='utf8'))['version'],
     'visualReviewConfirmed': args.reviewed,
     'counts': {
         'publicSamples': len(public),

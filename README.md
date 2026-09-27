@@ -8,9 +8,9 @@
 
 [校招样张 PDF](output/pdf/campus-ink-blue.pdf) · [AI 实习样张 PDF](output/pdf/ai-intern-ink-blue.pdf) · [两页经验样张 PDF](output/pdf/experienced-ink-blue.pdf) · [可直接填写的 resume.md](resume.md) · [版式配置](layout.yaml)
 
-**首个公开版本 v0.3.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持一页/两页 PDF、独立图片配置、模块排序，以及实际 PDF 的本地自动刷新预览。长标题、长链接、内容增减、长项目续页和照片方向已通过专项验证。
+**公开版本 v0.3.1。** 一个墨蓝主风格，提供校招与工作经验编排；支持一页/两页 PDF、独立图片配置、模块排序，以及实际 PDF 的本地自动刷新预览。长标题、长链接、内容增减、长项目续页和照片方向已通过专项验证。
 
-样例的人物、院校、公司、经历和全部指标均为虚构；校徽为自制虚构标识，照片为许可来源明确的 AI 合成人像。不代表真实候选人或任何公司的官方模板。
+校招样张使用“奶龙”昵称和用户选择的白底角色头像；学校、公司、经历及全部指标均为虚构，校徽为自制虚构标识。不代表真实候选人或任何公司的官方模板。该第三方头像未取得可确认的再分发许可，**不在 MIT 许可范围内**；详细来源见[素材说明](assets/README.md)。
 
 ## 三步开始
 
@@ -153,6 +153,6 @@ python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
 
 ## 许可与后续
 
-代码、CSS、样例文字和虚构校徽采用 [MIT](LICENSE)。Noto Sans SC 衍生字体按 [SIL OFL 1.1](assets/fonts/OFL.txt) 分发，人像保留来源公共领域标记，详情见 [素材说明](assets/README.md)。新增依赖按各自的 MIT / ISC / Apache-2.0 许可分发，版本固定在锁文件中。
+代码、CSS、样例文字和虚构校徽采用 [MIT](LICENSE)。Noto Sans SC 衍生字体按 [SIL OFL 1.1](assets/fonts/OFL.txt) 分发，保留的 AI 合成人像采用其来源页的公共领域标记。当前校招样张中的奶龙头像为第三方角色图片，未查到可确认的再分发许可，不能按 MIT 或公共领域使用。详情见 [素材说明](assets/README.md)。新增依赖按各自的 MIT / ISC / Apache-2.0 许可分发，版本固定在锁文件中。
 
 仓库的 CI 只读取三份匿名样例及合成边界内容，依次运行测试、PDF 文字核验与逐页渲染；源文件审计会拒绝将 `personal/`、`private/` 或意外生成的 PDF 加入 Git。运行时依赖由 `package-lock.json` 固定，可选 PDF 复核工具由 `requirements-qa.txt` 固定。当前以 GitHub 源码和 Release 提供下载，未发布 npm 包。工作台接入字段与调用方式见 [交接说明](docs/workbench-handoff.md)；没有修改工作台项目或部署个人简历网页。

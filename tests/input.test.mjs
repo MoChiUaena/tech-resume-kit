@@ -11,6 +11,9 @@ const source = await readFile(new URL('../resume.md', import.meta.url), 'utf8');
 test('Markdown retains every field of the reviewed phase A document', async () => {
   const original = JSON.parse(await readFile(new URL('../examples/campus.resume.json', import.meta.url), 'utf8'));
   original.schemaVersion = '0.2.0';
+  original.person.name = '奶龙';
+  original.assets.portrait = { src: 'assets/images/nailong-avatar.jpg', alt: '奶龙角色头像，来源为 B 站用户头像' };
+  original.notice = '演示样张 · 姓名、学校、经历及指标均为虚构；奶龙头像为第三方角色图片。';
   for (const section of original.sections) {
     if (section.kind === 'entries') for (const entry of section.entries) {
       entry.blocks = (entry.lines || []).map(text => ({ type: 'paragraph', text }));

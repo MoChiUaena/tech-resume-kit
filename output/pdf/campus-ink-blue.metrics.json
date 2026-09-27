@@ -6,6 +6,7 @@
   "contentHeightPx": 1009.1338582677166,
   "pageCount": 1,
   "maxPages": 1,
+  "warnings": [],
   "pageSizesPt": [
     {
       "width": 594.95996,
@@ -54,6 +55,48 @@
   ],
   "overlap": false,
   "outOfBounds": [],
+  "headingGroups": [
+    {
+      "label": "奶龙2027 届本科\n  Java 后端 / AI 应用开发实习生意向城市：杭州 / 上海 · 每周 5 天 · 可实习",
+      "height": 191.90812499999998
+    },
+    {
+      "label": "教育背景",
+      "height": 72.095625
+    },
+    {
+      "label": "澄川理工大学计算机科学与技术 · 本科2023.09 - 2027.06（预计）",
+      "height": 70.955
+    },
+    {
+      "label": "专业技能",
+      "height": 72.095625
+    },
+    {
+      "label": "实习经历",
+      "height": 72.095625
+    },
+    {
+      "label": "栖云科技Java 后端开发实习生 · 交易平台组2026.06 - 2026.09",
+      "height": 86.908125
+    },
+    {
+      "label": "项目经历",
+      "height": 72.095625
+    },
+    {
+      "label": "CampusHub 校园活动预约平台后端负责人 · 3 人协作2026.03 - 2026.06",
+      "height": 86.908125
+    },
+    {
+      "label": "DocPilot 技术文档问答助手独立开发2026.07 - 2026.09",
+      "height": 86.908125
+    },
+    {
+      "label": "荣誉与其他",
+      "height": 72.095625
+    }
+  ],
   "sections": [
     {
       "title": "教育背景",

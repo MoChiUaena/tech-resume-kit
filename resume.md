@@ -2,7 +2,7 @@
 schemaVersion: 0.2.0
 locale: zh-CN
 person:
-  name: 林知夏
+  name: 奶龙
   label: 2027 届本科
   target: Java 后端 / AI 应用开发实习生
   availability: 意向城市：杭州 / 上海 · 每周 5 天 · 可实习 6 个月
@@ -18,9 +18,9 @@ assets:
     src: assets/images/chengchuan-logo.png
     alt: 澄川理工大学自制虚构学校标识
   portrait:
-    src: assets/images/synthetic-portrait.jpg
-    alt: 虚构求职者的 AI 合成演示人像
-notice: 演示样张 · 姓名、学校、经历及指标均为虚构；人像为 AI 合成素材。
+    src: assets/images/nailong-avatar.jpg
+    alt: 奶龙角色头像，来源为 B 站用户头像
+notice: 演示样张 · 姓名、学校、经历及指标均为虚构；奶龙头像为第三方角色图片。
 ---
 
 ## 教育背景 {#education .entries}
