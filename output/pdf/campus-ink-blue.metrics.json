@@ -1,0 +1,105 @@
+{
+  "browser": "153.0.8010.12",
+  "offline": true,
+  "networkRequests": [],
+  "contentWidthPx": 680.3149606299213,
+  "contentHeightPx": 1009.1338582677166,
+  "pageCount": 1,
+  "maxPages": 1,
+  "pageSizesPt": [
+    {
+      "width": 594.95996,
+      "height": 841.91998
+    }
+  ],
+  "sheet": {
+    "x": 0,
+    "y": 0,
+    "width": 680.3125,
+    "height": 998.046875,
+    "bottom": 998.046875,
+    "right": 680.3125
+  },
+  "identity": {
+    "x": 105.8125,
+    "y": 0,
+    "width": 427.109375,
+    "height": 124.96875,
+    "bottom": 124.96875,
+    "right": 532.921875
+  },
+  "images": [
+    {
+      "asset": "portrait",
+      "naturalWidth": 690,
+      "naturalHeight": 930,
+      "x": 0,
+      "y": 0,
+      "width": 86.921875,
+      "height": 117.15625,
+      "bottom": 117.15625,
+      "right": 86.921875
+    },
+    {
+      "asset": "schoolLogo",
+      "naturalWidth": 1000,
+      "naturalHeight": 730,
+      "x": 551.8125,
+      "y": 1.125,
+      "width": 128.5,
+      "height": 94.484375,
+      "bottom": 95.609375,
+      "right": 680.3125
+    }
+  ],
+  "overlap": false,
+  "outOfBounds": [],
+  "sections": [
+    {
+      "title": "教育背景",
+      "x": 0,
+      "y": 155.046875,
+      "width": 680.3125,
+      "height": 94.921875,
+      "bottom": 249.96875,
+      "right": 680.3125
+    },
+    {
+      "title": "专业技能",
+      "x": 0,
+      "y": 263.1875,
+      "width": 680.3125,
+      "height": 115.859375,
+      "bottom": 379.046875,
+      "right": 680.3125
+    },
+    {
+      "title": "实习经历",
+      "x": 0,
+      "y": 392.265625,
+      "width": 680.3125,
+      "height": 175.53125,
+      "bottom": 567.796875,
+      "right": 680.3125
+    },
+    {
+      "title": "项目经历",
+      "x": 0,
+      "y": 581.015625,
+      "width": 680.3125,
+      "height": 296.65625,
+      "bottom": 877.671875,
+      "right": 680.3125
+    },
+    {
+      "title": "荣誉与其他",
+      "x": 0,
+      "y": 890.890625,
+      "width": 680.3125,
+      "height": 69.515625,
+      "bottom": 960.40625,
+      "right": 680.3125
+    }
+  ],
+  "bodySize": "14px"
+}

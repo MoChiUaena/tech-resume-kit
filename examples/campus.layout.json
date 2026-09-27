@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "0.1.0",
+  "theme": "ink-blue",
+  "page": { "size": "A4", "marginMm": 15 },
+  "bodyPt": 10.5,
+  "lineHeight": 1.36,
+  "accent": "#233e54",
+  "sectionOrder": ["education", "skills", "internship", "projects", "additional"],
+  "images": {
+    "schoolLogo": { "enabled": true, "widthMm": 34, "heightMm": 25 },
+    "portrait": { "enabled": true, "widthMm": 23, "heightMm": 31 }
+  }
+}

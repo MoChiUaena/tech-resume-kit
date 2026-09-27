@@ -1,0 +1,15 @@
+schemaVersion: 0.2.0
+preset: campus
+page:
+  size: A4
+  marginMm: 16
+bodyPt: 11
+lineHeight: 1.36
+namePt: 23
+accent: "#233e54"
+sectionOrder: [skills, projects, internship, education, additional]
+images:
+  schoolLogo:
+    enabled: false
+  portrait:
+    enabled: false

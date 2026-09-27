@@ -1,0 +1,52 @@
+{
+  "pages": 1,
+  "tagged": true,
+  "fonts": [
+    {
+      "name": "/AAAAAA+ResumeSansSC-Regular",
+      "embedded": true,
+      "toUnicode": true
+    },
+    {
+      "name": "/BAAAAA+ResumeSansSC-Bold",
+      "embedded": true,
+      "toUnicode": true
+    },
+    {
+      "name": "/CAAAAA+ResumeSansSC-SemiBold",
+      "embedded": true,
+      "toUnicode": true
+    }
+  ],
+  "links": [
+    "https://example.com/yian",
+    "https://example.com/yian/papertrail",
+    "mailto:yian.chen@example.com"
+  ],
+  "linkAnnotationCount": 3,
+  "imageCount": 0,
+  "contentFieldsChecked": 46,
+  "headingsChecked": 9,
+  "sectionOrder": [
+    "陈以安",
+    "专业技能",
+    "项目经历",
+    "实习经历",
+    "教育背景",
+    "荣誉与其他"
+  ],
+  "pageDetails": [
+    {
+      "page": 1,
+      "bodyCharacters": 1188,
+      "bodyBoundsPt": {
+        "left": 44.999998125,
+        "right": 549.5558862518368,
+        "top": 50.37755790093513,
+        "bottom": 712.35165021068
+      },
+      "imageCount": 0
+    }
+  ],
+  "visualReview": "See docs/phase-c-review.md; visual review is separate."
+}

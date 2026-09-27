@@ -1,0 +1,102 @@
+@font-face {
+  font-family: "Resume Sans";
+  src: url("__FONT_REGULAR__") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "Resume Sans";
+  src: url("__FONT_SEMIBOLD__") format("truetype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+}
+@font-face {
+  font-family: "Resume Sans";
+  src: url("__FONT_BOLD__") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+}
+* { box-sizing: border-box; }
+:root { --accent: #233e54; --body-pt: 10.5pt; --leading: 1.4; --page-margin: 15mm; }
+html { background: #e9edf0; }
+body {
+  margin: 0;
+  color: #262e34;
+  font-family: "Resume Sans", sans-serif;
+  font-size: var(--body-pt);
+  line-height: var(--leading);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+.sheet { width: 210mm; min-height: 297mm; margin: 9mm auto; padding: var(--page-margin); background: white; box-shadow: 0 3px 28px #1b2c3b18; }
+.resume-header { display: flex; align-items: flex-start; gap: var(--header-gap, 5mm); padding-bottom: 4.2mm; border-bottom: 1.2pt solid var(--accent); }
+.portrait { display: block; object-fit: cover; object-position: center 42%; flex: 0 0 auto; border: .4pt solid #d6dde2; }
+.identity { flex: 1; min-width: 0; }
+.name-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 3.5mm; margin: -.7mm 0 1mm; }
+h1 { font-size: var(--name-pt, 23pt); font-weight: 700; line-height: 1.25; letter-spacing: 1.5pt; margin: 0; color: #172c3e; overflow-wrap: anywhere; }
+.graduate-label { color: #526675; font-size: 8.5pt; white-space: nowrap; }
+.target { color: var(--accent); font-size: 11pt; font-weight: 600; margin: 1.4mm 0 2mm; }
+.availability { font-size: 8.5pt; color: #55616a; margin: 0 0 1.4mm; }
+.contacts { display: flex; flex-wrap: wrap; column-gap: 3.5mm; row-gap: 1.2mm; font-size: 8.7pt; line-height: 1.35; }
+.contacts a { overflow-wrap: anywhere; max-width: 100%; }
+.contacts a:last-child:not(:first-child):not(:nth-child(2)) { flex-basis: 100%; }
+.school-logo { object-fit: contain; object-position: right top; flex: 0 0 auto; margin-top: .3mm; }
+section { margin-top: var(--section-gap, 3.5mm); }
+h2 { display: flex; align-items: center; gap: 3mm; margin: 0 0 1.7mm; color: var(--accent); font-size: 11.8pt; font-weight: 700; letter-spacing: .65pt; line-height: 1.4; break-after: avoid; break-inside: avoid; overflow-wrap: anywhere; }
+h2::after { content: ""; height: .5pt; background: #c4cfd7; flex: 1; }
+.entry + .entry { margin-top: var(--entry-gap, 3.2mm); }
+.entry-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 3mm; break-after: avoid; break-inside: avoid; }
+h3 { font-size: 10.8pt; font-weight: 700; color: #202e39; margin: 0; line-height: 1.45; }
+.date { font-size: 9pt; color: #53616c; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.entry-title { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 2.8mm; min-width: 0; overflow-wrap: anywhere; }
+.entry-subtitle { font-size: 9pt; color: #4b5b66; break-after: avoid; }
+.stack { font-size: 8.8pt; color: #677680; margin: .7mm 0 1.1mm; break-after: avoid; break-inside: avoid; }
+p { margin: 0; }
+.entry-lines { margin-top: 1.2mm; }
+.entry-lines p + p, .additional-lines p + p { margin-top: .8mm; }
+ul, ol { padding: 0 0 0 3.5mm; margin: 1.1mm 0 0; }
+li { padding-left: .5mm; margin: 0; orphans: 2; widows: 2; break-inside: avoid; }
+li + li { margin-top: 1.1mm; }
+li::marker { color: #6b7e8d; font-size: 8pt; }
+strong { font-weight: 600; color: #1e3446; }
+a { color: inherit; text-decoration: none; }
+section a { text-decoration: underline; text-decoration-color: #aebdc8; text-underline-offset: 2px; overflow-wrap: anywhere; }
+code { font-family: inherit; font-size: inherit; }
+.skill { display: grid; grid-template-columns: 20mm 1fr; column-gap: 2.2mm; break-inside: avoid; }
+.skill + .skill { margin-top: 1mm; }
+.skill-label { font-weight: 600; color: #283c4c; overflow-wrap: anywhere; }
+.sample-note { margin-top: 4.2mm; padding-top: 2mm; border-top: .5pt solid #d8e0e5; color: #78858e; font-size: 7.3pt; break-inside: avoid; break-before: avoid; }
+p, li, .target, .availability, .stack { overflow-wrap: anywhere; }
+@page {
+  size: A4;
+  margin: 15mm;
+  @top-left {
+    content: "个人简历 · 续页";
+    font-family: "Resume Sans";
+    font-size: 8pt;
+    font-weight: 400;
+    color: #677680;
+    vertical-align: bottom;
+    padding-bottom: 3mm;
+  }
+  @bottom-right {
+    content: counter(page) " / " counter(pages);
+    font-family: "Resume Sans";
+    font-size: 8pt;
+    font-weight: 400;
+    color: #677680;
+    vertical-align: top;
+    padding-top: 3mm;
+  }
+}
+@page:first { @top-left { content: none; } }
+@media print {
+  html { background: white; }
+  body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .sheet { width: calc(210mm - var(--page-margin) - var(--page-margin)); min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+  .resume-header { break-inside: avoid; }
+  p { orphans: 2; widows: 2; }
+}

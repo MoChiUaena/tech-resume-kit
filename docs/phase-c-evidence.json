@@ -1,0 +1,418 @@
+{
+  "scope": "Stage C: one- and two-page output with boundary cases",
+  "modelSchemaVersion": "0.2.0",
+  "applicationVersion": "0.3.0",
+  "visualReviewConfirmed": true,
+  "counts": {
+    "publicSamples": 3,
+    "publicPages": 4,
+    "boundarySamples": 9,
+    "boundaryPages": 13,
+    "rejectedAsExpected": 2,
+    "totalTextFieldsChecked": 550,
+    "totalHeadingsChecked": 87
+  },
+  "publicSamples": [
+    {
+      "name": "campus-ink-blue",
+      "pages": 1,
+      "pdf": "output/pdf/campus-ink-blue.pdf",
+      "renderedPages": [
+        "output/pdf/campus-ink-blue.png"
+      ],
+      "textFieldsChecked": 49,
+      "headingsChecked": 9,
+      "imageCount": 2,
+      "linkCount": 3,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 1395,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9777611092587,
+            "top": 48.12755799468505,
+            "bottom": 791.1016469294299
+          },
+          "imageCount": 2
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "ai-intern-ink-blue",
+      "pages": 1,
+      "pdf": "output/pdf/ai-intern-ink-blue.pdf",
+      "renderedPages": [
+        "output/pdf/ai-intern-ink-blue.png"
+      ],
+      "textFieldsChecked": 46,
+      "headingsChecked": 9,
+      "imageCount": 0,
+      "linkCount": 3,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 1188,
+          "bodyBoundsPt": {
+            "left": 44.999998125,
+            "right": 549.5558862518368,
+            "top": 50.37755790093513,
+            "bottom": 712.35165021068
+          },
+          "imageCount": 0
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "experienced-ink-blue",
+      "pages": 2,
+      "pdf": "output/pdf/experienced-ink-blue.pdf",
+      "renderedPages": [
+        "output/pdf/experienced-ink-blue-1.png",
+        "output/pdf/experienced-ink-blue-2.png"
+      ],
+      "textFieldsChecked": 71,
+      "headingsChecked": 12,
+      "imageCount": 0,
+      "linkCount": 3,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 1433,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9784582342297,
+            "top": 48.12755799468505,
+            "bottom": 785.2739672802498
+          },
+          "imageCount": 0
+        },
+        {
+          "page": 2,
+          "bodyCharacters": 1133,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9777611092587,
+            "top": 46.523998061499924,
+            "bottom": 637.3516533356798
+          },
+          "imageCount": 0
+        }
+      ],
+      "warnings": []
+    }
+  ],
+  "boundarySamples": [
+    {
+      "name": "logo-only",
+      "pages": 1,
+      "pdf": "tmp/pdfs/boundary/logo-only.pdf",
+      "renderedPages": [
+        "tmp/pdfs/boundary/logo-only.png"
+      ],
+      "textFieldsChecked": 49,
+      "headingsChecked": 9,
+      "imageCount": 1,
+      "linkCount": 3,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 1395,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9777611092587,
+            "top": 48.12755799468505,
+            "bottom": 791.1016469294299
+          },
+          "imageCount": 1
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "photo-only",
+      "pages": 1,
+      "pdf": "tmp/pdfs/boundary/photo-only.pdf",
+      "renderedPages": [
+        "tmp/pdfs/boundary/photo-only.png"
+      ],
+      "textFieldsChecked": 49,
+      "headingsChecked": 9,
+      "imageCount": 1,
+      "linkCount": 3,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 1395,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9777611092587,
+            "top": 48.12755799468505,
+            "bottom": 791.1016469294299
+          },
+          "imageCount": 1
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "no-images",
+      "pages": 1,
+      "pdf": "tmp/pdfs/boundary/no-images.pdf",
+      "renderedPages": [
+        "tmp/pdfs/boundary/no-images.png"
+      ],
+      "textFieldsChecked": 49,
+      "headingsChecked": 9,
+      "imageCount": 0,
+      "linkCount": 3,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 1395,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9777611092587,
+            "top": 48.12755799468505,
+            "bottom": 791.1016469294299
+          },
+          "imageCount": 0
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "short-content",
+      "pages": 1,
+      "pdf": "tmp/pdfs/boundary/short-content.pdf",
+      "renderedPages": [
+        "tmp/pdfs/boundary/short-content.png"
+      ],
+      "textFieldsChecked": 26,
+      "headingsChecked": 6,
+      "imageCount": 0,
+      "linkCount": 1,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 355,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9777611092587,
+            "top": 48.12755799468505,
+            "bottom": 447.60166124192995
+          },
+          "imageCount": 0
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "oriented-photo",
+      "pages": 1,
+      "pdf": "tmp/pdfs/boundary/oriented-photo.pdf",
+      "renderedPages": [
+        "tmp/pdfs/boundary/oriented-photo.png"
+      ],
+      "textFieldsChecked": 49,
+      "headingsChecked": 9,
+      "imageCount": 2,
+      "linkCount": 3,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 1395,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9777611092587,
+            "top": 48.12755799468505,
+            "bottom": 791.1016469294299
+          },
+          "imageCount": 2
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "long-title-link",
+      "pages": 2,
+      "pdf": "tmp/pdfs/boundary/long-title-link.pdf",
+      "renderedPages": [
+        "tmp/pdfs/boundary/long-title-link-1.png",
+        "tmp/pdfs/boundary/long-title-link-2.png"
+      ],
+      "textFieldsChecked": 50,
+      "headingsChecked": 9,
+      "imageCount": 2,
+      "linkCount": 4,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 1581,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9777611092587,
+            "top": 48.12755799468505,
+            "bottom": 786.023967249
+          },
+          "imageCount": 2
+        },
+        {
+          "page": 2,
+          "bodyCharacters": 174,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 490.45937936419176,
+            "top": 46.523998061499924,
+            "bottom": 146.85167377317987
+          },
+          "imageCount": 0
+        }
+      ],
+      "warnings": [
+        "末页可能偏空，请查看实际预览；可精简内容、缩短链接显示文字或调整间距。"
+      ]
+    },
+    {
+      "name": "oversized-entry",
+      "pages": 2,
+      "pdf": "tmp/pdfs/boundary/oversized-entry.pdf",
+      "renderedPages": [
+        "tmp/pdfs/boundary/oversized-entry-1.png",
+        "tmp/pdfs/boundary/oversized-entry-2.png"
+      ],
+      "textFieldsChecked": 49,
+      "headingsChecked": 2,
+      "imageCount": 0,
+      "linkCount": 3,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 1486,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9777611092587,
+            "top": 48.12755799468505,
+            "bottom": 780.0239674989999
+          },
+          "imageCount": 0
+        },
+        {
+          "page": 2,
+          "bodyCharacters": 1318,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 546.6426310732228,
+            "top": 46.523998061499924,
+            "bottom": 637.3516533356798
+          },
+          "imageCount": 0
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "oversized-paragraph",
+      "pages": 2,
+      "pdf": "tmp/pdfs/boundary/oversized-paragraph.pdf",
+      "renderedPages": [
+        "tmp/pdfs/boundary/oversized-paragraph-1.png",
+        "tmp/pdfs/boundary/oversized-paragraph-2.png"
+      ],
+      "textFieldsChecked": 10,
+      "headingsChecked": 1,
+      "imageCount": 0,
+      "linkCount": 3,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 2322,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 551.4119301495019,
+            "top": 48.12755799468505,
+            "bottom": 794.27396690525
+          },
+          "imageCount": 0
+        },
+        {
+          "page": 2,
+          "bodyCharacters": 649,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 551.4119301495019,
+            "top": 46.523998061499924,
+            "bottom": 256.3516692106799
+          },
+          "imageCount": 0
+        }
+      ],
+      "warnings": [
+        "末页可能偏空，请查看实际预览；可精简内容、缩短链接显示文字或调整间距。"
+      ]
+    },
+    {
+      "name": "heading-boundary",
+      "pages": 2,
+      "pdf": "tmp/pdfs/boundary/heading-boundary.pdf",
+      "renderedPages": [
+        "tmp/pdfs/boundary/heading-boundary-1.png",
+        "tmp/pdfs/boundary/heading-boundary-2.png"
+      ],
+      "textFieldsChecked": 53,
+      "headingsChecked": 3,
+      "imageCount": 0,
+      "linkCount": 3,
+      "fontCount": 3,
+      "pageDetails": [
+        {
+          "page": 1,
+          "bodyCharacters": 1430,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 392.75695663512613,
+            "top": 48.12755799468505,
+            "bottom": 773.2739677802499
+          },
+          "imageCount": 0
+        },
+        {
+          "page": 2,
+          "bodyCharacters": 162,
+          "bodyBoundsPt": {
+            "left": 42.74999821875,
+            "right": 552.9777611092587,
+            "top": 47.100178304492374,
+            "bottom": 173.85167264817994
+          },
+          "imageCount": 0
+        }
+      ],
+      "warnings": [
+        "末页可能偏空，请查看实际预览；可精简内容、缩短链接显示文字或调整间距。"
+      ]
+    }
+  ],
+  "rejectedCases": [
+    "over-two-pages",
+    "oversized-header"
+  ],
+  "limits": [
+    "Only A4 with one or two pages is accepted",
+    "Blank starter contains prompts, not a real resume",
+    "The sparse-last-page warning estimates density and asks for visual review"
+  ]
+}

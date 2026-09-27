@@ -1,0 +1,30 @@
+{
+  "name": "tech-resume-kit",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "中文技术岗 Markdown 简历模板套件",
+  "scripts": {
+    "sample": "node scripts/build-sample.mjs",
+    "init": "node src/cli.mjs init",
+    "check": "node src/cli.mjs check",
+    "preview": "node src/cli.mjs preview",
+    "build": "node src/cli.mjs build",
+    "test": "node --test --test-concurrency=1",
+    "qa:boundaries": "node scripts/check-boundaries.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "image-size": "2.0.4",
+    "markdown-it": "15.0.2",
+    "pdf-lib": "1.17.1",
+    "playwright": "1.63.0",
+    "yaml": "2.9.1",
+    "zod": "4.6.5"
+  },
+  "bin": {
+    "tech-resume": "src/cli.mjs"
+  }
+}

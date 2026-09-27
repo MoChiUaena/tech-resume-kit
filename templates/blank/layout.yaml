@@ -1,0 +1,7 @@
+schemaVersion: 0.2.0
+preset: campus
+images:
+  schoolLogo:
+    enabled: false
+  portrait:
+    enabled: false

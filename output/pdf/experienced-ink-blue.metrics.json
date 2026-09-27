@@ -1,0 +1,95 @@
+{
+  "browser": "153.0.8010.12",
+  "offline": true,
+  "networkRequests": [],
+  "contentWidthPx": 680.3149606299213,
+  "contentHeightPx": 1009.1338582677166,
+  "pageCount": 2,
+  "maxPages": 2,
+  "pageSizesPt": [
+    {
+      "width": 594.95996,
+      "height": 841.91998
+    },
+    {
+      "width": 594.95996,
+      "height": 841.91998
+    }
+  ],
+  "sheet": {
+    "x": 0,
+    "y": 0,
+    "width": 680.3125,
+    "height": 1786.828125,
+    "bottom": 1786.828125,
+    "right": 680.3125
+  },
+  "identity": {
+    "x": 0,
+    "y": 0,
+    "width": 680.3125,
+    "height": 104.796875,
+    "bottom": 104.796875,
+    "right": 680.3125
+  },
+  "images": [],
+  "overlap": false,
+  "outOfBounds": [],
+  "sections": [
+    {
+      "title": "职业概述",
+      "x": 0,
+      "y": 134.875,
+      "width": 680.3125,
+      "height": 66.5,
+      "bottom": 201.375,
+      "right": 680.3125
+    },
+    {
+      "title": "技术能力",
+      "x": 0,
+      "y": 214.59375,
+      "width": 680.3125,
+      "height": 115.859375,
+      "bottom": 330.453125,
+      "right": 680.3125
+    },
+    {
+      "title": "工作经历",
+      "x": 0,
+      "y": 343.671875,
+      "width": 680.3125,
+      "height": 522.625,
+      "bottom": 866.296875,
+      "right": 680.3125
+    },
+    {
+      "title": "代表项目",
+      "x": 0,
+      "y": 879.515625,
+      "width": 680.3125,
+      "height": 700.84375,
+      "bottom": 1580.359375,
+      "right": 680.3125
+    },
+    {
+      "title": "教育背景",
+      "x": 0,
+      "y": 1593.578125,
+      "width": 680.3125,
+      "height": 72.875,
+      "bottom": 1666.453125,
+      "right": 680.3125
+    },
+    {
+      "title": "其他信息",
+      "x": 0,
+      "y": 1679.671875,
+      "width": 680.3125,
+      "height": 69.515625,
+      "bottom": 1749.1875,
+      "right": 680.3125
+    }
+  ],
+  "bodySize": "14px"
+}

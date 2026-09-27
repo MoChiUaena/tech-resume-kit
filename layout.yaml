@@ -1,0 +1,28 @@
+schemaVersion: 0.2.0
+theme: ink-blue
+page:
+  size: A4
+  marginMm: 15
+bodyPt: 10.5
+lineHeight: 1.36
+accent: "#233e54"
+images:
+  schoolLogo:
+    enabled: true
+    widthMm: 34
+    heightMm: 25
+    slot: end
+    align: top
+  portrait:
+    enabled: true
+    widthMm: 23
+    heightMm: 31
+    slot: start
+    align: top
+preset: campus
+namePt: 23
+header:
+  gapMm: 5
+spacing:
+  sectionMm: 3.5
+  entryMm: 3.2

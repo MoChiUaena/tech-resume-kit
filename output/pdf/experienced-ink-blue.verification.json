@@ -1,0 +1,64 @@
+{
+  "pages": 2,
+  "tagged": true,
+  "fonts": [
+    {
+      "name": "/AAAAAA+ResumeSansSC-Regular",
+      "embedded": true,
+      "toUnicode": true
+    },
+    {
+      "name": "/BAAAAA+ResumeSansSC-Bold",
+      "embedded": true,
+      "toUnicode": true
+    },
+    {
+      "name": "/CAAAAA+ResumeSansSC-SemiBold",
+      "embedded": true,
+      "toUnicode": true
+    }
+  ],
+  "links": [
+    "https://example.com/chengyuan",
+    "https://example.com/chengyuan/knowbridge/evaluation",
+    "mailto:chengyuan.gu@example.com"
+  ],
+  "linkAnnotationCount": 3,
+  "imageCount": 0,
+  "contentFieldsChecked": 71,
+  "headingsChecked": 12,
+  "sectionOrder": [
+    "顾承远",
+    "职业概述",
+    "技术能力",
+    "工作经历",
+    "代表项目",
+    "教育背景",
+    "其他信息"
+  ],
+  "pageDetails": [
+    {
+      "page": 1,
+      "bodyCharacters": 1433,
+      "bodyBoundsPt": {
+        "left": 42.74999821875,
+        "right": 552.9784582342297,
+        "top": 48.12755799468505,
+        "bottom": 785.2739672802498
+      },
+      "imageCount": 0
+    },
+    {
+      "page": 2,
+      "bodyCharacters": 1133,
+      "bodyBoundsPt": {
+        "left": 42.74999821875,
+        "right": 552.9777611092587,
+        "top": 46.523998061499924,
+        "bottom": 637.3516533356798
+      },
+      "imageCount": 0
+    }
+  ],
+  "visualReview": "See docs/phase-c-review.md; visual review is separate."
+}

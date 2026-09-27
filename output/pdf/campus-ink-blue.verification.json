@@ -1,0 +1,52 @@
+{
+  "pages": 1,
+  "tagged": true,
+  "fonts": [
+    {
+      "name": "/AAAAAA+ResumeSansSC-Regular",
+      "embedded": true,
+      "toUnicode": true
+    },
+    {
+      "name": "/BAAAAA+ResumeSansSC-Bold",
+      "embedded": true,
+      "toUnicode": true
+    },
+    {
+      "name": "/CAAAAA+ResumeSansSC-SemiBold",
+      "embedded": true,
+      "toUnicode": true
+    }
+  ],
+  "links": [
+    "https://example.com/linzhixia",
+    "mailto:zhixia.lin@example.com",
+    "tel:13800000000"
+  ],
+  "linkAnnotationCount": 3,
+  "imageCount": 2,
+  "contentFieldsChecked": 49,
+  "headingsChecked": 9,
+  "sectionOrder": [
+    "林知夏",
+    "教育背景",
+    "专业技能",
+    "实习经历",
+    "项目经历",
+    "荣誉与其他"
+  ],
+  "pageDetails": [
+    {
+      "page": 1,
+      "bodyCharacters": 1395,
+      "bodyBoundsPt": {
+        "left": 42.74999821875,
+        "right": 552.9777611092587,
+        "top": 48.12755799468505,
+        "bottom": 791.1016469294299
+      },
+      "imageCount": 2
+    }
+  ],
+  "visualReview": "See docs/phase-c-review.md; visual review is separate."
+}

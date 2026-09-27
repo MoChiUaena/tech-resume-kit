@@ -1,0 +1,47 @@
+name: Verify anonymous resume samples
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Audit tracked files
+        run: python scripts/audit-public-files.py
+      - name: Install locked Node dependencies and Chromium
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Install PDF verification tools
+        run: |
+          python -m pip install -r requirements-qa.txt
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+      - name: Test the input and export workflow
+        run: npm test
+      - name: Build and check only anonymous samples
+        run: |
+          npm run sample
+          python scripts/verify-pdf.py
+          python scripts/render-pdfs.py
+          npm run qa:boundaries
+          python scripts/verify-pdf.py --directory tmp/pdfs/boundary
+          python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
+          python scripts/collect-qa-report.py

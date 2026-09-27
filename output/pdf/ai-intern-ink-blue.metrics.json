@@ -1,0 +1,82 @@
+{
+  "browser": "153.0.8010.12",
+  "offline": true,
+  "networkRequests": [],
+  "contentWidthPx": 672.7559055118111,
+  "contentHeightPx": 1001.5748031496064,
+  "pageCount": 1,
+  "maxPages": 1,
+  "pageSizesPt": [
+    {
+      "width": 594.95996,
+      "height": 841.91998
+    }
+  ],
+  "sheet": {
+    "x": 0,
+    "y": 0,
+    "width": 672.75,
+    "height": 890.296875,
+    "bottom": 890.296875,
+    "right": 672.75
+  },
+  "identity": {
+    "x": 0,
+    "y": 0,
+    "width": 672.75,
+    "height": 104.796875,
+    "bottom": 104.796875,
+    "right": 672.75
+  },
+  "images": [],
+  "overlap": false,
+  "outOfBounds": [],
+  "sections": [
+    {
+      "title": "专业技能",
+      "x": 0,
+      "y": 134.875,
+      "width": 672.75,
+      "height": 119.546875,
+      "bottom": 254.421875,
+      "right": 672.75
+    },
+    {
+      "title": "项目经历",
+      "x": 0,
+      "y": 267.640625,
+      "width": 672.75,
+      "height": 284.078125,
+      "bottom": 551.71875,
+      "right": 672.75
+    },
+    {
+      "title": "实习经历",
+      "x": 0,
+      "y": 564.9375,
+      "width": 672.75,
+      "height": 116.125,
+      "bottom": 681.0625,
+      "right": 672.75
+    },
+    {
+      "title": "教育背景",
+      "x": 0,
+      "y": 694.28125,
+      "width": 672.75,
+      "height": 73.796875,
+      "bottom": 768.078125,
+      "right": 672.75
+    },
+    {
+      "title": "荣誉与其他",
+      "x": 0,
+      "y": 781.296875,
+      "width": 672.75,
+      "height": 71.359375,
+      "bottom": 852.65625,
+      "right": 672.75
+    }
+  ],
+  "bodySize": "14.6667px"
+}

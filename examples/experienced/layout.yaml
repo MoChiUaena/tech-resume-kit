@@ -1,0 +1,14 @@
+schemaVersion: 0.2.0
+preset: experience
+page:
+  size: A4
+  marginMm: 15
+  maxPages: 2
+bodyPt: 10.5
+lineHeight: 1.36
+sectionOrder: [summary, skills, experience, projects, education, additional]
+images:
+  portrait:
+    enabled: false
+  schoolLogo:
+    enabled: false

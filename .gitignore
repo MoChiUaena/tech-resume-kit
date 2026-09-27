@@ -1,0 +1,8 @@
+node_modules/
+tmp/
+.env*
+personal/
+private/
+*.local.*
+output/personal/
+output/pdf/*.html
