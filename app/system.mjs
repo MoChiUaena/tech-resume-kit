@@ -1,5 +1,7 @@
 export function wireSystem({ request, managed, settle, operationPayload, acceptState }) {
   const $ = id => document.getElementById(id); let info, poll;
+  const pauseButton = document.createElement('button'); pauseButton.id = 'update-pause'; pauseButton.textContent = '暂停下载'; pauseButton.hidden = true; $('update-prepare').after(pauseButton);
+  const progress = document.createElement('progress'); progress.id = 'update-progress'; progress.max = 1; progress.hidden = true; progress.setAttribute('aria-label', '更新下载进度'); $('update-message').after(progress);
   const importOption = document.createElement('option'); importOption.value = 'import'; importOption.textContent = '迁入旧版 my-resume'; $('storage-mode').append(importOption);
   const sourceField = document.createElement('div'), sourceLabel = document.createElement('label'), sourceInput = document.createElement('input'), sourceBrowse = document.createElement('button'), candidates = document.createElement('datalist');
   sourceField.hidden = true; sourceLabel.className = 'dialog-field'; sourceLabel.textContent = '旧版 my-resume 文件夹'; sourceLabel.htmlFor = 'storage-source';
@@ -9,17 +11,22 @@ export function wireSystem({ request, managed, settle, operationPayload, acceptS
   function error(message) { $('system-error').textContent = message; $('system-error').hidden = !message; }
   function renderUpdate(update) {
     $('update-current').textContent = `当前版本 ${info.version}`;
-    const busy = ['downloading', 'extracting'].includes(update.phase);
+    const busy = ['downloading', 'verifying', 'extracting'].includes(update.phase);
     const messages = {
       idle: '点击检查获取最新正式版本。', available: `发现正式版 ${update.latestVersion}。`,
       current: update.latestVersion === info.version ? '当前已是最新正式版。' : `最新正式版为 ${update.latestVersion}，当前版本保留。`,
       downloading: `正在下载 ${((update.received || 0) / 1_000_000).toFixed(1)} / ${(update.total / 1_000_000).toFixed(1)} MB…`,
-      extracting: 'SHA-256 已通过，正在准备新版…', ready: `新版 ${update.latestVersion} 已准备完成。切换前会保存全部资料和整库副本。`, failed: update.error,
+      verifying: '下载已完成，正在核验文件…', extracting: '文件校验通过，正在准备新版…', ready: `新版 ${update.latestVersion} 已准备完成。切换前会保存全部资料和整库副本。`, failed: update.error,
+      paused: update.downloadComplete ? '安装包已下载，点击继续准备。' : `下载已暂停，已保留 ${((update.received || 0) / 1_000_000).toFixed(1)} MB，点击继续下载。`,
     };
     $('update-message').textContent = [messages[update.phase], update.warning].filter(Boolean).join(' ');
     $('update-check').disabled = busy || update.phase === 'ready';
-    $('update-prepare').hidden = !update.supported || !['available', 'failed'].includes(update.phase);
-    $('update-activate').hidden = update.phase !== 'ready';
+    $('update-prepare').hidden = !update.supported || !['available', 'failed', 'paused'].includes(update.phase);
+    $('update-prepare').textContent = update.downloadComplete ? '继续准备新版' : update.resumable ? '继续下载新版' : '下载并准备新版';
+    $('update-activate').hidden = !update.supported || update.phase !== 'ready';
+    pauseButton.hidden = !update.supported || !busy; pauseButton.textContent = update.phase === 'downloading' ? '暂停下载' : '暂停准备';
+    progress.hidden = !busy && update.phase !== 'paused';
+    if (update.phase === 'downloading' || update.phase === 'paused') progress.value = Math.min(1, (update.received || 0) / (update.total || 1)); else progress.removeAttribute('value');
     $('update-rollback').hidden = !update.rollbackDirectory;
     $('update-release').hidden = !update.releaseUrl;
     if (update.releaseUrl) $('update-release').href = update.releaseUrl;
@@ -60,14 +67,15 @@ export function wireSystem({ request, managed, settle, operationPayload, acceptS
   });
   for (const [id, backup] of [['storage-open', false], ['storage-backup-open', true]]) $(id).addEventListener('click', async () => { try { error(''); await request('/api/storage/open', { backup }); } catch (failure) { error(failure.message); } });
   for (const [id, action] of [['update-check', 'check'], ['update-prepare', 'prepare']]) $(id).addEventListener('click', async () => {
-    try { error(''); $(id).disabled = true; renderUpdate(await request(`/api/updates/${action}`, {})); }
-    catch (failure) { error(failure.message); }
-    finally { $(id).disabled = false; }
+    try { error(''); $(id).disabled = true; const result = await request(`/api/updates/${action}`, {}); $(id).disabled = false; renderUpdate(result); }
+    catch (failure) { $(id).disabled = false; error(failure.message); }
+    finally { if (id === 'update-prepare') $(id).disabled = false; }
   });
+  pauseButton.addEventListener('click', async () => { try { error(''); pauseButton.disabled = true; renderUpdate(await request('/api/updates/pause', {})); } catch (failure) { error(failure.message); } finally { pauseButton.disabled = false; } });
   for (const [id, action] of [['update-activate', 'activate'], ['update-rollback', 'rollback']]) $(id).addEventListener('click', async () => {
     try {
       error(''); await managed(async () => { await request(`/api/updates/${action}`, operationPayload()); });
       clearTimeout(poll); document.body.replaceChildren(); const note = document.createElement('p'); note.textContent = '资料已保存，正在打开所选版本。若没有打开，请双击原来的启动简历.exe。'; document.body.append(note);
-    } catch (failure) { error(failure.message); }
+    } catch (failure) { error(failure.message); try { renderUpdate(await request('/api/updates/status')); } catch {} }
   });
 }

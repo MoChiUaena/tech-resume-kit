@@ -124,6 +124,7 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
             spawn('explorer.exe', [target], { windowsHide: true }).on('error', () => {}); json({ ok: true });
           } else if (pathname === '/api/updates/check') json(await updater.check());
           else if (pathname === '/api/updates/prepare') json(updater.prepare());
+          else if (pathname === '/api/updates/pause') json(await updater.pause());
           else if (pathname === '/api/updates/activate' || pathname === '/api/updates/rollback') {
             if (!storage?.managed || !desktopDirectory) throw new ResumeError('请在 Windows 免安装版中切换程序版本');
             await checkCurrent(payload); await project.flush();

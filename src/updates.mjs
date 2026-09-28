@@ -1,11 +1,12 @@
-import { readFile, mkdir, rename, unlink } from 'node:fs/promises';
+import { readFile, mkdir, unlink, lstat } from 'node:fs/promises';
 import { createReadStream, openSync, writeSync, closeSync, mkdirSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { Unzip, UnzipInflate } from 'fflate';
 import { saveFile } from './files.mjs';
-import { fileHash } from './storage.mjs';
+import { fileHash, canonicalDirectory, inventory } from './storage.mjs';
+import { downloadArchive, downloadSize } from './update-download.mjs';
 import { ResumeError } from './errors.mjs';
 
 const repository = 'MoChiUaena/tech-resume-kit', maximumDownload = 350_000_000, maximumExtractedFile = 300_000_000;
@@ -55,7 +56,7 @@ function safeEntry(name, expectedRoot) {
   if (parts[0] !== expectedRoot || parts.length < 1 || parts.some(part => !part || part === '.' || part === '..' || /[<>:"\\|?*\x00-\x1f]/.test(part) || /[. ]$/.test(part) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))) throw fail('安装包包含不安全的文件路径');
   return parts.slice(1).join('/');
 }
-export async function extractPackage(archive, stage, version) {
+export async function extractPackage(archive, stage, version, { signal } = {}) {
   const source = await open(archive, 'r');
   try {
     const { size } = await source.stat(), length = Math.min(size, 65557), tail = Buffer.alloc(length);
@@ -89,7 +90,7 @@ export async function extractPackage(archive, stage, version) {
   });
   unzip.register(UnzipInflate);
   try {
-    for await (const chunk of createReadStream(archive, { highWaterMark: 65536 })) { if (problem) throw problem; unzip.push(chunk); }
+    for await (const chunk of createReadStream(archive, { highWaterMark: 65536, signal })) { if (problem) throw problem; unzip.push(chunk); }
     unzip.push(new Uint8Array(), true); if (problem) throw problem;
     if (!seen.size || seen.size !== finished.size) throw fail('安装包不完整');
     const required = ['启动简历.exe', 'runtime/node.exe', 'runtime/versions.json', 'toolkit/package.json', 'toolkit/src/app.mjs'];
@@ -102,54 +103,133 @@ export async function extractPackage(archive, stage, version) {
   finally { for (const handle of handles) closeSync(handle); }
 }
 export async function createUpdater({ version, home, programDirectory, supported = process.platform === 'win32' && !!programDirectory, fetcher = fetch } = {}) {
-  let state = { currentVersion: version, supported, phase: 'idle' }, release, task, controller;
-  const receiptFile = path.join(home, 'update-state.json');
+  home = await canonicalDirectory(home);
+  if (programDirectory) programDirectory = await canonicalDirectory(programDirectory);
+  let state = { currentVersion: version, supported, phase: 'idle' }, release, task, controller, job;
+  const receiptFile = path.join(home, 'update-state.json'), jobFile = path.join(home, 'update-job.json');
+  const warnings = [];
+  const validId = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value);
+  const validHash = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+  async function readJson(filename, maximum) {
+    const info = await lstat(filename);
+    if (!info.isFile() || info.isSymbolicLink() || info.size > maximum) throw fail('更新记录格式不正确');
+    return JSON.parse(await readFile(filename, 'utf8'));
+  }
+  function savedRelease(value) {
+    if (!value || !/^\d+\.\d+\.\d+$/.test(value.latestVersion)) throw fail('更新版本记录不正确');
+    const tag = 'v' + value.latestVersion;
+    if (value.archive?.name !== `tech-resume-windows-x64-${value.latestVersion}.zip` || value.checksums?.name !== 'SHA256SUMS.txt') throw fail('更新包记录不正确');
+    return { currentVersion: version, latestVersion: value.latestVersion, available: compareVersions(value.latestVersion, version) > 0, releaseUrl: `https://github.com/${repository}/releases/tag/${tag}`, archive: releaseAsset({ ...value.archive, browser_download_url: value.archive.url }, tag), checksums: releaseAsset({ ...value.checksums, browser_download_url: value.checksums.url }, tag) };
+  }
+  const folderFor = () => path.join(home, 'updates', job.id);
+  const archiveFile = () => path.join(folderFor(), release.archive.name);
+  const stageFor = () => path.join(folderFor(), 'staging-' + job.preparedId);
+  const preparedDirectory = () => path.join(stageFor(), `tech-resume-windows-x64-${release.latestVersion}`);
+  async function regularFolder(folder) { const info = await lstat(folder); if (!info.isDirectory() || info.isSymbolicLink()) throw fail('更新缓存目录不正确'); }
+  async function saveJob(phase) {
+    job.phase = phase; await saveFile(jobFile, JSON.stringify(job, null, 2), true);
+  }
+  async function receivedBytes() {
+    try { return Math.max(await downloadSize(archiveFile()), await downloadSize(archiveFile() + '.download')); } catch { return 0; }
+  }
+  async function verifyPrepared(complete = false) {
+    if (!validId(job.preparedId) || !validHash(job.manifestSha256)) throw fail('已准备的程序记录不完整，请重新准备');
+    for (const folder of [path.join(home, 'updates'), folderFor(), stageFor(), preparedDirectory()]) await regularFolder(folder);
+    const manifestFile = path.join(stageFor(), 'files.json');
+    const entries = await readJson(manifestFile, 5_000_000);
+    if (await fileHash(manifestFile) !== job.manifestSha256 || !Array.isArray(entries) || entries.length > 15000) throw fail('已准备的程序清单发生变化，请重新准备');
+    const seen = new Set(); let total = 0;
+    for (const entry of entries) {
+      if (!entry || typeof entry.name !== 'string' || !validHash(entry.sha256) || !Number.isInteger(entry.size) || entry.size < 0 || entry.size > maximumExtractedFile) throw fail('程序文件清单不正确');
+      safeEntry(`tech-resume-windows-x64-${release.latestVersion}/${entry.name}`, `tech-resume-windows-x64-${release.latestVersion}`);
+      if (seen.has(entry.name.toLowerCase())) throw fail('程序文件清单重复'); seen.add(entry.name.toLowerCase()); total += entry.size;
+    }
+    if (total > 900_000_000) throw fail('程序文件清单超过大小上限');
+    if (complete) {
+      const actual = (await inventory(preparedDirectory())).filter(entry => entry.name !== 'startup-error.local.txt');
+      const canonical = list => JSON.stringify([...list].sort((a, b) => a.name.localeCompare(b.name)).map(({ name, size, sha256 }) => ({ name, size, sha256 })));
+      if (canonical(actual) !== canonical(entries)) throw fail('准备好的程序文件发生变化，请重新准备');
+    } else {
+      for (const name of ['启动简历.exe', 'runtime/node.exe', 'runtime/versions.json', 'toolkit/package.json', 'toolkit/src/app.mjs']) {
+        const entry = entries.find(entry => entry.name === name); if (!entry) throw fail('程序清单缺少启动文件');
+        let parent = preparedDirectory();
+        for (const part of name.split('/').slice(0, -1)) { parent = path.join(parent, part); await regularFolder(parent); }
+        const filename = path.join(preparedDirectory(), name);
+        if (await downloadSize(filename) !== entry.size || await fileHash(filename) !== entry.sha256) throw fail('准备好的启动文件发生变化，请重新准备');
+      }
+    }
+  }
   let receipt;
   try {
-    receipt = JSON.parse(await readFile(receiptFile, 'utf8'));
+    receipt = await readJson(receiptFile, 100_000);
     if (receipt?.schemaVersion !== 1 || typeof receipt.previousProgramDirectory !== 'string' || typeof receipt.installedProgramDirectory !== 'string') throw new Error('Invalid update receipt');
-  } catch (error) { receipt = null; if (error.code !== 'ENOENT') state.warning = '上次更新记录无法读取，上一版本入口暂不可用。'; }
-  const status = () => ({ ...state, rollbackDirectory: receipt?.previousProgramDirectory && receipt.installedProgramDirectory === programDirectory ? receipt.previousProgramDirectory : null });
+  } catch (error) { receipt = null; if (error.code !== 'ENOENT') warnings.push('上次更新记录无法读取，上一版本入口暂不可用。'); }
+  try {
+    const saved = await readJson(jobFile, 100_000);
+    if (saved.schemaVersion !== 1 || !validId(saved.id) || !['available', 'downloading', 'verifying', 'extracting', 'ready', 'paused', 'failed'].includes(saved.phase) || saved.sha256 && !validHash(saved.sha256) || saved.validator && (typeof saved.validator !== 'string' || saved.validator.length > 1024 || /[\r\n]/.test(saved.validator))) throw fail('下载记录无法读取');
+    const restored = savedRelease(saved.release);
+    if (restored.available) {
+      job = saved; release = restored;
+      const received = await receivedBytes();
+      state = { ...release, supported, phase: saved.phase === 'available' ? 'available' : 'paused', received, total: release.archive.size, resumed: true };
+      if (saved.phase === 'ready') {
+        try { await verifyPrepared(); state = { ...state, phase: 'ready', directory: preparedDirectory(), sha256: job.sha256 }; }
+        catch (error) { state = { ...state, phase: 'failed', error: `${error.message}；已下载的压缩包会保留。` }; }
+      }
+    }
+  } catch (error) { job = null; release = undefined; if (error.code !== 'ENOENT') warnings.push('上次下载记录无法读取，可以重新检查版本。'); }
+  const status = () => ({ ...state, warning: warnings.join(' '), resumable: state.received > 0, downloadComplete: typeof state.total === 'number' && state.received === state.total, rollbackDirectory: receipt?.previousProgramDirectory && receipt.installedProgramDirectory === programDirectory ? receipt.previousProgramDirectory : null });
   const check = async () => {
     if (task || state.phase === 'ready') return status();
-    release = await checkRelease(version, fetcher); state = { ...release, supported, phase: release.available ? 'available' : 'current' }; return status();
+    const latest = await checkRelease(version, fetcher);
+    const same = job && release?.latestVersion === latest.latestVersion && JSON.stringify(release.archive) === JSON.stringify(latest.archive);
+    release = latest;
+    if (latest.available) {
+      if (!same) job = { schemaVersion: 1, id: randomUUID(), release: latest, phase: 'available' };
+      await saveJob(same ? job.phase : 'available');
+      state = { ...latest, supported, phase: same && state.phase === 'failed' ? 'failed' : same && state.received ? 'paused' : 'available', ...(same ? { received: state.received, total: latest.archive.size, error: state.error } : {}) };
+    } else { job = null; await unlink(jobFile).catch(error => { if (error.code !== 'ENOENT') throw error; }); state = { ...latest, supported, phase: 'current' }; }
+    return status();
   };
   async function download() {
-    const folder = path.join(home, 'updates', randomUUID());
     controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 600000);
-    const archive = path.join(folder, release.archive.name), temporary = archive + '.download'; let handle;
     try {
-      await mkdir(folder, { recursive: true });
-      state = { ...state, phase: 'downloading', received: 0, total: release.archive.size };
-      const sums = await fetcher(release.checksums.url, { signal: controller.signal }); if (!sums.ok) throw fail('无法下载安装包校验文件');
-      const lines = (await boundedText(sums, 100_000)).split(/\r?\n/), matches = lines.map(line => /^([a-f0-9]{64})\s+\*?(.+)$/.exec(line)).filter(match => match?.[2] === release.archive.name);
-      if (matches.length !== 1) throw fail('安装包缺少唯一的 SHA-256 校验值'); const expectedHash = matches[0][1];
-      if (release.archive.digest && release.archive.digest !== `sha256:${expectedHash}`) throw fail('GitHub 安装包摘要与校验文件不一致');
-      const response = await fetcher(release.archive.url, { signal: controller.signal }); if (!response.ok) throw fail('无法下载正式安装包');
-      handle = await open(temporary, 'wx', 0o600); const digest = createHash('sha256');
-      for await (const chunk of response.body) {
-        state.received += chunk.length; if (state.received > release.archive.size || state.received > maximumDownload) throw fail('下载包大小与正式版本不一致');
-        digest.update(chunk); await handle.writeFile(chunk);
+      await mkdir(path.join(home, 'updates'), { recursive: true }); await regularFolder(path.join(home, 'updates'));
+      await mkdir(folderFor(), { recursive: true }); await regularFolder(folderFor());
+      controller.signal.throwIfAborted(); await saveJob('downloading');
+      if (!job.sha256) {
+        const sums = await fetcher(release.checksums.url, { signal: controller.signal }); if (!sums.ok) throw fail('无法下载安装包校验文件');
+        const lines = (await boundedText(sums, 100_000)).split(/\r?\n/), matches = lines.map(line => /^([a-f0-9]{64})\s+\*?(.+)$/.exec(line)).filter(match => match?.[2] === release.archive.name);
+        if (matches.length !== 1) throw fail('安装包缺少唯一的 SHA-256 校验值'); job.sha256 = matches[0][1];
       }
-      await handle.close(); handle = null;
-      if (state.received !== release.archive.size || digest.digest('hex') !== expectedHash) throw fail('安装包下载不完整或 SHA-256 校验失败，旧程序保持不变');
-      await rename(temporary, archive); state.phase = 'extracting';
-      const stage = path.join(folder, 'staging'), output = await extractPackage(archive, stage, release.latestVersion);
-      const destination = path.join(folder, path.basename(output)); await rename(output, destination);
-      state = { ...state, phase: 'ready', directory: destination, sha256: expectedHash }; return status();
-    } catch (error) { state = { ...state, phase: 'failed', error: error instanceof ResumeError ? error.message : '更新下载失败，请检查网络后重试；旧程序仍可使用' }; }
-    finally { clearTimeout(timeout); if (handle) await handle.close(); await unlink(temporary).catch(() => {}); controller = null; }
+      if (release.archive.digest && release.archive.digest !== `sha256:${job.sha256}`) throw fail('GitHub 安装包摘要与校验文件不一致');
+      await saveJob('downloading');
+      await downloadArchive({ archive: release.archive, filename: archiveFile(), sha256: job.sha256, validator: job.validator, fetcher, signal: controller.signal,
+        onProgress: received => { state.received = received; state.phase = 'downloading'; }, onVerify: () => { state.phase = 'verifying'; },
+        onValidator: async validator => { job.validator = validator; await saveJob('downloading'); } });
+      controller.signal.throwIfAborted(); state.phase = 'extracting'; job.preparedId = randomUUID(); await saveJob('extracting');
+      const output = await extractPackage(archiveFile(), stageFor(), release.latestVersion, { signal: controller.signal });
+      controller.signal.throwIfAborted(); job.manifestSha256 = await fileHash(path.join(stageFor(), 'files.json')); await saveJob('ready');
+      state = { ...state, phase: 'ready', directory: output, sha256: job.sha256 }; return status();
+    } catch (error) {
+      const paused = controller.signal.aborted;
+      state = { ...state, phase: paused ? 'paused' : 'failed', received: await receivedBytes(), error: paused ? undefined : error instanceof ResumeError ? error.message : '下载中断，已收到的内容会保留；点击继续下载可重试。' };
+      await saveJob(state.phase).catch(() => {});
+    } finally { clearTimeout(timeout); controller.abort(); controller = null; }
   }
   const prepare = () => {
     if (!supported) throw fail('此环境请从正式发布页下载安装包');
     if (!release?.available) throw fail('请先检查可用的正式版本');
-    if (!task && state.phase !== 'ready') { state = { ...state, phase: 'downloading', received: 0, total: release.archive.size }; task = download().finally(() => { task = null; }); }
+    if (!task && state.phase !== 'ready') { state = { ...state, phase: 'downloading', received: state.received || 0, total: release.archive.size, error: undefined }; task = download().finally(() => { task = null; }); }
     return status();
   };
   const activate = async backup => {
     if (state.phase !== 'ready') throw fail('新版安装包尚未准备完成');
+    try { await verifyPrepared(true); }
+    catch (error) { state = { ...state, phase: 'failed', error: `${error.message}；点击重新准备会复用已下载的压缩包。` }; await saveJob('failed'); throw error; }
     receipt = { schemaVersion: 1, previousProgramDirectory: programDirectory, installedProgramDirectory: state.directory, dataBackupDirectory: backup.backup, createdAt: new Date().toISOString() };
     await saveFile(receiptFile, JSON.stringify(receipt, null, 2), true); return state.directory;
   };
-  return { status, check, prepare, activate, wait: () => task, close: async () => { controller?.abort(); await task; } };
+  const pause = async () => { controller?.abort(); await task; return status(); };
+  return { status, check, prepare, activate, pause, wait: () => task, close: pause };
 }
