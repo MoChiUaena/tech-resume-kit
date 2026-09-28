@@ -10,6 +10,7 @@ function toast(text) { $('toast').textContent = text; $('toast').hidden = false;
 function edited() { tick++; $('save-status').textContent = '正在保存…'; $('page-status').textContent = '正在更新'; $('pdf-download').disabled = true; clearTimeout(timer); timer = setTimeout(save, 700); }
 function renderContacts() {
   $('contacts').replaceChildren();
+  if (sourceMode) { $('contact-add').disabled = true; return; }
   for (const [index, contact] of (state.front?.person?.contacts || []).entries()) {
     const row = document.createElement('div'); row.className = 'contact-row';
     const select = document.createElement('select'); select.setAttribute('aria-label', `联系方式 ${index + 1} 类型`);
@@ -27,7 +28,7 @@ function renderContacts() {
 }
 function populate() {
   const person = state.front?.person;
-  sourceMode = !person || typeof person.name !== 'string' || typeof person.target !== 'string' || !Array.isArray(person.contacts) || !person.contacts.length || !person.contacts.every(contact => typeof contact.text === 'string' && typeof contact.href === 'string');
+  sourceMode = !person || typeof person.name !== 'string' || typeof person.target !== 'string' || !Array.isArray(person.contacts) || !person.contacts.length || !person.contacts.every(contact => typeof contact?.text === 'string' && typeof contact?.href === 'string');
   $('person-fields').hidden = sourceMode; $('contacts').hidden = sourceMode;
   for (const field of ['name', 'target', 'label', 'availability']) $(field).value = state.front?.person?.[field] || '';
   $('body').value = sourceMode ? state.source : state.body; renderContacts();

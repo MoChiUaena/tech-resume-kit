@@ -44,6 +44,17 @@ test('browser editor autosaves, exports actual PDFs, recovers from errors and ba
   assert.match(await readFile(path.join(app.project.root, 'resume.md'), 'utf8'), /通用求职者/);
   await page.reload(); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   assert.equal(await page.getByLabel('姓名', { exact: true }).inputValue(), '通用求职者');
+  await page.getByRole('button', { name: '完整 Markdown', exact: true }).click();
+  const full = await page.locator('#body').inputValue();
+  const malformed = full.replace(/  contacts:\n(?:[ \t].*\n)+/, '  contacts: [null]\n');
+  assert.notEqual(malformed, full);
+  await page.locator('#body').fill(malformed);
+  await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 });
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('#body').value.includes('contacts: [null]'));
+  await page.locator('#body').fill(full); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.getByRole('button', { name: '返回正文编辑', exact: true }).click();
+  assert.equal(await page.getByLabel('姓名', { exact: true }).inputValue(), '通用求职者');
   const original = await page.locator('#body').inputValue(); await page.locator('#body').fill(original + '\n\n> 不支持的引用\n');
   await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 }); assert.equal(await page.locator('#pdf-frame').isVisible(), false); assert.equal(await page.locator('#pdf-download').isDisabled(), true);
   await page.locator('#body').fill(original); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
