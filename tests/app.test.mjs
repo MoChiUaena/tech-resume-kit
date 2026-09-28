@@ -67,6 +67,7 @@ test('browser editor autosaves, exports actual PDFs, recovers from errors and ba
   assert.equal((await readdir(path.join(app.project.root, 'backups'))).length, 1);
   await page.getByRole('button', { name: '版式与图片' }).click();
   await page.locator('#portrait-upload').setInputFiles(path.join(kitRoot, 'assets/images/nailong-avatar.jpg'));
+  await page.locator('#crop-apply').click();
   await page.waitForFunction(() => document.querySelector('#save-status').textContent === '已自动保存');
   await page.getByRole('button', { name: '关闭设置' }).click();
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
@@ -105,6 +106,7 @@ test('browser manages independent resumes and restores a full downloadable backu
   await page.waitForFunction(() => document.querySelector('#name').value === '多版本填写示例'); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   await page.getByLabel('姓名', { exact: true }).fill('待恢复内容'); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   await page.locator('#settings-open').click(); await page.locator('#portrait-upload').setInputFiles(path.join(kitRoot, 'assets/images/synthetic-portrait.jpg'));
+  await page.locator('#crop-apply').click();
   await page.getByRole('button', { name: '关闭设置' }).click(); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   await page.locator('#history-open').click();
   await page.locator('.history-item').filter({ hasText: '手动备份' }).getByRole('button', { name: '恢复', exact: true }).click();

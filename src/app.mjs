@@ -14,7 +14,7 @@ import { ResumeError } from './errors.mjs';
 export async function startEditor(directory, { port = 0, idleSeconds = 0, historyIntervalMs } = {}) {
   const project = await openLibrary(directory, { historyIntervalMs }), token = randomBytes(24).toString('hex');
   let lastSeen = Date.now(), url, closing = false;
-  const staticFiles = { '/': ['app/index.html', 'text/html; charset=utf-8'], '/app.js': ['app/app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app/app.css', 'text/css; charset=utf-8'] };
+  const staticFiles = { '/': ['app/index.html', 'text/html; charset=utf-8'], '/app.js': ['app/app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app/app.css', 'text/css; charset=utf-8'], '/crop.mjs': ['app/crop.mjs', 'text/javascript; charset=utf-8'], '/entries.mjs': ['app/entries.mjs', 'text/javascript; charset=utf-8'] };
   async function bytes(request, maximum) {
     const chunks = []; let size = 0;
     for await (const chunk of request) { size += chunk.length; if (size > maximum) throw new ResumeError('文件太大；正文上限 500 KB，图片上限 5 MB', { code: 'SIZE' }); chunks.push(chunk); }
@@ -36,6 +36,10 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
         } else if (pathname === '/api/state') { lastSeen = Date.now(); json(await project.read()); }
         else if (pathname === '/api/ping') { lastSeen = Date.now(); json({ ok: true }); }
         else if (pathname === '/api/history') { lastSeen = Date.now(); json({ backups: await project.backups(requested.searchParams.get('resumeId')), warning: project.historyStatus() }); }
+        else if (pathname === '/api/portrait') {
+          const photo = await project.portrait(requested.searchParams.get('resumeId'), requested.searchParams.get('revision'));
+          response.writeHead(200, { 'Content-Type': photo.type }); response.end(photo.buffer);
+        }
         else if (pathname === '/backup.zip') {
           const backup = await project.exportBackup(requested.searchParams.get('resumeId'), requested.searchParams.get('backupId'));
           response.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(backup.decoded.manifest.resumeName + '-完整备份.zip')}` }); response.end(backup.buffer);

@@ -44,6 +44,8 @@ jobs:
           python scripts/render-pdfs.py --directory tmp/pdfs/install
           python scripts/verify-pdf.py --directory tmp/pdfs/library
           python scripts/render-pdfs.py --directory tmp/pdfs/library
+          python scripts/verify-pdf.py --directory tmp/pdfs/editing
+          python scripts/render-pdfs.py --directory tmp/pdfs/editing
       - name: Build and check only anonymous samples
         run: |
           npm run sample

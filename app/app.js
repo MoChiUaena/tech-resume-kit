@@ -1,6 +1,9 @@
+import { createCropModel, normalizeCrop, rotateCrop, paintCrop, exportCrop } from './crop.mjs';
+import { insertResumeEntry } from './entries.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
+let cropSession, cropDrag, entryKind;
 async function request(url, data, raw = false) {
   const options = data === undefined ? {} : { method: 'POST', headers: { 'X-Resume-Token': token, ...(raw ? { 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision } : { 'Content-Type': 'application/json' }) }, body: raw ? data : JSON.stringify({ resumeId: state?.resumeId, ...data }) };
   const response = await fetch(url, options), result = await response.json();
@@ -41,6 +44,8 @@ function populate() {
   $('source-mode').textContent = sourceMode ? '返回正文编辑' : '完整 Markdown';
   $('preset').value = state.layout.preset; $('max-pages').value = state.layout.page.maxPages; $('body-size').value = state.layout.bodyPt; $('margin').value = state.layout.page.marginMm; $('accent').value = state.layout.accent;
   for (const key of ['portrait', 'schoolLogo']) { const asset = state.front?.assets?.[key]; $(`${key}-enabled`).checked = state.layout.images[key].enabled; $(`${key}-enabled`).disabled = !asset; $(`${key}-file`).textContent = asset ? asset.src.split('/').at(-1) : '尚未选择'; }
+  $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
+  for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
 }
 async function refreshPreview(revision, expectedTick = tick) {
   const sequence = ++previewSequence, resumeId = state.resumeId; previewReady = false; $('page-status').textContent = '正在排版…'; $('pdf-download').disabled = true;
@@ -80,6 +85,8 @@ async function managed(action) {
     $('pdf-download').disabled = !previewReady;
     for (const key of ['portrait','schoolLogo']) $(`${key}-enabled`).disabled = !state.front?.assets?.[key];
     $('contact-add').disabled = sourceMode || state.front.person.contacts.length >= 6;
+    $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
+    for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
   }
 }
 function acceptState(result) { state = result; tick = savedTick = 0; previewSequence++; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); }
@@ -91,6 +98,7 @@ $('source-mode').addEventListener('click', async () => {
     await settle(); state = await request('/api/state');
     if (sourceMode) populate();
     else { sourceMode = true; $('body').value = state.source; $('person-fields').hidden = true; $('contacts').hidden = true; $('contact-add').disabled = true; $('source-mode').textContent = '返回正文编辑'; }
+    for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
   } catch (error) { toast(error.message); }
 });
 $('contact-add').addEventListener('click', () => { state.front.person.contacts.push({ text: '', href: 'mailto:' }); renderContacts(); edited(); });
@@ -100,6 +108,7 @@ for (const key of ['portrait', 'schoolLogo']) {
   $(`${key}-enabled`).addEventListener('change', event => { state.layout.images[key].enabled = event.target.checked; edited(); });
   $(`${key}-upload`).addEventListener('change', async event => {
     const file = event.target.files[0]; if (!file) return;
+    if (key === 'portrait') { try { await openCrop(file); } catch (error) { toast(error.message); } event.target.value = ''; return; }
     const resumeId = state.resumeId;
     const upload = (async () => { if (file.size > 5_000_000) throw new Error('图片请控制在 5 MB 以内'); if (sourceMode) throw new Error('请先返回正文编辑，再选择图片'); const asset = await request(`/api/image/${key}`, file, true); if (state.resumeId !== resumeId) return; state.front.assets ||= {}; state.front.assets[key] = asset; state.layout.images[key].enabled = true; $(`${key}-enabled`).checked = true; $(`${key}-enabled`).disabled = false; $(`${key}-file`).textContent = file.name; edited(); })();
     pendingUploads.add(upload); try { await upload; } catch (error) { toast(error.message); } finally { pendingUploads.delete(upload); event.target.value = ''; }
@@ -165,4 +174,93 @@ $('restore-cancel').addEventListener('click', () => { $('restore-dialog').close(
 $('restore-confirm').addEventListener('click', async () => {
   try { await managed(async () => { if (restoreChoice.resumeId !== state.resumeId) throw new Error('简历已经切换，请重新选择备份'); const result = restoreChoice.file ? await request('/api/restore-upload', restoreChoice.file, true) : await request('/api/restore', { ...operationPayload(), backupId: restoreChoice.backupId }); acceptState(result); $('restore-dialog').close(); $('backup-import').value = ''; await loadHistory(); }); toast('已恢复，恢复前的内容也已保留'); }
   catch (error) { toast(error.message); }
+});
+
+function drawPhoto() {
+  if (!cropSession) return;
+  paintCrop($('crop-canvas'), cropSession.image, cropSession.model);
+  $('crop-zoom').value = cropSession.model.zoom;
+  $('crop-zoom-value').textContent = `${Math.round(cropSession.model.zoom * 100)}%`;
+}
+async function openCrop(file) {
+  if (sourceMode) throw new Error('请先返回正文编辑，再选择照片');
+  if (file.size > 5_000_000) throw new Error('照片请控制在 5 MB 以内');
+  const resumeId = state.resumeId, image = new Image(), imageUrl = URL.createObjectURL(file);
+  try {
+    image.src = imageUrl; await image.decode();
+    if (!image.naturalWidth || !image.naturalHeight || image.naturalWidth > 20000 || image.naturalHeight > 20000) throw new Error('照片尺寸不正确');
+    if (state.resumeId !== resumeId) throw new Error('简历已经切换，请重新选择照片');
+    if (cropSession) URL.revokeObjectURL(cropSession.url);
+    cropSession = { image, url: imageUrl, model: createCropModel(image.naturalWidth, image.naturalHeight), resumeId };
+    drawPhoto(); $('crop-dialog').showModal();
+  } catch (error) { URL.revokeObjectURL(imageUrl); throw new Error(error.message || '照片无法读取，请选择 PNG 或 JPEG'); }
+}
+$('crop-existing').addEventListener('click', async () => {
+  try {
+    await settle();
+    const response = await fetch(`/api/portrait?resumeId=${state.resumeId}&revision=${state.revision}`);
+    if (!response.ok) { const result = await response.json(); throw new Error(result.error?.message || '照片无法读取'); }
+    await openCrop(await response.blob());
+  } catch (error) { toast(error.message); }
+});
+$('crop-zoom').addEventListener('input', event => { if (cropSession) { cropSession.model.zoom = Number(event.target.value); drawPhoto(); } });
+for (const [id, quarterTurns] of [['crop-rotate-left',-1],['crop-rotate-right',1]]) $(id).addEventListener('click', () => { if (cropSession) { rotateCrop(cropSession.model, quarterTurns); drawPhoto(); } });
+$('crop-reset').addEventListener('click', () => { if (cropSession) { cropSession.model = createCropModel(cropSession.image.naturalWidth, cropSession.image.naturalHeight); drawPhoto(); } });
+$('crop-canvas').addEventListener('pointerdown', event => {
+  if (!cropSession) return;
+  const rect = event.currentTarget.getBoundingClientRect();
+  cropDrag = { x: event.clientX, y: event.clientY, startX: cropSession.model.x, startY: cropSession.model.y, ratio: 460 / event.currentTarget.clientWidth, pointerId: event.pointerId };
+  event.currentTarget.setPointerCapture(event.pointerId);
+});
+$('crop-canvas').addEventListener('pointermove', event => {
+  if (!cropDrag || !cropSession || event.pointerId !== cropDrag.pointerId) return;
+  cropSession.model.x = cropDrag.startX + (event.clientX - cropDrag.x) * cropDrag.ratio;
+  cropSession.model.y = cropDrag.startY + (event.clientY - cropDrag.y) * cropDrag.ratio;
+  drawPhoto();
+});
+for (const event of ['pointerup','pointercancel','lostpointercapture']) $('crop-canvas').addEventListener(event, () => cropDrag = undefined);
+$('crop-canvas').addEventListener('keydown', event => {
+  const offsets = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] }[event.key];
+  if (!cropSession || !offsets) return; event.preventDefault(); const step = event.shiftKey ? 1 : 10;
+  cropSession.model.x += offsets[0] * step; cropSession.model.y += offsets[1] * step; drawPhoto();
+});
+$('crop-cancel').addEventListener('click', () => $('crop-dialog').close());
+$('crop-dialog').addEventListener('close', () => { if (cropSession) URL.revokeObjectURL(cropSession.url); cropSession = undefined; cropDrag = undefined; });
+$('crop-apply').addEventListener('click', async () => {
+  if (!cropSession) return;
+  const photo = cropSession;
+  try {
+    await managed(async () => {
+      if (photo.resumeId !== state.resumeId) throw new Error('简历已经切换，请重新裁剪');
+      if (state.front?.assets?.portrait) await request('/api/backup', { ...operationPayload(), reason: 'photo' });
+      const file = await exportCrop(photo.image, photo.model), asset = await request('/api/image/portrait', file, true);
+      state.front.assets ||= {}; state.front.assets.portrait = asset; state.layout.images.portrait.enabled = true;
+      $('portrait-enabled').checked = true; $('portrait-file').textContent = '已裁剪 · 23:31';
+      $('crop-dialog').close();
+    });
+    edited(); await settle();
+  } catch (error) { toast(error.message); }
+});
+const entryLabels = {
+  education: ['添加教育经历','学校名称','专业 / 学历','课程、成绩或奖项，每行一条'],
+  internship: ['添加实习经历','公司名称','岗位 / 职责','负责的工作、关键做法和结果，每行一条'],
+  project: ['添加项目经历','项目名称','负责角色','项目目标、技术做法和结果，每行一条'],
+};
+for (const kind of Object.keys(entryLabels)) $(`entry-${kind}`).addEventListener('click', () => {
+  if (sourceMode) { toast('请先返回正文编辑'); return; }
+  entryKind = kind;
+  const labels = entryLabels[kind];
+  $('entry-dialog-title').textContent = labels[0]; $('entry-title-label').textContent = labels[1]; $('entry-subtitle-label').textContent = labels[2]; $('entry-details-label').textContent = labels[3];
+  $('entry-stack-field').hidden = kind === 'education';
+  for (const id of ['entry-title','entry-subtitle','entry-date','entry-stack','entry-details']) $(id).value = '';
+  $('entry-error').hidden = true; $('entry-dialog').showModal(); $('entry-title').focus();
+});
+$('entry-submit').addEventListener('click', async () => {
+  try {
+    if (sourceMode) throw new Error('请先返回正文编辑');
+    const result = insertResumeEntry($('body').value, { kind: entryKind, title: $('entry-title').value, subtitle: $('entry-subtitle').value, date: $('entry-date').value, stack: entryKind === 'education' ? '' : $('entry-stack').value, details: $('entry-details').value }, state.layout);
+    $('body').value = result.body; if (result.sectionOrder) state.layout.sectionOrder = result.sectionOrder;
+    $('entry-dialog').close(); edited();
+    $('body').focus(); $('body').setSelectionRange(result.selectionStart, result.selectionStart); await settle();
+  } catch (error) { $('entry-error').textContent = error.message; $('entry-error').hidden = false; }
 });

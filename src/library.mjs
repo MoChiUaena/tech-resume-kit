@@ -6,6 +6,8 @@ import { openProject } from './project.mjs';
 import { initializeProject, saveFile } from './files.mjs';
 import { captureBackup, decodeBackup, applyBackup } from './backup.mjs';
 import { ResumeError } from './errors.mjs';
+import { assetPath } from './assets.mjs';
+import { imageSize } from 'image-size';
 
 const uuid = z.string().uuid(), idSchema = z.union([z.literal('legacy'), uuid]);
 const catalogSchema = z.object({ schemaVersion: z.literal(1), activeId: idSchema, resumes: z.array(z.object({ id: idSchema, name: z.string().trim().min(1).max(60), createdAt: z.string() }).strict()).min(1).max(100) }).strict();
@@ -14,7 +16,7 @@ function name(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 60 || /[\x00-\x1f\x7f]/.test(value)) throw new ResumeError('简历名称需要 1 到 60 个字符');
   return value.trim();
 }
-const kinds = { initial: '初始版本', manual: '手动备份', auto: '自动版本', template: '切换模板前', import: '导入正文前', restore: '恢复前' };
+const kinds = { initial: '初始版本', manual: '手动备份', auto: '自动版本', template: '切换模板前', import: '导入正文前', restore: '恢复前', photo: '裁剪照片前' };
 
 export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}) {
   const root = path.resolve(directory), catalogFile = path.join(root, 'library.json');
@@ -146,9 +148,18 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     try { const info = await lstat(assets); if (!info.isDirectory() || info.isSymbolicLink()) throw new ResumeError('图片目录不正确'); } catch (error) { if (error.code !== 'ENOENT') throw error; await mkdir(assets); }
     await saveFile(path.join(project.root, src), content, true);
   });
+  const portrait = async (id, revision) => {
+    await queue; await check({ resumeId: id, revision });
+    const project = await projectFor(), asset = (await project.read()).front?.assets?.portrait;
+    if (!asset || typeof asset.src !== 'string') throw new ResumeError('请先选择证件照');
+    const buffer = await readFile(assetPath(project.root, asset.src));
+    const type = imageSize(buffer).type;
+    if (!['png', 'jpg'].includes(type) || buffer.length > 5_000_000) throw new ResumeError('照片需要为 5 MB 以内的 PNG 或 JPEG');
+    return { buffer, type: type === 'jpg' ? 'image/jpeg' : 'image/png' };
+  };
   const backups = async id => { await queue; if (id !== catalog.activeId) throw new ResumeError('简历已经切换', { code: 'CONFLICT' }); return historyFor(id); };
   const exportBackup = async (id, backupId) => { await queue; if (id !== catalog.activeId) throw new ResumeError('简历已经切换', { code: 'CONFLICT' }); return readBackup(id, backupId); };
-  const createBackup = payload => mutate(async () => { const current = await check(payload); return checkpoint(current.resumeId, 'manual'); });
+  const createBackup = payload => mutate(async () => { const current = await check(payload); return checkpoint(current.resumeId, payload.reason === 'photo' ? 'photo' : 'manual'); });
   const flush = () => mutate(async () => { for (const id of dirty) await checkpoint(id, 'auto', false); });
   async function autoCheckpoint() {
     await mutate(async () => {
@@ -157,5 +168,5 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   }
   if (!(await historyFor(catalog.activeId)).length) await checkpoint(catalog.activeId, 'initial');
   if (historyIntervalMs > 0) { timer = setInterval(() => autoCheckpoint().catch(error => { historyWarning = `自动版本未保存：${error.message}`; }), Math.min(historyIntervalMs, 60000)); timer.unref(); }
-  return { root, read, save, useTemplate, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, switchResume, backups, createBackup, exportBackup, restore, storeImage, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); await flush(); } };
+  return { root, read, save, useTemplate, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); await flush(); } };
 }

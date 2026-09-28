@@ -44,6 +44,8 @@ Linux 可能需要用 `npx playwright install --with-deps chromium` 安装系统
 
 `npm run app` 打开同一套本地编辑页面，资料自动保存到 `my-resume/`。
 
+源码开发版增加了照片裁剪和经历表单：选择照片后可拖动、缩放、旋转，保持 23:31 比例；正文上方的“教育 / 实习 / 项目”按钮可自动添加带日期的条目。已有照片可再次调整，调整前保留备份。当前正式下载仍为 v0.6.0；开发变更见[变更记录](docs/changelog.md)，集中发布规则见[维护说明](docs/maintaining.md)。
+
 如需使用命令行，先创建独立起步目录：
 
 ```sh
