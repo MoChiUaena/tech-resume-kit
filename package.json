@@ -1,6 +1,6 @@
 {
   "name": "tech-resume-kit",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "中文技术岗 Markdown 简历模板套件",
@@ -8,7 +8,7 @@
   "repository": { "type": "git", "url": "https://github.com/MoChiUaena/tech-resume-kit.git" },
   "exports": { ".": { "types": "./src/index.d.mts", "import": "./src/index.mjs" } },
   "types": "./src/index.d.mts",
-  "files": ["src/", "assets/", "templates/", "examples/ai-intern/*.md", "examples/ai-intern/*.yaml", "examples/experienced/*.md", "examples/experienced/*.yaml", "examples/json/*.json", "resume.md", "layout.yaml", "docs/api.md", "docs/content-model.md", "docs/input-format.md", "starter/"],
+  "files": ["src/", "app/", "assets/", "templates/", "examples/ai-intern/*.md", "examples/ai-intern/*.yaml", "examples/experienced/*.md", "examples/experienced/*.yaml", "examples/json/*.json", "resume.md", "layout.yaml", "docs/api.md", "docs/content-model.md", "docs/input-format.md", "starter/"],
   "scripts": {
     "sample": "node scripts/build-sample.mjs",
     "init": "node src/cli.mjs init",
@@ -18,7 +18,10 @@
     "test": "node --test --test-concurrency=1",
     "qa:boundaries": "node scripts/check-boundaries.mjs",
     "package:release": "python scripts/package-release.py",
-    "test:package": "node scripts/smoke-package.mjs"
+    "test:package": "node scripts/smoke-package.mjs",
+    "app": "node src/app.mjs",
+    "package:windows": "python scripts/package-windows.py",
+    "test:windows": "node scripts/smoke-windows.mjs"
   },
   "engines": {
     "node": ">=22"

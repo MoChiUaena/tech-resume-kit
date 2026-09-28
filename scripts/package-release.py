@@ -19,7 +19,7 @@ required = {'src/index.mjs', 'src/index.d.mts', 'src/resume.css', 'src/cli.mjs',
 assert required <= paths, f'Missing package resources: {required - paths}'
 for name in paths:
     parts = PurePosixPath(name).parts
-    assert parts[0] in {'src', 'assets', 'templates', 'examples', 'docs', 'starter'} or name in {'package.json', 'README.md', 'LICENSE', 'resume.md', 'layout.yaml'}, name
+    assert parts[0] in {'src', 'app', 'assets', 'templates', 'examples', 'docs', 'starter'} or name in {'package.json', 'README.md', 'LICENSE', 'resume.md', 'layout.yaml'}, name
     assert not any(part.startswith('.env') or part in {'personal', 'private', 'tmp', 'node_modules', '.git'} or '.local.' in part for part in parts), name
 archive = output / packed['filename']
 starter_name = f'tech-resume-starter-{version}'

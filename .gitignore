@@ -3,6 +3,7 @@ tmp/
 .env*
 personal/
 private/
+my-resume/
 *.local.*
 output/personal/
 output/pdf/*.html

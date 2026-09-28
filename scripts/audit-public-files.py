@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parents[1]
 tracked = set(subprocess.check_output(['git', 'ls-files', '-z'], cwd=root).decode('utf-8').rstrip('\0').split('\0'))
 for filename in sorted(tracked):
     parts = Path(filename).parts
-    if not parts or parts[0] in {'personal', 'private', 'tmp', 'node_modules'}:
+    if not parts or parts[0] in {'personal', 'private', 'my-resume', 'tmp', 'node_modules'}:
         raise SystemExit(f'Private or generated path is tracked: {filename}')
     if any(part.startswith('.env') or '.local.' in part for part in parts):
         raise SystemExit(f'Local-only file is tracked: {filename}')

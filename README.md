@@ -1,24 +1,28 @@
 # tech-resume-kit
 
-用 Markdown 写中文技术简历，用独立 YAML 调整版式，在本地预览和导出 PDF。
+在本地页面填写中文技术简历，用 Markdown 编辑经历，实时预览并下载 PDF。Windows 版下载解压后双击启动。
 
 [![Verify anonymous samples](https://github.com/MoChiUaena/tech-resume-kit/actions/workflows/verify.yml/badge.svg)](https://github.com/MoChiUaena/tech-resume-kit/actions/workflows/verify.yml)
 
-![从 Markdown 生成并实际渲染的完整中文校招简历](output/pdf/campus-ink-blue.png)
+![本地 Markdown 编辑、基本信息填写与实际 PDF 预览](docs/images/editor.png)
 
 [校招样张 PDF](output/pdf/campus-ink-blue.pdf) · [AI 实习样张 PDF](output/pdf/ai-intern-ink-blue.pdf) · [两页经验样张 PDF](output/pdf/experienced-ink-blue.pdf) · [可直接填写的 resume.md](resume.md) · [版式配置](layout.yaml)
 
-**公开版本 v0.4.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持一页/两页 PDF、独立图片配置、模块排序，以及实际 PDF 的本地自动刷新预览。长标题、长链接、内容增减、长项目续页和照片方向已通过专项验证。
+**公开版本 v0.5.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持一页/两页 PDF、独立图片配置、模块排序，以及实际 PDF 的本地自动刷新预览。长标题、长链接、内容增减、长项目续页和照片方向已通过专项验证。
 
 校招样张使用“奶龙”姓名和白底竖版头像。图片来源与许可信息集中记录在[素材说明](assets/README.md)。
 
-## 下载后填写
+## 下载使用
 
-[下载空白填写 ZIP](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.4.0/tech-resume-starter-0.4.0.zip)，解压后编辑根目录的 `resume.md` 和 `layout.yaml`。
+[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.5.0/tech-resume-windows-x64-0.5.0.zip) · Windows 10 / 11 x64 · 约 187 MB
 
-Windows 安装 Node.js 22+ 后，依次运行 `01-install.cmd`、`02-preview.cmd` 和 `03-export-pdf.cmd`。预览自动打开浏览器，导出 PDF 存入 `output/`，每次保存为新文件。macOS / Linux 对应运行 `sh install.sh`、`sh preview.sh`、`sh export-pdf.sh`。
+1. 完整解压，双击 **启动简历.exe**。
+2. 在打开的页面填写基本信息和 Markdown 经历，右侧自动更新实际 PDF 预览。
+3. 点击 **下载 PDF**。
 
-首次安装需要联网下载依赖和 Chromium，准备好后可断网预览和导出。ZIP 内附照片与 Logo 的填写说明。开发者可以下载 [安装包 TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.4.0/tech-resume-kit-0.4.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
+照片、校徽和版式通过“版式与图片”设置。修改自动保存到 `my-resume/`，再次启动可以继续编辑；切换起步模板前会备份当前内容。保留整个 `my-resume/` 文件夹即可备份或迁移自己的资料。
+
+运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.5.0/tech-resume-kit-0.5.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
 
 ## 从源码开始
 
@@ -29,10 +33,18 @@ git clone https://github.com/MoChiUaena/tech-resume-kit.git
 cd tech-resume-kit
 npm ci
 npx playwright install chromium
-npm run init -- --dir personal/my-resume
+npm run app
 ```
 
 Linux 可能需要用 `npx playwright install --with-deps chromium` 安装系统依赖。
+
+`npm run app` 打开同一套本地编辑页面，资料自动保存到 `my-resume/`。
+
+如需使用命令行，先创建独立起步目录：
+
+```sh
+npm run init -- --dir personal/my-resume --template blank
+```
 
 编辑生成目录内的 `resume.md` 和 `layout.yaml`，然后运行：
 
@@ -46,7 +58,7 @@ npm run build -- personal/my-resume/resume.md --out personal/my-resume/output/re
 
 PDF 导出使用同一份 HTML/CSS，等待字体和图片加载完成。check、preview 和 build 都以实际 PDF 页数执行上限检查。输出已存在时会停止；确认要更新才加 `--force`。校验失败或超过页数上限时，原 PDF 保持不变。直接查看或保存已生成的 PDF 即可，不需要再次打印 HTML。
 
-`personal/`、`private/` 和 `*.local.*` 默认被 Git 忽略；起步目录不会覆盖现有目录。没有上传、远程图片、在线字体或第三方 PDF 服务。
+`my-resume/`、`personal/`、`private/` 和 `*.local.*` 默认被 Git 忽略；起步目录不会覆盖现有目录。内容和图片在本机存取，中文字体随包提供。
 
 ## Markdown 怎么写
 
@@ -155,7 +167,7 @@ python -X utf8 scripts/verify-pdf.py --directory tmp/pdfs/boundary
 python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
 ```
 
-三份正式样张共 4 页，分别核对 49 / 46 / 71 个文本字段；9 份边界 PDF 共 13 页，另有超出两页和超长页眉两类拒绝用例。全部有效页面已渲染并逐页检查。验证覆盖嵌入字体、正文阅读顺序、链接、图像、纸张边界和标题跟随，记录见 [阶段 C 核验](docs/phase-c-review.md)。16 项自动测试覆盖解析、复制到外部目录、预览刷新及覆盖保护，不宣称所有 ATS 都能正确解析。
+三份正式样张共 4 页，分别核对 49 / 46 / 71 个文本字段；9 份边界 PDF 共 13 页，另有超出两页和超长页眉两类拒绝用例。全部有效页面已渲染并逐页检查。验证覆盖嵌入字体、正文阅读顺序、链接、图像、纸张边界和标题跟随，记录见 [阶段 C 核验](docs/phase-c-review.md)。18 项自动测试覆盖解析、复制到外部目录、预览刷新及覆盖保护，不宣称所有 ATS 都能正确解析。
 
 数据链路为 `Markdown/YAML → ResumeDocument + LayoutConfig → HTML/CSS → Chromium PDF`。模型版本为 `0.2.0`；解析器与渲染器独立，工作台可直接生成相同结构，见 [模型与接口](docs/content-model.md)。阶段 A 的 JSON 留作回归基准，不再是默认编辑入口。
 
@@ -163,4 +175,4 @@ python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
 
 代码、样例文字和虚构校徽采用 [MIT](LICENSE)，中文字体按 [SIL OFL 1.1](assets/fonts/OFL.txt) 分发。图片的来源和使用说明见[素材说明](assets/README.md)。
 
-仓库 CI 使用公开样例、空白起步文件及合成边界内容，验证独立安装、导出、PDF 文字与逐页渲染。运行时依赖由 `package-lock.json` 固定，可选 PDF 复核工具由 `requirements-qa.txt` 固定。当前通过 GitHub 源码和 Release 提供 ZIP / TGZ 下载，未发布到 npm 注册表。工作台接入见[交接说明](docs/workbench-handoff.md)。
+仓库 CI 使用公开样例、空白起步文件及合成边界内容，验证独立安装、导出、PDF 文字与逐页渲染。运行时依赖由 `package-lock.json` 固定，可选 PDF 复核工具由 `requirements-qa.txt` 固定。当前通过 GitHub 源码和 Release 提供 Windows 免安装包、源码 ZIP / TGZ 下载，未发布到 npm 注册表。工作台接入见[交接说明](docs/workbench-handoff.md)。

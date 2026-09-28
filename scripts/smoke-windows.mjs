@@ -1,0 +1,60 @@
+import assert from 'node:assert/strict';
+import { spawn, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { mkdtemp, mkdir, readFile, writeFile, rm, realpath } from 'node:fs/promises';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { PDFDocument } from 'pdf-lib';
+import { pdfExpectations } from './pdf-expectations.mjs';
+const exec = promisify(execFile), root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+assert.equal(process.platform, 'win32');
+const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
+const outside = await mkdtemp(path.join(tmpdir(), 'tech-resume-免安装 验证-'));
+let child, url, token;
+try {
+  await exec(process.env.TECH_RESUME_PYTHON || 'python', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert all(".." not in n.split("/") and not n.startswith("/") for n in z.namelist()); z.extractall(sys.argv[2])', path.join(root, 'tmp/packages', `tech-resume-windows-x64-${version}.zip`), outside], { windowsHide: true, timeout: 120000 });
+  const portable = path.join(outside, `tech-resume-windows-x64-${version}`), executable = path.join(portable, '启动简历.exe');
+  const system = process.env.SystemRoot || 'C:\\Windows';
+  child = spawn(executable, ['--no-open'], { cwd: outside, windowsHide: true, stdio: 'ignore', env: { ...process.env, PATH: path.join(system, 'System32'), PLAYWRIGHT_BROWSERS_PATH: path.join(outside, 'missing-browser-cache'), HTTP_PROXY: 'http://127.0.0.1:9', HTTPS_PROXY: 'http://127.0.0.1:9' } });
+  const sessionFile = path.join(portable, 'my-resume/app-session.local.json');
+  let session;
+  for (let i = 0; i < 100; i++) {
+    try { session = JSON.parse(await readFile(sessionFile, 'utf8')); break; } catch {}
+    if (child.exitCode !== null) throw new Error('Portable launcher exited before startup');
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+  assert.ok(session, 'Portable app did not start'); url = session.url;
+  const actualRuntime = await exec(path.join(system, 'System32/WindowsPowerShell/v1.0/powershell.exe'), ['-NoProfile', '-Command', `[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); (Get-CimInstance Win32_Process -Filter 'ProcessId = ${Number(session.pid)}').ExecutablePath`], { windowsHide: true });
+  assert.equal(actualRuntime.stdout.trim().toLowerCase(), path.join(portable, 'runtime/node.exe').toLowerCase());
+  const second = spawn(executable, ['--no-open'], { cwd: outside, windowsHide: true, stdio: 'ignore' });
+  assert.equal(await new Promise(resolve => second.once('exit', resolve)), 0);
+  assert.equal(JSON.parse(await readFile(sessionFile, 'utf8')).pid, session.pid);
+  const html = await (await fetch(url)).text(); token = /name="resume-token" content="([a-f0-9]+)"/.exec(html)[1];
+  const post = async (endpoint, body) => {
+    const response = await fetch(url + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: url.slice(0, -1), 'X-Resume-Token': token }, body: JSON.stringify(body) });
+    const result = await response.json(); assert.equal(response.status, 200, JSON.stringify(result)); return result;
+  };
+  let state = await (await fetch(url + 'api/state')).json();
+  const preview = await (await fetch(url + 'api/preview')).json(); assert.equal(preview.pageCount, 1);
+  state.front.person.name = '免安装填写示例';
+  state = await post('api/save', { revision: state.revision, front: state.front, body: state.body, layout: state.layout });
+  const document = await fetch(url + `document.pdf?revision=${state.revision}&download=1`); assert.equal(document.status, 200);
+  const buffer = Buffer.from(await document.arrayBuffer()); assert.equal((await PDFDocument.load(buffer)).getPageCount(), 1);
+  const qa = path.join(root, 'tmp/pdfs/editor'); await mkdir(qa, { recursive: true });
+  await writeFile(path.join(qa, 'portable-blank.pdf'), buffer);
+  const { parseResume } = await import('../src/input.mjs'); const { resolveSectionOrder } = await import('../src/schema.mjs');
+  const model = parseResume(state.source).document; state.layout.sectionOrder = resolveSectionOrder(model, state.layout);
+  await writeFile(path.join(qa, 'portable-blank.expected.json'), JSON.stringify(pdfExpectations({ document: model, layout: state.layout, images: {} }, 1)));
+  state = await post('api/template', { template: 'experience', revision: state.revision });
+  const twoPages = await (await fetch(url + 'api/preview')).json(); assert.equal(twoPages.pageCount, 2);
+  assert.match(await readFile(path.join(portable, 'my-resume/resume.md'), 'utf8'), /后端/);
+  await post('api/exit', {});
+  if (child.exitCode === null) await new Promise((resolve, reject) => { const timer = setTimeout(() => reject(new Error('Portable shutdown timed out')), 10000); child.once('exit', code => { clearTimeout(timer); assert.equal(code, 0); resolve(); }); });
+  await writeFile(path.join(root, 'tmp/packages/windows-smoke.json'), JSON.stringify({ version, bundledNode: true, noNodeInPath: true, independentBrowserCache: true, offlineProxy: true, singleton: true, autosave: true, pdfPages: [1, 2], cleanExit: true }, null, 2));
+  console.log('Windows EXE passed: no system Node PATH, missing global browser cache, offline export, one/two pages, singleton and clean exit.');
+} finally {
+  if (child?.pid && child.exitCode === null) await exec('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }).catch(() => {});
+  const actual = await realpath(outside); assert.ok(actual.startsWith(path.join(await realpath(tmpdir()), 'tech-resume-免安装 验证-')));
+  await rm(actual, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+}
