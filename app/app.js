@@ -1,5 +1,6 @@
 import { createCropModel, normalizeCrop, rotateCrop, paintCrop, exportCrop } from './crop.mjs';
 import { insertResumeEntry } from './entries.mjs';
+import { wireSystem } from './system.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
@@ -264,3 +265,4 @@ $('entry-submit').addEventListener('click', async () => {
     $('body').focus(); $('body').setSelectionRange(result.selectionStart, result.selectionStart); await settle();
   } catch (error) { $('entry-error').textContent = error.message; $('entry-error').hidden = false; }
 });
+wireSystem({ request, managed, settle, operationPayload, acceptState });

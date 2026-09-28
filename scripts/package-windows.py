@@ -70,7 +70,7 @@ with tempfile.TemporaryDirectory(prefix='windows-', dir=output) as staging:
             (runtime / ('NODE-LICENSE.txt' if filename == 'LICENSE' else filename)).write_bytes(source.read(f'{node_name}/{filename}'))
     for folder in browser_folders:
         shutil.copytree(cache / folder, runtime / 'browsers' / folder)
-    subprocess.run([str(compiler), '/nologo', '/target:winexe', '/platform:x64', '/codepage:65001', '/reference:System.Windows.Forms.dll', f'/out:{stage / "启动简历.exe"}', str(root / 'desktop/Launcher.cs')], check=True)
+    subprocess.run([str(compiler), '/nologo', '/target:winexe', '/platform:x64', '/codepage:65001', '/reference:System.Windows.Forms.dll', '/reference:System.Web.Extensions.dll', f'/out:{stage / "启动简历.exe"}', str(root / 'desktop/Launcher.cs')], check=True)
     shutil.copy2(root / 'desktop/README.md', stage / '使用说明.md')
     shutil.copy2(root / 'LICENSE', stage / 'LICENSE')
     (stage / '.gitignore').write_text('my-resume/\n*.local.*\nruntime/\ntoolkit/node_modules/\n', encoding='utf-8')

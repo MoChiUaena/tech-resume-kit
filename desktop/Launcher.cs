@@ -7,6 +7,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using System.Web.Script.Serialization;
+using System.Collections.Generic;
 
 class Launcher {
     static string Quote(string value) {
@@ -20,13 +22,27 @@ class Launcher {
     [STAThread]
     static int Main(string[] args) {
         string root = AppDomain.CurrentDomain.BaseDirectory;
+        var json = new JavaScriptSerializer();
+        if (args.Length == 2 && args[0] == "--pick-directory") {
+            using (var dialog = new FolderBrowserDialog()) {
+                dialog.Description = "选择简历数据文件夹"; dialog.ShowNewFolderButton = true;
+                string selected = dialog.ShowDialog() == DialogResult.OK ? dialog.SelectedPath : null;
+                File.WriteAllText(args[1], json.Serialize(new { directory = selected }), new UTF8Encoding(false)); return 0;
+            }
+        }
+        Func<string, string> option = name => { int index = Array.IndexOf(args, name); return index >= 0 && index + 1 < args.Length ? args[index + 1] : null; };
+        string settings = option("--settings") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TechResumeKit", "settings.json");
+        string explicitDirectory = option("--dir"), previous = option("--update-from");
+        string identity = Path.GetFullPath(explicitDirectory ?? settings);
         string identifier;
-        using (var sha = SHA256.Create()) identifier = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(root.ToUpperInvariant()))).Replace("-", "");
-        bool created;
-        using (var mutex = new Mutex(true, "Local\\tech-resume-kit-" + identifier, out created)) {
-            if (!created) {
+        using (var sha = SHA256.Create()) identifier = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(identity.ToUpperInvariant()))).Replace("-", "");
+        using (var mutex = new Mutex(false, "Local\\tech-resume-kit-" + identifier)) {
+            bool acquired; try { acquired = mutex.WaitOne(args.Contains("--wait") ? 20000 : 0); } catch (AbandonedMutexException) { acquired = true; }
+            if (!acquired) {
                 try {
-                    string text = File.ReadAllText(Path.Combine(root, "my-resume", "app-session.local.json"));
+                    string data = explicitDirectory;
+                    if (data == null) data = (string)json.Deserialize<Dictionary<string, object>>(File.ReadAllText(settings))["dataDirectory"];
+                    string text = File.ReadAllText(Path.Combine(data, "app-session.local.json"));
                     var match = Regex.Match(text, "\"url\"\\s*:\\s*\"(http://127\\.0\\.0\\.1:\\d+/)\"");
                     if (match.Success && !args.Contains("--no-open")) Process.Start(new ProcessStartInfo(match.Groups[1].Value) { UseShellExecute = true });
                 } catch { }
@@ -36,7 +52,13 @@ class Launcher {
             try {
                 string node = Path.Combine(root, "runtime", "node.exe"), app = Path.Combine(root, "toolkit", "src", "app.mjs");
                 if (!File.Exists(node) || !File.Exists(app)) throw new Exception("请先完整解压下载包，再运行启动简历.exe。");
-                var start = new ProcessStartInfo(node, Quote(app) + " --idle-seconds 300 " + String.Join(" ", args.Select(Quote))) {
+                var forwarded = new System.Collections.Generic.List<string>();
+                for (int index = 0; index < args.Length; index++) {
+                    if (args[index] == "--wait") continue;
+                    if (args[index] == "--update-from") { index++; continue; }
+                    forwarded.Add(args[index]);
+                }
+                var start = new ProcessStartInfo(node, Quote(app) + " --idle-seconds 300 --desktop " + Quote(root.TrimEnd(Path.DirectorySeparatorChar)) + " " + String.Join(" ", forwarded.Select(Quote))) {
                     WorkingDirectory = root, UseShellExecute = false, CreateNoWindow = true,
                     RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8
                 };
@@ -50,9 +72,16 @@ class Launcher {
                 return 0;
             } catch (Exception error) {
                 try { File.WriteAllText(Path.Combine(root, "startup-error.local.txt"), error.ToString(), Encoding.UTF8); } catch { }
+                if (previous != null && !String.Equals(Path.GetFullPath(previous).TrimEnd(Path.DirectorySeparatorChar), root.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase)) {
+                    mutex.ReleaseMutex(); acquired = false;
+                    try {
+                        string fallback = Path.Combine(previous, "启动简历.exe");
+                        if (File.Exists(fallback)) Process.Start(new ProcessStartInfo(fallback, "--wait --settings " + Quote(settings) + (args.Contains("--no-open") ? " --no-open" : "")) { UseShellExecute = false, CreateNoWindow = true });
+                    } catch { }
+                }
                 if (!args.Contains("--no-open")) MessageBox.Show(error.Message, "Markdown 简历", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return 1;
-            } finally { mutex.ReleaseMutex(); }
+            } finally { if (acquired) mutex.ReleaseMutex(); }
         }
     }
 }
