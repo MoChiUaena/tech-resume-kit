@@ -9,7 +9,6 @@ person:
     - text: your.name@example.com
       href: mailto:your.name@example.com
 assets: {}
-notice: 起步示例，请将所有提示替换为真实、可核实的信息。
 ---
 
 ## 教育背景 {#education .entries}

@@ -1,9 +1,14 @@
 {
   "name": "tech-resume-kit",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "中文技术岗 Markdown 简历模板套件",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/MoChiUaena/tech-resume-kit.git" },
+  "exports": { ".": { "types": "./src/index.d.mts", "import": "./src/index.mjs" } },
+  "types": "./src/index.d.mts",
+  "files": ["src/", "assets/", "templates/", "examples/ai-intern/*.md", "examples/ai-intern/*.yaml", "examples/experienced/*.md", "examples/experienced/*.yaml", "examples/json/*.json", "resume.md", "layout.yaml", "docs/api.md", "docs/content-model.md", "docs/input-format.md", "starter/"],
   "scripts": {
     "sample": "node scripts/build-sample.mjs",
     "init": "node src/cli.mjs init",
@@ -11,13 +16,16 @@
     "preview": "node src/cli.mjs preview",
     "build": "node src/cli.mjs build",
     "test": "node --test --test-concurrency=1",
-    "qa:boundaries": "node scripts/check-boundaries.mjs"
+    "qa:boundaries": "node scripts/check-boundaries.mjs",
+    "package:release": "python scripts/package-release.py",
+    "test:package": "node scripts/smoke-package.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
     "image-size": "2.0.4",
+    "jsonc-parser": "3.3.1",
     "markdown-it": "15.0.2",
     "pdf-lib": "1.17.1",
     "playwright": "1.63.0",
@@ -26,5 +34,8 @@
   },
   "bin": {
     "tech-resume": "src/cli.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
   }
 }

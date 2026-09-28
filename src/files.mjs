@@ -11,7 +11,7 @@ export async function ensureNewOutput(filename, force = false) {
   catch (error) { if (error.code === 'ENOENT') return; throw error; }
   if (!force) throw new ResumeError('文件已存在；请换输出路径，或确认后使用 --force 覆盖', { file: filename, code: 'EXISTS' });
 }
-export async function savePdf(filename, buffer, force = false) {
+export async function saveFile(filename, buffer, force = false) {
   await mkdir(path.dirname(filename), { recursive: true });
   if (!force) {
     try { await writeFile(filename, buffer, { flag: 'wx', mode: 0o600 }); }
@@ -24,6 +24,7 @@ export async function savePdf(filename, buffer, force = false) {
     await rename(temporary, filename);
   } finally { await unlink(temporary).catch(() => {}); }
 }
+export const savePdf = saveFile;
 export async function initializeProject(directory, template = 'campus') {
   if (!['campus', 'experience', 'blank'].includes(template)) throw new ResumeError('template 只支持 campus、experience 或 blank');
   const target = path.resolve(directory);

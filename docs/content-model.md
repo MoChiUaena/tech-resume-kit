@@ -1,6 +1,6 @@
-# 内容模型与接口草案
+# 内容模型与接口
 
-`ResumeDocument` 与 `LayoutConfig` 的 `schemaVersion` 均为 `0.2.0`。这是 GitHub v0.3.0 中可运行的接口草案，尚未发布为稳定 npm 包。与阶段 A 的 `0.1.0` 相比，条目和普通章节改用 `blocks`，以保留“段落 → 列表 → 段落”的原始阅读顺序。0.1.0 JSON 仅作为回归基准，不能直接传入新版渲染器。
+`ResumeDocument` 与 `LayoutConfig` 的 `schemaVersion` 均为 `0.2.0`。GitHub v0.4.0 提供可安装 TGZ、公共 ESM 入口和 TypeScript 类型声明，见[调用接口](api.md)。与阶段 A 的 `0.1.0` 相比，条目和普通章节改用 `blocks`，以保留“段落 → 列表 → 段落”的原始阅读顺序。0.1.0 JSON 仅作为回归基准，不能直接传入新版渲染器。
 
 ## ResumeDocument
 
@@ -68,9 +68,7 @@ type LayoutConfig = {
 ## 本地调用
 
 ```js
-import { loadResume } from './src/input.mjs';
-import { renderResume } from './src/render.mjs';
-import { inspectAndExport } from './src/export.mjs';
+import { loadResume, renderResume, inspectAndExport } from 'tech-resume-kit';
 
 const input = await loadResume('personal/my-resume/resume.md');
 const rendered = await renderResume(input.document, input.layout, input);
@@ -83,4 +81,4 @@ const { buffer, metrics } = await inspectAndExport(rendered, { pdf: true });
 - `inspectAndExport(rendered, { pdf: false })` 验证真实浏览器布局和实际 PDF 页数；内部仍生成 PDF 以准确计数，`pdf: true` 才向调用方返回 Buffer。同时返回 `warnings` 和含 `pageCount`、`maxPages`、纸张尺寸的 `metrics`。该函数不写最终输出文件，临时 HTML 在完成后清理。
 - `ResumeError` 携带可选的 `file`、`line`、`field` 与 `code`。输入错误和布局错误返回中文说明。
 
-字体和模板属于套件资源；`assetBase` 是调用上下文，不存入 ResumeDocument。输出覆盖、预览服务和 CLI 选项不混入渲染模型。当前支持一页或两页，超过配置上限会报错；浏览器自然分页，段落和长项目可续页。工作台接入方式见 [交接说明](workbench-handoff.md)，后续稳定接口将依据实际接入情况确定。
+字体和模板属于套件资源；`assetBase` 是调用上下文，不存入 ResumeDocument。输出覆盖、预览服务和 CLI 选项不混入渲染模型。当前支持一页或两页，超过配置上限会报错；浏览器自然分页，段落和长项目可续页。工作台接入方式见 [交接说明](workbench-handoff.md)，JSON 命令和包安装方式见[调用接口](api.md)。

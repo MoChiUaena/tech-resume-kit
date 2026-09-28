@@ -8,11 +8,19 @@
 
 [校招样张 PDF](output/pdf/campus-ink-blue.pdf) · [AI 实习样张 PDF](output/pdf/ai-intern-ink-blue.pdf) · [两页经验样张 PDF](output/pdf/experienced-ink-blue.pdf) · [可直接填写的 resume.md](resume.md) · [版式配置](layout.yaml)
 
-**公开版本 v0.3.1。** 一个墨蓝主风格，提供校招与工作经验编排；支持一页/两页 PDF、独立图片配置、模块排序，以及实际 PDF 的本地自动刷新预览。长标题、长链接、内容增减、长项目续页和照片方向已通过专项验证。
+**公开版本 v0.4.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持一页/两页 PDF、独立图片配置、模块排序，以及实际 PDF 的本地自动刷新预览。长标题、长链接、内容增减、长项目续页和照片方向已通过专项验证。
 
 校招样张使用“奶龙”姓名和白底竖版头像。图片来源与许可信息集中记录在[素材说明](assets/README.md)。
 
-## 三步开始
+## 下载后填写
+
+[下载空白填写 ZIP](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.4.0/tech-resume-starter-0.4.0.zip)，解压后编辑根目录的 `resume.md` 和 `layout.yaml`。
+
+Windows 安装 Node.js 22+ 后，依次运行 `01-install.cmd`、`02-preview.cmd` 和 `03-export-pdf.cmd`。预览自动打开浏览器，导出 PDF 存入 `output/`，每次保存为新文件。macOS / Linux 对应运行 `sh install.sh`、`sh preview.sh`、`sh export-pdf.sh`。
+
+首次安装需要联网下载依赖和 Chromium，准备好后可断网预览和导出。ZIP 内附照片与 Logo 的填写说明。开发者可以下载 [安装包 TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.4.0/tech-resume-kit-0.4.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
+
+## 从源码开始
 
 需要 Node.js 22 或更高版本。首次安装需要联网下载 npm 依赖和 Chromium；准备好后预览和导出可断网运行。
 
@@ -147,7 +155,7 @@ python -X utf8 scripts/verify-pdf.py --directory tmp/pdfs/boundary
 python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
 ```
 
-三份正式样张共 4 页，分别核对 49 / 46 / 71 个文本字段；9 份边界 PDF 共 13 页，另有超出两页和超长页眉两类拒绝用例。全部有效页面已渲染并逐页检查。验证覆盖嵌入字体、正文阅读顺序、链接、图像、纸张边界和标题跟随，记录见 [阶段 C 核验](docs/phase-c-review.md)。14 项自动测试覆盖解析、复制到外部目录、预览刷新及覆盖保护，不宣称所有 ATS 都能正确解析。
+三份正式样张共 4 页，分别核对 49 / 46 / 71 个文本字段；9 份边界 PDF 共 13 页，另有超出两页和超长页眉两类拒绝用例。全部有效页面已渲染并逐页检查。验证覆盖嵌入字体、正文阅读顺序、链接、图像、纸张边界和标题跟随，记录见 [阶段 C 核验](docs/phase-c-review.md)。16 项自动测试覆盖解析、复制到外部目录、预览刷新及覆盖保护，不宣称所有 ATS 都能正确解析。
 
 数据链路为 `Markdown/YAML → ResumeDocument + LayoutConfig → HTML/CSS → Chromium PDF`。模型版本为 `0.2.0`；解析器与渲染器独立，工作台可直接生成相同结构，见 [模型与接口](docs/content-model.md)。阶段 A 的 JSON 留作回归基准，不再是默认编辑入口。
 
@@ -155,4 +163,4 @@ python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
 
 代码、样例文字和虚构校徽采用 [MIT](LICENSE)，中文字体按 [SIL OFL 1.1](assets/fonts/OFL.txt) 分发。图片的来源和使用说明见[素材说明](assets/README.md)。
 
-仓库的 CI 只读取三份匿名样例及合成边界内容，依次运行测试、PDF 文字核验与逐页渲染；源文件审计会拒绝将 `personal/`、`private/` 或意外生成的 PDF 加入 Git。运行时依赖由 `package-lock.json` 固定，可选 PDF 复核工具由 `requirements-qa.txt` 固定。当前以 GitHub 源码和 Release 提供下载，未发布 npm 包。工作台接入字段与调用方式见 [交接说明](docs/workbench-handoff.md)；没有修改工作台项目或部署个人简历网页。
+仓库 CI 使用公开样例、空白起步文件及合成边界内容，验证独立安装、导出、PDF 文字与逐页渲染。运行时依赖由 `package-lock.json` 固定，可选 PDF 复核工具由 `requirements-qa.txt` 固定。当前通过 GitHub 源码和 Release 提供 ZIP / TGZ 下载，未发布到 npm 注册表。工作台接入见[交接说明](docs/workbench-handoff.md)。

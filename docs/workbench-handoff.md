@@ -1,11 +1,15 @@
 # 本地简历工作台接入说明
 
-模板套件版本：`0.3.0`；内容和版式模型的 `schemaVersion`：`0.2.0`。当前交接范围是可用接口与匿名样例，不提前合并工作台和模板仓库，也不修改工作台的代码或依赖。
+套件版本 `0.4.0`，内容与版式模型 `schemaVersion: "0.2.0"`。GitHub Release 提供可安装的 TGZ，公共 ESM 入口和 TypeScript 类型声明见[调用接口](api.md)。
 
-工作台可以生成 `ResumeDocument` 和 `LayoutConfig`，直接调用 `src/render.mjs` 的 `renderResume(document, layout, { assetBase })`，无需先拼 Markdown。结构、默认值和取值范围见 [内容模型](content-model.md)，运行时定义位于 `src/schema.mjs`。`assetBase` 为本地图片目录；`assets.schoolLogo.src` 与 `assets.portrait.src` 是相对路径，二者独立开关。正文段落和列表按 `blocks` 顺序传入。
+Node.js 调用方可直接使用 `renderResume(document, layout, { assetBase })`，再调用 `inspectAndExport(rendered, { pdf: true })` 取得 PDF 字节、真实页数和排版检查结果。Java 等调用方可用 `ProcessBuilder` 执行：
 
-渲染结果交给 `src/export.mjs` 的 `inspectAndExport(rendered, { pdf: true })`，取得 PDF Buffer、页数、布局检查结果和提示。当前限制为 A4、一页或两页；超过 `page.maxPages` 时抛出 `ResumeError`。工作台可以接管输入表单、文件选择和输出保存；应复用套件的 CSS 与 PDF 导出路径，避免维护第二套近似排版。
+```text
+node /installed/tech-resume-kit/src/cli.mjs build-json /local/resume.json --assets /local/assets --out /local/resume.pdf --json
+```
 
-接入前建议在独立分支验证：校招双图、无图 AI 样例、两页经验样例和已有个人数据的本地导出。个人资料留在工作台本地忽略目录，不进入模板套件的 CI、公开 PDF 或 GitHub 仓库。
+参数应作为独立数组元素传入。stdout 为单个 JSON 对象，失败退出码为 1；输出已存在时默认拒绝覆盖。JSON 外层为 `{ document, layout }`，字段规则见[内容模型](content-model.md)。
 
-本仓库保留 `npm run sample`、`npm test` 和 PDF 核验命令供工作台对照。正式跨仓库依赖方式和稳定版本策略需要两个项目协同决定；这个文档只说明当前可运行接口。
+目前工作台使用数值 `schemaVersion: 2`，包含 `content`、UUID 章节、非结构化 `meta`、`classic/banner` 布局和裁切参数；它与套件模型不同，不能直接传入。接入需要明确转换章节、条目日期、素材路径与图片布局，并提示套件范围之外的字号、行距等参数。套件遇到该模型会给出 `MODEL` 错误，不自动丢字段或调整参数。
+
+套件侧接口与下载包已经提供，实际工作台转换与接入仍需在工作台项目完成。建议先用校招双图、无图和两页经验三类内容验证转换后的 PDF。

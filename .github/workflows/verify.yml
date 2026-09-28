@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Audit tracked files
@@ -36,6 +36,12 @@ jobs:
           sudo apt-get install -y poppler-utils
       - name: Test the input and export workflow
         run: npm test
+      - name: Package and install outside the source checkout
+        run: |
+          npm run package:release
+          npm run test:package
+          python scripts/verify-pdf.py --directory tmp/pdfs/install
+          python scripts/render-pdfs.py --directory tmp/pdfs/install
       - name: Build and check only anonymous samples
         run: |
           npm run sample

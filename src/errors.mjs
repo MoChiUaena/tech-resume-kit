@@ -6,6 +6,9 @@ export class ResumeError extends Error {
   toString() {
     return `${this.file || '简历'}${this.line ? `:${this.line}` : ''}${this.field ? ` [${this.field}]` : ''}：${this.message}`;
   }
+  toJSON() {
+    return { code: this.code, message: this.message, file: this.file, line: this.line, field: this.field };
+  }
 }
 
 export function locationFor(locations, field) {
