@@ -12,7 +12,7 @@ import { extractPackage } from '../src/updates.mjs';
 const exec = promisify(execFile), root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 assert.equal(process.platform, 'win32');
 const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
-const outside = await mkdtemp(path.join(tmpdir(), 'tech-resume-免安装 验证-'));
+const outside = await realpath(await mkdtemp(path.join(tmpdir(), 'tech-resume-免安装 验证-')));
 let child, url, token;
 try {
   await exec(process.env.TECH_RESUME_PYTHON || 'python', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert all(".." not in n.split("/") and not n.startswith("/") for n in z.namelist()); z.extractall(sys.argv[2])', path.join(root, 'tmp/packages', `tech-resume-windows-x64-${version}.zip`), outside], { windowsHide: true, timeout: 120000 });
