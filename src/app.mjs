@@ -6,12 +6,13 @@ import { randomBytes, createHash } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import { spawn } from 'node:child_process';
 import { imageSize } from 'image-size';
-import { openProject } from './project.mjs';
+import { openLibrary } from './library.mjs';
+import { backupLimit } from './backup.mjs';
 import { kitRoot } from './render.mjs';
 import { ResumeError } from './errors.mjs';
 
-export async function startEditor(directory, { port = 0, idleSeconds = 0 } = {}) {
-  const project = await openProject(directory), token = randomBytes(24).toString('hex');
+export async function startEditor(directory, { port = 0, idleSeconds = 0, historyIntervalMs } = {}) {
+  const project = await openLibrary(directory, { historyIntervalMs }), token = randomBytes(24).toString('hex');
   let lastSeen = Date.now(), url, closing = false;
   const staticFiles = { '/': ['app/index.html', 'text/html; charset=utf-8'], '/app.js': ['app/app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app/app.css', 'text/css; charset=utf-8'] };
   async function bytes(request, maximum) {
@@ -34,10 +35,15 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0 } = {})
           response.writeHead(200, { 'Content-Type': type }); response.end(contents); lastSeen = Date.now();
         } else if (pathname === '/api/state') { lastSeen = Date.now(); json(await project.read()); }
         else if (pathname === '/api/ping') { lastSeen = Date.now(); json({ ok: true }); }
+        else if (pathname === '/api/history') { lastSeen = Date.now(); json({ backups: await project.backups(requested.searchParams.get('resumeId')), warning: project.historyStatus() }); }
+        else if (pathname === '/backup.zip') {
+          const backup = await project.exportBackup(requested.searchParams.get('resumeId'), requested.searchParams.get('backupId'));
+          response.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(backup.decoded.manifest.resumeName + '-完整备份.zip')}` }); response.end(backup.buffer);
+        }
         else if (pathname === '/api/preview' || pathname === '/document.pdf') {
           lastSeen = Date.now();
-          const result = await project.preview(requested.searchParams.get('revision'));
-          if (pathname === '/api/preview') json({ revision: result.revision, pageCount: result.metrics.pageCount, warnings: result.warnings });
+          const result = await project.preview(requested.searchParams.get('revision'), requested.searchParams.get('resumeId'));
+          if (pathname === '/api/preview') json({ revision: result.revision, resumeId: result.resumeId, pageCount: result.metrics.pageCount, warnings: result.warnings });
           else {
             response.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `${requested.searchParams.has('download') ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(result.name + '-简历.pdf')}` }); response.end(result.buffer);
           }
@@ -45,21 +51,24 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0 } = {})
       } else if (request.method === 'POST') {
         if (request.headers.origin !== url.slice(0, -1) || request.headers['x-resume-token'] !== token) { json({ error: { message: '请求来源不正确，请重新打开应用' } }, 403); return; }
         lastSeen = Date.now();
-        if (pathname === '/api/save' || pathname === '/api/template') {
+        const actions = { '/api/save': project.save, '/api/template': project.useTemplate, '/api/resumes/create': project.create, '/api/resumes/duplicate': project.duplicate, '/api/resumes/rename': project.rename, '/api/resumes/switch': project.switchResume, '/api/backup': project.createBackup, '/api/restore': project.restore };
+        if (actions[pathname]) {
           if (request.headers['content-type']?.split(';')[0] !== 'application/json') throw new ResumeError('请求格式不正确');
           let payload; try { payload = JSON.parse((await bytes(request, 2_000_000)).toString('utf8')); } catch (error) { if (error instanceof ResumeError) throw error; throw new ResumeError('请求格式不正确'); }
-          const state = await (pathname === '/api/save' ? project.save(payload) : project.useTemplate(payload));
+          const state = await actions[pathname](payload);
           json(state);
+        } else if (pathname === '/api/restore-upload') {
+          const payload = { resumeId: request.headers['x-resume-id'], revision: request.headers['x-resume-revision'] };
+          json(await project.restore(payload, await bytes(request, backupLimit)));
         } else if (pathname === '/api/image/portrait' || pathname === '/api/image/schoolLogo') {
           const content = await bytes(request, 5_000_000); let dimensions;
           try { dimensions = imageSize(content); } catch { throw new ResumeError('请选择有效的 PNG 或 JPEG 图片'); }
           if (!['png', 'jpg'].includes(dimensions.type) || !dimensions.width || !dimensions.height || dimensions.width > 20_000 || dimensions.height > 20_000) throw new ResumeError('请选择尺寸不超过 20000 像素的 PNG 或 JPEG 图片');
           const key = pathname.split('/').at(-1), extension = dimensions.type === 'jpg' ? 'jpg' : 'png';
           const src = `assets/${key}-${createHash('sha256').update(content).digest('hex').slice(0, 20)}.${extension}`;
-          await mkdir(path.join(project.root, 'assets'), { recursive: true });
-          await writeFile(path.join(project.root, src), content, { mode: 0o600 });
+          await project.storeImage(request.headers['x-resume-id'], src, content);
           json({ src, alt: key === 'portrait' ? '证件照' : '学校 Logo' });
-        } else if (pathname === '/api/exit') { json({ ok: true }); setTimeout(close, 150); }
+        } else if (pathname === '/api/exit') { await project.flush(); json({ ok: true }); setTimeout(() => close().catch(() => {}), 150); }
         else json({ error: { message: '接口不存在' } }, 404);
       } else json({ error: { message: '请求方式不支持' } }, 405);
     } catch (error) {
@@ -74,10 +83,11 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0 } = {})
   let timer;
   async function close() {
     if (closing) return; closing = true; clearInterval(timer);
+    try { await project.close(); } catch (error) { closing = false; throw error; }
     server.closeAllConnections(); server.close();
     try { const session = JSON.parse(await readFile(sessionFile, 'utf8')); if (session.url === url) await unlink(sessionFile); } catch {}
   }
-  if (idleSeconds) timer = setInterval(() => { if (Date.now() - lastSeen > idleSeconds * 1000) close(); }, 10_000);
+  if (idleSeconds) timer = setInterval(() => { if (Date.now() - lastSeen > idleSeconds * 1000) close().catch(() => {}); }, 10_000);
   return { server, project, url, close };
 }
 

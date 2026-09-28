@@ -1,14 +1,38 @@
 {
   "name": "tech-resume-kit",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "中文技术岗 Markdown 简历模板套件",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/MoChiUaena/tech-resume-kit.git" },
-  "exports": { ".": { "types": "./src/index.d.mts", "import": "./src/index.mjs" } },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MoChiUaena/tech-resume-kit.git"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.mts",
+      "import": "./src/index.mjs"
+    }
+  },
   "types": "./src/index.d.mts",
-  "files": ["src/", "app/", "assets/", "templates/", "examples/ai-intern/*.md", "examples/ai-intern/*.yaml", "examples/experienced/*.md", "examples/experienced/*.yaml", "examples/json/*.json", "resume.md", "layout.yaml", "docs/api.md", "docs/content-model.md", "docs/input-format.md", "starter/"],
+  "files": [
+    "src/",
+    "app/",
+    "assets/",
+    "templates/",
+    "examples/ai-intern/*.md",
+    "examples/ai-intern/*.yaml",
+    "examples/experienced/*.md",
+    "examples/experienced/*.yaml",
+    "examples/json/*.json",
+    "resume.md",
+    "layout.yaml",
+    "docs/api.md",
+    "docs/content-model.md",
+    "docs/input-format.md",
+    "starter/"
+  ],
   "scripts": {
     "sample": "node scripts/build-sample.mjs",
     "init": "node src/cli.mjs init",
@@ -27,6 +51,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "fflate": "0.8.3",
     "image-size": "2.0.4",
     "jsonc-parser": "3.3.1",
     "markdown-it": "15.0.2",

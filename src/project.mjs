@@ -1,4 +1,4 @@
-import { readFile, mkdir, access, stat } from 'node:fs/promises';
+import { readFile, mkdir, access, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { stringify } from 'yaml';
@@ -14,6 +14,19 @@ export async function openProject(directory) {
   const root = path.resolve(directory);
   try { await access(root); } catch (error) { if (error.code === 'ENOENT') await initializeProject(root, 'blank'); else throw error; }
   const inputFile = path.join(root, 'resume.md'), configFile = path.join(root, 'layout.yaml');
+  const pendingFile = path.join(root, 'write-pending.local.json');
+  async function commitPair(source, config) {
+    await saveFile(pendingFile, JSON.stringify({ version: 1, source, config }), true);
+    await saveFile(inputFile, source, true);
+    await saveFile(configFile, config, true);
+    await unlink(pendingFile);
+  }
+  try {
+    const pending = JSON.parse(await readFile(pendingFile, 'utf8'));
+    if (pending.version !== 1 || typeof pending.source !== 'string' || Buffer.byteLength(pending.source) > 500_000 || typeof pending.config !== 'string') throw new ResumeError('未完成的保存记录格式不正确，请保留该文件以便恢复');
+    validate(layoutSchema, readYaml(pending.config), new Map());
+    await commitPair(pending.source, pending.config);
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
   const revisionOf = (source, config) => createHash('sha256').update(source).update('\0').update(config).digest('hex');
   async function read() {
     const [source, config] = await Promise.all([readFile(inputFile, 'utf8'), readFile(configFile, 'utf8')]);
@@ -33,8 +46,7 @@ export async function openProject(directory) {
   async function write(source, layout) {
     if (typeof source !== 'string' || Buffer.byteLength(source, 'utf8') > 500_000) throw new ResumeError('Markdown 内容超过 500 KB 或格式不正确');
     const normalized = validate(layoutSchema, layout, new Map());
-    await saveFile(inputFile, source, true);
-    await saveFile(configFile, stringify(normalized), true);
+    await commitPair(source, stringify(normalized));
     cached = undefined;
     return read();
   }

@@ -38,7 +38,7 @@ try {
   let state = await (await fetch(url + 'api/state')).json();
   const preview = await (await fetch(url + 'api/preview')).json(); assert.equal(preview.pageCount, 1);
   state.front.person.name = '免安装填写示例';
-  state = await post('api/save', { revision: state.revision, front: state.front, body: state.body, layout: state.layout });
+  state = await post('api/save', { resumeId: state.resumeId, revision: state.revision, front: state.front, body: state.body, layout: state.layout });
   const document = await fetch(url + `document.pdf?revision=${state.revision}&download=1`); assert.equal(document.status, 200);
   const buffer = Buffer.from(await document.arrayBuffer()); assert.equal((await PDFDocument.load(buffer)).getPageCount(), 1);
   const qa = path.join(root, 'tmp/pdfs/editor'); await mkdir(qa, { recursive: true });
@@ -46,12 +46,36 @@ try {
   const { parseResume } = await import('../src/input.mjs'); const { resolveSectionOrder } = await import('../src/schema.mjs');
   const model = parseResume(state.source).document; state.layout.sectionOrder = resolveSectionOrder(model, state.layout);
   await writeFile(path.join(qa, 'portable-blank.expected.json'), JSON.stringify(pdfExpectations({ document: model, layout: state.layout, images: {} }, 1)));
-  state = await post('api/template', { template: 'experience', revision: state.revision });
+  state = await post('api/template', { resumeId: state.resumeId, template: 'experience', revision: state.revision });
   const twoPages = await (await fetch(url + 'api/preview')).json(); assert.equal(twoPages.pageCount, 2);
   assert.match(await readFile(path.join(portable, 'my-resume/resume.md'), 'utf8'), /后端/);
+  const originalId = state.resumeId;
+  const snapshot = await post('api/backup', { resumeId: state.resumeId, revision: state.revision });
+  const archive = await fetch(url + `backup.zip?resumeId=${state.resumeId}&backupId=${snapshot.id}`);
+  assert.equal(archive.status, 200);
+  state = await post('api/resumes/duplicate', { resumeId: state.resumeId, revision: state.revision, name: '另一份求职版本' });
+  assert.notEqual(state.resumeId, originalId);
+  const otherId = state.resumeId;
+  state.front.person.name = '第二份简历';
+  state = await post('api/save', { resumeId: state.resumeId, revision: state.revision, front: state.front, body: state.body, layout: state.layout });
+  state = await post('api/resumes/switch', { resumeId: state.resumeId, revision: state.revision, targetId: originalId });
+  assert.notEqual(state.front.person.name, '第二份简历');
+  state = await post('api/resumes/switch', { resumeId: state.resumeId, revision: state.revision, targetId: otherId });
+  assert.equal(state.front.person.name, '第二份简历');
+  state = await post('api/restore', { resumeId: state.resumeId, revision: state.revision, backupId: (await (await fetch(url + `api/history?resumeId=${otherId}`)).json()).backups.find(b => b.kind === 'initial').id });
+  assert.notEqual(state.front.person.name, '第二份简历');
   await post('api/exit', {});
   if (child.exitCode === null) await new Promise((resolve, reject) => { const timer = setTimeout(() => reject(new Error('Portable shutdown timed out')), 10000); child.once('exit', code => { clearTimeout(timer); assert.equal(code, 0); resolve(); }); });
-  await writeFile(path.join(root, 'tmp/packages/windows-smoke.json'), JSON.stringify({ version, bundledNode: true, noNodeInPath: true, independentBrowserCache: true, offlineProxy: true, singleton: true, autosave: true, pdfPages: [1, 2], cleanExit: true }, null, 2));
+  child = spawn(executable, ['--no-open'], { cwd: outside, windowsHide: true, stdio: 'ignore', env: { ...process.env, PATH: path.join(system, 'System32'), PLAYWRIGHT_BROWSERS_PATH: path.join(outside, 'missing-browser-cache'), HTTP_PROXY: 'http://127.0.0.1:9', HTTPS_PROXY: 'http://127.0.0.1:9' } });
+  let restarted;
+  for (let i = 0; i < 100; i++) { try { restarted = JSON.parse(await readFile(sessionFile, 'utf8')); if (restarted.pid !== session.pid) break; } catch {} await new Promise(resolve => setTimeout(resolve, 200)); }
+  assert.ok(restarted && restarted.pid !== session.pid, 'Restart did not create a fresh session');
+  url = restarted.url; token = /name="resume-token" content="([a-f0-9]+)"/.exec(await (await fetch(url)).text())[1];
+  const afterRestart = await (await fetch(url + 'api/state')).json();
+  assert.equal(afterRestart.resumeId, otherId); assert.equal(afterRestart.resumes.length, 2); assert.notEqual(afterRestart.front.person.name, '第二份简历');
+  await post('api/exit', {});
+  if (child.exitCode === null) await new Promise((resolve, reject) => { const timer = setTimeout(() => reject(new Error('Restart shutdown timed out')), 10000); child.once('exit', code => { clearTimeout(timer); assert.equal(code, 0); resolve(); }); });
+  await writeFile(path.join(root, 'tmp/packages/windows-smoke.json'), JSON.stringify({ version, bundledNode: true, noNodeInPath: true, independentBrowserCache: true, offlineProxy: true, singleton: true, autosave: true, pdfPages: [1, 2], multipleResumes: true, completeBackup: true, restore: true, restartPersistence: true, cleanExit: true }, null, 2));
   console.log('Windows EXE passed: no system Node PATH, missing global browser cache, offline export, one/two pages, singleton and clean exit.');
 } finally {
   if (child?.pid && child.exitCode === null) await exec('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }).catch(() => {});

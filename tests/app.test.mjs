@@ -9,6 +9,7 @@ import { startEditor } from '../src/app.mjs';
 import { kitRoot } from '../src/render.mjs';
 import { pdfExpectations } from '../scripts/pdf-expectations.mjs';
 import { writeFile } from 'node:fs/promises';
+import { decodeBackup } from '../src/backup.mjs';
 
 async function fixture(t) {
   const root = await mkdtemp(path.join(tmpdir(), 'tech-resume-editor-'));
@@ -19,7 +20,7 @@ async function fixture(t) {
 test('editor protects local writes and stale edits, and malformed Markdown remains recoverable', async t => {
   const app = await fixture(t), state = await (await fetch(app.url + 'api/state')).json();
   const html = await (await fetch(app.url)).text(), token = /name="resume-token" content="([a-f0-9]+)"/.exec(html)[1];
-  const post = (payload, headers = {}) => fetch(app.url + 'api/save', { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(payload) });
+  const post = (payload, headers = {}) => fetch(app.url + 'api/save', { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ resumeId: state.resumeId, ...payload }) });
   assert.equal((await post({})).status, 403);
   assert.equal((await fetch(app.url + 'resume.md')).status, 404);
   const headers = { Origin: app.url.slice(0, -1), 'X-Resume-Token': token };
@@ -78,4 +79,55 @@ test('browser editor autosaves, exports actual PDFs, recovers from errors and ba
   await writeFile(path.join(directory, 'editor-campus.expected.json'), JSON.stringify(pdfExpectations({ ...result, images: Object.fromEntries(result.metrics.images.map(image => [image.asset, true])) }, 1)));
   await page.waitForTimeout(1400); await page.screenshot({ path: path.join(directory, 'editor-screen.png') });
   assert.deepEqual(pageErrors, []);
+});
+
+test('browser manages independent resumes and restores a full downloadable backup with pictures', async t => {
+  const app = await fixture(t), browser = await chromium.launch({ channel: 'chromium' }); t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1500, height: 1040 } });
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto(app.url); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.locator('#resume-create').click(); await page.getByLabel('简历名称', { exact: true }).fill('Java 校招');
+  await page.locator('#resume-template').selectOption('campus'); await page.locator('#resume-submit').click();
+  await page.waitForFunction(() => document.querySelector('#resume-select').selectedOptions[0]?.textContent === 'Java 校招');
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  const javaId = await page.locator('#resume-select').inputValue();
+  await page.getByLabel('姓名', { exact: true }).fill('多版本填写示例'); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.locator('#history-open').click(); await page.locator('#backup-create').click();
+  await page.locator('.history-item').filter({ hasText: '手动备份' }).waitFor();
+  await page.getByRole('button', { name: '关闭备份与恢复' }).click();
+  await page.locator('#resume-copy').click(); await page.getByLabel('简历名称', { exact: true }).fill('AI 申请版'); await page.locator('#resume-submit').click();
+  await page.waitForFunction(() => document.querySelector('#resume-select').selectedOptions[0]?.textContent === 'AI 申请版');
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 }); const aiId = await page.locator('#resume-select').inputValue(); assert.notEqual(aiId, javaId);
+  await page.getByLabel('姓名', { exact: true }).fill('AI 版本修改'); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.locator('#resume-rename').click(); await page.getByLabel('简历名称', { exact: true }).fill('AI 实习'); await page.locator('#resume-submit').click();
+  await page.waitForFunction(() => document.querySelector('#resume-select').selectedOptions[0]?.textContent === 'AI 实习');
+  await page.locator('#resume-select').selectOption(javaId);
+  await page.waitForFunction(() => document.querySelector('#name').value === '多版本填写示例'); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.getByLabel('姓名', { exact: true }).fill('待恢复内容'); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.locator('#settings-open').click(); await page.locator('#portrait-upload').setInputFiles(path.join(kitRoot, 'assets/images/synthetic-portrait.jpg'));
+  await page.getByRole('button', { name: '关闭设置' }).click(); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.locator('#history-open').click();
+  await page.locator('.history-item').filter({ hasText: '手动备份' }).getByRole('button', { name: '恢复', exact: true }).click();
+  await page.locator('#restore-confirm').click(); await page.waitForFunction(() => document.querySelector('#name').value === '多版本填写示例');
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  const restored = await app.project.read(); assert.equal(restored.resumeId, javaId);
+  const directory = path.join(app.project.root, 'resumes', javaId);
+  assert.deepEqual(await readFile(path.join(directory, restored.front.assets.portrait.src)), await readFile(path.join(kitRoot, 'assets/images/nailong-avatar.jpg')));
+  await page.locator('.history-item').filter({ hasText: '恢复前' }).waitFor();
+  const [archiveDownload] = await Promise.all([page.waitForEvent('download'), page.locator('#backup-export').click()]);
+  const qa = path.join(kitRoot, 'tmp/pdfs/library'); await mkdir(qa, { recursive: true });
+  const archivePath = path.join(qa, 'complete-backup.zip'); await archiveDownload.saveAs(archivePath);
+  const archive = decodeBackup(await readFile(archivePath)); assert.ok(Object.keys(archive.files).some(key => key.startsWith('assets/')));
+  await page.getByRole('button', { name: '关闭备份与恢复' }).click(); await page.locator('#resume-select').selectOption(aiId);
+  await page.waitForFunction(() => document.querySelector('#name').value === 'AI 版本修改'); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.locator('#history-open').click(); await page.locator('#backup-import').setInputFiles(archivePath); await page.locator('#restore-confirm').click();
+  await page.waitForFunction(() => document.querySelector('#name').value === '多版本填写示例'); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  assert.equal((await app.project.read()).resumeId, aiId);
+  await page.getByRole('button', { name: '关闭备份与恢复' }).click(); await page.reload();
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 }); assert.equal(await page.locator('#resume-select').inputValue(), aiId);
+  const result = await app.project.preview(), target = path.join(qa, 'restored-library.pdf'); await writeFile(target, result.buffer);
+  await writeFile(path.join(qa, 'restored-library.expected.json'), JSON.stringify(pdfExpectations({ ...result, images: Object.fromEntries(result.metrics.images.map(image => [image.asset,true])) }, 1)));
+  await page.waitForTimeout(1200); await page.screenshot({ path: path.join(qa, 'library-screen.png') });
+  await page.locator('#history-open').click(); await page.screenshot({ path: path.join(qa, 'history-screen.png') });
+  assert.deepEqual(errors, []);
 });

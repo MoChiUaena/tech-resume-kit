@@ -8,21 +8,25 @@
 
 [校招样张 PDF](output/pdf/campus-ink-blue.pdf) · [AI 实习样张 PDF](output/pdf/ai-intern-ink-blue.pdf) · [两页经验样张 PDF](output/pdf/experienced-ink-blue.pdf) · [可直接填写的 resume.md](resume.md) · [版式配置](layout.yaml)
 
-**公开版本 v0.5.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持一页/两页 PDF、独立图片配置、模块排序，以及实际 PDF 的本地自动刷新预览。长标题、长链接、内容增减、长项目续页和照片方向已通过专项验证。
+**公开版本 v0.6.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持一页/两页 PDF、独立图片配置、模块排序，以及实际 PDF 的本地自动刷新预览。长标题、长链接、内容增减、长项目续页和照片方向已通过专项验证。
 
 校招样张使用“奶龙”姓名和白底竖版头像。图片来源与许可信息集中记录在[素材说明](assets/README.md)。
 
 ## 下载使用
 
-[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.5.0/tech-resume-windows-x64-0.5.0.zip) · Windows 10 / 11 x64 · 约 187 MB
+[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.6.0/tech-resume-windows-x64-0.6.0.zip) · Windows 10 / 11 x64 · 约 187 MB
 
 1. 完整解压，双击 **启动简历.exe**。
 2. 在打开的页面填写基本信息和 Markdown 经历，右侧自动更新实际 PDF 预览。
 3. 点击 **下载 PDF**。
 
-照片、校徽和版式通过“版式与图片”设置。修改自动保存到 `my-resume/`，再次启动可以继续编辑；切换起步模板前会备份当前内容。保留整个 `my-resume/` 文件夹即可备份或迁移自己的资料。
+照片、校徽和版式通过“版式与图片”设置。修改自动保存到 `my-resume/`，再次启动可以继续编辑。
 
-运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.5.0/tech-resume-kit-0.5.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
+“当前简历”支持新建、复制、重命名和切换，每份简历有独立正文、版式、图片与历史。“备份与恢复”可以立即备份、下载包含图片的完整 ZIP，以及恢复历史版本或备份文件；恢复前先保留当前内容。有修改时每 5 分钟生成自动版本，切换或退出前也会保存。
+
+旧版 `resume.md`、`layout.yaml`、图片与 `backups/` 留在原位置，升级后作为第一份简历。新简历存入 `my-resume/resumes/`，新版完整备份在 `my-resume/history/`，列表保存在 `my-resume/library.json`。复制整个 `my-resume/` 文件夹即可迁移全部资料；完整备份 ZIP 对应当前选中的一份简历。
+
+运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.6.0/tech-resume-kit-0.6.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
 
 ## 从源码开始
 
@@ -167,7 +171,7 @@ python -X utf8 scripts/verify-pdf.py --directory tmp/pdfs/boundary
 python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
 ```
 
-三份正式样张共 4 页，分别核对 49 / 46 / 71 个文本字段；9 份边界 PDF 共 13 页，另有超出两页和超长页眉两类拒绝用例。全部有效页面已渲染并逐页检查。验证覆盖嵌入字体、正文阅读顺序、链接、图像、纸张边界和标题跟随，记录见 [阶段 C 核验](docs/phase-c-review.md)。18 项自动测试覆盖解析、复制到外部目录、预览刷新及覆盖保护，不宣称所有 ATS 都能正确解析。
+三份正式样张共 4 页，分别核对 49 / 46 / 71 个文本字段；9 份边界 PDF 共 13 页，另有超出两页和超长页眉两类拒绝用例。全部有效页面已渲染并逐页检查。验证覆盖嵌入字体、正文阅读顺序、链接、图像、纸张边界和标题跟随，记录见 [阶段 C 核验](docs/phase-c-review.md)。26 项自动测试覆盖解析、复制到外部目录、预览刷新及覆盖保护，不宣称所有 ATS 都能正确解析。
 
 数据链路为 `Markdown/YAML → ResumeDocument + LayoutConfig → HTML/CSS → Chromium PDF`。模型版本为 `0.2.0`；解析器与渲染器独立，工作台可直接生成相同结构，见 [模型与接口](docs/content-model.md)。阶段 A 的 JSON 留作回归基准，不再是默认编辑入口。
 
