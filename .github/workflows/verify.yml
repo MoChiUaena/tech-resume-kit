@@ -26,7 +26,7 @@ jobs:
       - name: Audit tracked files
         run: |
           python scripts/audit-public-files.py
-          python scripts/test-signing.py
+          python scripts/test-macos-bundle.py
       - name: Install locked Node dependencies and Chromium
         run: |
           npm ci
@@ -106,8 +106,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GODEBUG: http2client=0
         run: gh release download v0.7.0 --repo MoChiUaena/tech-resume-kit --pattern tech-resume-windows-x64-0.7.0.zip --dir tmp/packages
-      - name: Verify Windows signing refuses missing or untrusted credentials
-        run: pwsh -NoProfile -File scripts/test-windows-signing.ps1
       - name: Verify published-version upgrade and reopening the old program
         run: npm run test:upgrade
       - uses: actions/upload-artifact@v7.0.1
@@ -170,7 +168,7 @@ jobs:
           npm run test:posix
           python scripts/verify-pdf.py --directory tmp/pdfs/portable
           python scripts/render-pdfs.py --directory tmp/pdfs/portable
-      - name: Build and verify the native macOS app with test signatures
+      - name: Build and verify the native macOS app
         if: runner.os == 'macOS'
         run: |
           npm run package:macos-app
@@ -184,7 +182,7 @@ jobs:
           compression-level: 0
           retention-days: 7
           path: |
-            tmp/packages/tech-resume-macos-app-*-adhoc.*
+            tmp/packages/tech-resume-macos-app-${{ matrix.arch }}-*
             tmp/pdfs/macos-app/
       - uses: actions/upload-artifact@v7.0.1
         if: runner.os == 'macOS'

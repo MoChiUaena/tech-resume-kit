@@ -12,11 +12,9 @@ import { pdfExpectations } from './pdf-expectations.mjs';
 assert.equal(process.platform, 'darwin');
 const exec = promisify(execFile), root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
-const mode = process.env.TECH_RESUME_MAC_APP_MODE || 'adhoc';
-assert.ok(['adhoc', 'notarized'].includes(mode));
-const name = `tech-resume-macos-app-${process.arch}-${version}${mode === 'adhoc' ? '-adhoc' : ''}`;
-const proof = JSON.parse(await readFile(path.join(root, `tmp/packages/${name}.signing.json`), 'utf8'));
-assert.equal(proof.mode, mode); assert.equal(proof.notarized, mode === 'notarized'); assert.equal(proof.developerId, mode === 'notarized');
+const name = `tech-resume-macos-app-${process.arch}-${version}`;
+const proof = JSON.parse(await readFile(path.join(root, `tmp/packages/${name}.validation.json`), 'utf8'));
+assert.equal(proof.bundleIntegrityVerified, true);
 const outer = await realpath(await mkdtemp(path.join(tmpdir(), 'tech-resume-mac-app-')));
 let child, browser, url, token;
 const stop = async () => {
@@ -79,14 +77,10 @@ try {
   await browser.close(); browser = null; await stop();
   await launch(); assert.equal((await (await fetch(url + 'api/state')).json()).front.person.name, '奶龙应用验证'); await stop();
   await exec('/usr/bin/codesign', ['--verify', '--deep', '--strict', app]);
-  if (mode === 'notarized') {
-    await exec('/usr/bin/xcrun', ['stapler', 'validate', app]);
-    await exec('/usr/sbin/spctl', ['--assess', '--type', 'execute', app]);
-  }
   await writeFile(path.join(app, 'Contents/Info.plist'), Buffer.from((await readFile(path.join(app, 'Contents/Info.plist'))).toString().replace('Tech Resume Kit', 'Tampered Resume')));
   await assert.rejects(exec('/usr/bin/codesign', ['--verify', '--deep', '--strict', app]));
-  await writeFile(path.join(root, `tmp/packages/${name}.smoke.json`), JSON.stringify({ version, arch: process.arch, mode, nativeApp: true, packageRuntimes: true, singleton: true, offlinePdf: true, restartPersistence: true, bundleUnchangedByEditing: true, tamperingRejected: true, notarized: proof.notarized }, null, 2));
-  console.log(`macOS ${process.arch}: native app, offline PDF, restart and signature tampering checks passed (${mode}).`);
+  await writeFile(path.join(root, `tmp/packages/${name}.smoke.json`), JSON.stringify({ version, arch: process.arch, nativeApp: true, packageRuntimes: true, singleton: true, offlinePdf: true, restartPersistence: true, bundleUnchangedByEditing: true, tamperingRejected: true }, null, 2));
+  console.log(`macOS ${process.arch}: native app, offline PDF, restart and resource integrity checks passed.`);
 } finally {
   await browser?.close(); await stop().catch(() => {});
   if (child?.exitCode === null) child.kill('SIGTERM');

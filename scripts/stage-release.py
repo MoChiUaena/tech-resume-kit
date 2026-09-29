@@ -56,7 +56,6 @@ with zipfile.ZipFile(file) as archive:
     prefix = f'tech-resume-windows-x64-{version}/'
     assert all(name.startswith(prefix) and '..' not in PurePosixPath(name).parts for name in archive.namelist())
     manifest = json.loads(archive.read(prefix + 'runtime/versions.json'))
-    assert manifest.get('signing', {}).get('state', 'unsigned') == 'unsigned', 'Signed distributions require the separately verified signing workflow outputs'
     assert manifest['kit'] == version and manifest['node'] == '24.18.0' and manifest['chromiumHeadlessRevision'] == '1243'
     assert json.loads(archive.read(prefix + 'toolkit/package.json'))['version'] == version
     with archive.open(prefix + 'runtime/node.exe') as stream:

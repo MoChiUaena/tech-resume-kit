@@ -12,11 +12,6 @@ import urllib.request
 import zipfile
 
 assert os.name == 'nt', 'Build this Windows package on Windows.'
-signing_mode = os.environ.get('TECH_RESUME_WINDOWS_SIGNING', 'unsigned')
-if signing_mode not in {'unsigned', 'required'}:
-    raise SystemExit('TECH_RESUME_WINDOWS_SIGNING must be unsigned or required.')
-if signing_mode == 'required' and not re.fullmatch(r'[0-9a-fA-F]{40}', os.environ.get('TECH_RESUME_WIN_CERT_THUMBPRINT', '')):
-    raise SystemExit('Required Windows signing is not configured; an unsigned package will not be substituted.')
 root = Path(__file__).resolve().parents[1]
 output = root / 'tmp/packages'
 output.mkdir(parents=True, exist_ok=True)
@@ -79,18 +74,10 @@ with tempfile.TemporaryDirectory(prefix='windows-', dir=output) as staging:
     shutil.copy2(root / 'desktop/winldd-LICENSE.txt', winldd / 'LICENSE.PrintDeps.txt')
     shutil.copy2(root / 'node_modules/playwright-core/LICENSE', winldd / 'LICENSE.Apache-2.0.txt')
     subprocess.run([str(compiler), '/nologo', '/target:winexe', '/platform:x64', '/codepage:65001', '/reference:System.Windows.Forms.dll', '/reference:System.Web.Extensions.dll', f'/out:{stage / "启动简历.exe"}', str(root / 'desktop/Launcher.cs')], check=True)
-    signing = {'state': 'unsigned', 'authenticode': False, 'timestamped': False}
-    if signing_mode == 'required':
-        completed = subprocess.run([shutil.which('pwsh') or 'powershell.exe', '-NoProfile', '-File', str(root / 'scripts/sign-windows.ps1'), '-File', str(stage / '启动简历.exe')], capture_output=True, text=True, encoding='utf-8')
-        if completed.returncode:
-            raise SystemExit('Windows signing or trusted timestamp verification failed; no package was created.')
-        signing = json.loads(completed.stdout)
-        if signing.get('state') != 'verified' or not signing.get('authenticode') or not signing.get('timestamped') or signing.get('launcherSha256') != hashlib.sha256((stage / '启动简历.exe').read_bytes()).hexdigest():
-            raise SystemExit('Windows signing evidence does not match the launcher.')
     shutil.copy2(root / 'desktop/README.md', stage / '使用说明.md')
     shutil.copy2(root / 'LICENSE', stage / 'LICENSE')
     (stage / '.gitignore').write_text('my-resume/\n*.local.*\nruntime/\ntoolkit/node_modules/\n', encoding='utf-8')
-    manifest = {'kit': version, 'node': node_version, 'nodeSource': f'https://nodejs.org/dist/v{node_version}/{node_name}.zip', 'nodeArchiveSha256': node_sha, 'nodeExeSha256': hashlib.sha256((runtime / 'node.exe').read_bytes()).hexdigest(), 'playwright': '1.63.0', 'chromiumHeadlessRevision': revisions['chromium-headless-shell'], 'signing': signing}
+    manifest = {'kit': version, 'node': node_version, 'nodeSource': f'https://nodejs.org/dist/v{node_version}/{node_name}.zip', 'nodeArchiveSha256': node_sha, 'nodeExeSha256': hashlib.sha256((runtime / 'node.exe').read_bytes()).hexdigest(), 'playwright': '1.63.0', 'chromiumHeadlessRevision': revisions['chromium-headless-shell']}
     (runtime / 'versions.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     print('Writing Windows portable ZIP with runtime and browser resources.', flush=True)
     with zipfile.ZipFile(portable_zip, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:

@@ -59,7 +59,7 @@ Linux 可能需要用 `npx playwright install --with-deps chromium` 安装系统
 
 main 开发版提供工作台模型 2、3、4 的显式转换 API 与 JSON 命令，返回章节映射和版式差异报告，见[工作台接入](docs/workbench-handoff.md)。该接口尚未进入 v0.8.0 下载包。
 
-开发版另提供 macOS 原生 `.app` 和 Windows / macOS 签名构建入口，见[签名说明](docs/signing.md)。正式签名和公证尚未完成，公开下载仍为 v0.8.0。
+开发版另提供可双击打开的 macOS 原生 `.app`，随包提供运行组件，使用方式见[macOS 应用包](docs/macos-app.md)。公开下载仍为 v0.8.0，成熟功能统一通过 GitHub Release 交付。
 
 如需使用命令行，先创建独立起步目录：
 
