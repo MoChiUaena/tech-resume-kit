@@ -7,3 +7,9 @@ my-resume/
 *.local.*
 output/personal/
 output/pdf/*.html
+__pycache__/
+*.pfx
+*.p12
+*.p8
+*.keychain
+*.keychain-db

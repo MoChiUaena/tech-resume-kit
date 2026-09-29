@@ -12,6 +12,8 @@ for filename in sorted(tracked):
         raise SystemExit(f'Private or generated path is tracked: {filename}')
     if any(part.startswith('.env') or '.local.' in part for part in parts):
         raise SystemExit(f'Local-only file is tracked: {filename}')
+    if Path(filename).suffix.lower() in {'.pfx', '.p12', '.p8', '.keychain', '.keychain-db'}:
+        raise SystemExit(f'Signing credentials are tracked: {filename}')
     if filename.startswith('output/pdf/'):
         basename = Path(filename).name
         stems = ('campus-ink-blue', 'ai-intern-ink-blue', 'experienced-ink-blue')

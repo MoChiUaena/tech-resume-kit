@@ -35,6 +35,8 @@ def copy(source):
     return target
 
 source = inputs / 'source'
+test_report = json.loads((source / 'tmp/source-tests.json').read_text())
+assert test_report['failures'] == 0 and test_report['passed'] > 0 and test_report['tests'] >= test_report['passed']
 copy(source / 'tmp/packages' / f'tech-resume-kit-{version}.tgz')
 copy(source / 'tmp/packages' / f'tech-resume-starter-{version}.zip')
 for stem, pages in [('campus-ink-blue', 1), ('ai-intern-ink-blue', 1), ('experienced-ink-blue', 2)]:
@@ -54,6 +56,7 @@ with zipfile.ZipFile(file) as archive:
     prefix = f'tech-resume-windows-x64-{version}/'
     assert all(name.startswith(prefix) and '..' not in PurePosixPath(name).parts for name in archive.namelist())
     manifest = json.loads(archive.read(prefix + 'runtime/versions.json'))
+    assert manifest.get('signing', {}).get('state', 'unsigned') == 'unsigned', 'Signed distributions require the separately verified signing workflow outputs'
     assert manifest['kit'] == version and manifest['node'] == '24.18.0' and manifest['chromiumHeadlessRevision'] == '1243'
     assert json.loads(archive.read(prefix + 'toolkit/package.json'))['version'] == version
     with archive.open(prefix + 'runtime/node.exe') as stream:
@@ -92,7 +95,7 @@ for label in ['linux-x64', 'linux-arm64', 'macos-x64', 'macos-arm64']:
 
 assets = [{'name': file.name, 'size': file.stat().st_size, 'sha256': sha(file)} for file in sorted(output.iterdir()) if file.name not in {'release-validation.json', 'SHA256SUMS.txt'}]
 assert len(assets) == 11
-report = {'version': version, 'commit': head, 'ciRun': run_id, 'ciUrl': f'https://github.com/MoChiUaena/tech-resume-kit/actions/runs/{run_id}', 'tests': 78, 'jobs': [{'name': job['name'], 'conclusion': job['conclusion']} for job in run['jobs']], 'windowsUpgrade': upgrade, 'platforms': platforms, 'publicPdfPages': [1, 1, 2], 'signing': {'windows': False, 'macosNotarized': False}, 'assets': assets}
+report = {'version': version, 'commit': head, 'ciRun': run_id, 'ciUrl': f'https://github.com/MoChiUaena/tech-resume-kit/actions/runs/{run_id}', 'tests': test_report['tests'], 'testResults': test_report, 'jobs': [{'name': job['name'], 'conclusion': job['conclusion']} for job in run['jobs']], 'windowsUpgrade': upgrade, 'platforms': platforms, 'publicPdfPages': [1, 1, 2], 'signing': {'windows': False, 'macosNotarized': False}, 'assets': assets}
 (output / 'release-validation.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 files = sorted(file for file in output.iterdir() if file.name != 'SHA256SUMS.txt')
 (output / 'SHA256SUMS.txt').write_text(''.join(f'{sha(file)}  {file.name}\n' for file in files), encoding='utf-8')

@@ -18,6 +18,12 @@ let child, url, token, browser;
 try {
   await exec(process.env.TECH_RESUME_PYTHON || 'python', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert all(".." not in n.split("/") and not n.startswith("/") for n in z.namelist()); z.extractall(sys.argv[2])', path.join(root, 'tmp/packages', `tech-resume-windows-x64-${version}.zip`), outside], { windowsHide: true, timeout: 120000 });
   const portable = path.join(outside, `tech-resume-windows-x64-${version}`), executable = path.join(portable, '启动简历.exe');
+  if (process.env.TECH_RESUME_WINDOWS_SIGNING === 'required') {
+    const verified = await exec('pwsh', ['-NoProfile', '-File', path.join(root, 'scripts/sign-windows.ps1'), '-File', executable, '-VerifyOnly'], { windowsHide: true });
+    assert.equal(JSON.parse(verified.stdout).state, 'verified');
+    const manifest = JSON.parse(await readFile(path.join(portable, 'runtime/versions.json'), 'utf8'));
+    assert.equal(manifest.signing.launcherSha256, JSON.parse(verified.stdout).launcherSha256);
+  }
   const settingsFile = path.join(outside, '用户 设置/settings.json'), directory = path.join(outside, '用户 设置/data');
   const args = ['--no-open', '--settings', settingsFile];
   await initializeProject(path.join(portable, 'my-resume'), 'blank');
