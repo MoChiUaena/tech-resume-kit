@@ -15,6 +15,14 @@ on:
         description: Successful Verify workflow run ID
         required: true
         type: string
+      topic:
+        description: Short functional theme used after the version in the release title
+        required: true
+        type: string
+      notes:
+        description: Concrete release notes for the verified candidate
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -28,6 +36,8 @@ jobs:
       RELEASE_VERSION: ${{ inputs.version }}
       CANDIDATE_SHA: ${{ inputs.candidate_sha }}
       CANDIDATE_RUN: ${{ inputs.candidate_run }}
+      RELEASE_TOPIC: ${{ inputs.topic }}
+      RELEASE_NOTES: ${{ inputs.notes }}
       GH_TOKEN: ${{ github.token }}
       GODEBUG: http2client=0
     steps:
@@ -42,6 +52,9 @@ jobs:
           from pathlib import Path
           version=os.environ['RELEASE_VERSION']; head=os.environ['CANDIDATE_SHA']; run=os.environ['CANDIDATE_RUN']
           assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',version)
+          topic=os.environ['RELEASE_TOPIC'];notes=os.environ['RELEASE_NOTES']
+          assert topic.strip()==topic and 1<=len(topic)<=60 and not any(ord(c)<32 for c in topic)
+          assert notes.strip()
           assert re.fullmatch(r'[0-9a-f]{40}',head) and run.isdigit()
           state=json.loads(subprocess.check_output(['gh','run','view',run,'--repo','MoChiUaena/tech-resume-kit','--json','status,conclusion,headSha,jobs']))
           assert state['headSha']==head and state['status']=='completed' and state['conclusion']=='success'
@@ -70,12 +83,13 @@ jobs:
           body=(assets/'release-validation.json').read_text();data=json.loads(body)
           assert data['commit']==head and data['version']==version
           notes=base/'notes.md'
-          notes.write_text('经历条目支持编辑、复制、排序和删除；简历库提供回收站与整库 ZIP。Windows、macOS Intel / Apple Silicon、Linux x64 / ARM64 启动包内置 Node、Chromium、字体和依赖。\n\n从 v0.7.0 升级验收核对了 23 个原文件，简历、图片、历史和当前选择保留，旧程序可重新打开资料。78 项测试和六项 CI 通过。\n\nWindows EXE 未签名，macOS 包未签名、公证；Linux 系统依赖说明随包提供。附 SHA256SUMS.txt 与 release-validation.json。\n')
+          notes.write_text(os.environ['RELEASE_NOTES'].strip()+'\n\n'+str(data['tests'])+' 项 Node.js 测试与六项 CI 通过。签名状态与文件摘要见 release-validation.json 和 SHA256SUMS.txt。\n')
           result=subprocess.run(['gh','release','view',tag,'--repo','MoChiUaena/tech-resume-kit','--json','isDraft,targetCommitish'],capture_output=True,text=True)
           if result.returncode==0:
             existing=json.loads(result.stdout);assert existing['isDraft'] and existing['targetCommitish']==head
+            subprocess.run(['gh','release','edit',tag,'--repo','MoChiUaena/tech-resume-kit','--title',tag+' - '+os.environ['RELEASE_TOPIC'],'--notes-file',str(notes)],check=True)
           else:
-            subprocess.run(['gh','release','create',tag,'--repo','MoChiUaena/tech-resume-kit','--target',head,'--title',tag+' - 简历管理与跨平台启动','--notes-file',str(notes),'--draft'],check=True)
+            subprocess.run(['gh','release','create',tag,'--repo','MoChiUaena/tech-resume-kit','--target',head,'--title',tag+' - '+os.environ['RELEASE_TOPIC'],'--notes-file',str(notes),'--draft'],check=True)
           for file in sorted(assets.iterdir()):
             subprocess.run(['gh','release','upload',tag,str(file),'--repo','MoChiUaena/tech-resume-kit'],check=True)
           PY

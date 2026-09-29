@@ -7,3 +7,4 @@ my-resume/
 *.local.*
 output/personal/
 output/pdf/*.html
+__pycache__/
