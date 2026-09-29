@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 import { imageSize } from 'image-size';
 import { openLibrary } from './library.mjs';
 import { backupLimit } from './backup.mjs';
+import { libraryBackupLimit } from './library-backup.mjs';
 import { kitRoot } from './render.mjs';
 import { ResumeError } from './errors.mjs';
 import { openStorage, lockDirectory, snapshotLibrary, canonicalDirectory, assertInactive } from './storage.mjs';
@@ -71,10 +72,10 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
     const child = spawn(path.join(directory, '启动简历.exe'), args, { detached: true, windowsHide: true, stdio: 'ignore' });
     child.once('error', error => { console.error(`新版启动失败：${error.message}；请打开原来的启动简历.exe。`); }); child.unref();
   }
-  const staticFiles = { '/': ['app/index.html', 'text/html; charset=utf-8'], '/app.js': ['app/app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app/app.css', 'text/css; charset=utf-8'], '/crop.mjs': ['app/crop.mjs', 'text/javascript; charset=utf-8'], '/entries.mjs': ['app/entries.mjs', 'text/javascript; charset=utf-8'], '/entry-manager.mjs': ['app/entry-manager.mjs', 'text/javascript; charset=utf-8'], '/system.mjs': ['app/system.mjs', 'text/javascript; charset=utf-8'] };
+  const staticFiles = { '/': ['app/index.html', 'text/html; charset=utf-8'], '/app.js': ['app/app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app/app.css', 'text/css; charset=utf-8'], '/crop.mjs': ['app/crop.mjs', 'text/javascript; charset=utf-8'], '/entries.mjs': ['app/entries.mjs', 'text/javascript; charset=utf-8'], '/entry-manager.mjs': ['app/entry-manager.mjs', 'text/javascript; charset=utf-8'], '/library-manager.mjs': ['app/library-manager.mjs', 'text/javascript; charset=utf-8'], '/system.mjs': ['app/system.mjs', 'text/javascript; charset=utf-8'] };
   async function bytes(request, maximum) {
     const chunks = []; let size = 0;
-    for await (const chunk of request) { size += chunk.length; if (size > maximum) throw new ResumeError('文件太大；正文上限 500 KB，图片上限 5 MB', { code: 'SIZE' }); chunks.push(chunk); }
+    for await (const chunk of request) { size += chunk.length; if (size > maximum) throw new ResumeError(maximum === libraryBackupLimit ? '整库 ZIP 请控制在 128 MB 以内' : '文件太大；正文上限 500 KB，图片上限 5 MB', { code: 'SIZE' }); chunks.push(chunk); }
     return Buffer.concat(chunks);
   }
   const server = createServer(async (request, response) => {
@@ -105,6 +106,11 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
         else if (pathname === '/backup.zip') {
           const backup = await project.exportBackup(requested.searchParams.get('resumeId'), requested.searchParams.get('backupId'));
           response.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(backup.decoded.manifest.resumeName + '-完整备份.zip')}` }); response.end(backup.buffer);
+        }
+        else if (pathname === '/library.zip' || pathname === '/library-before-restore.zip') {
+          const payload = { resumeId: requested.searchParams.get('resumeId'), revision: requested.searchParams.get('revision'), libraryRevision: requested.searchParams.get('libraryRevision') };
+          const buffer = pathname === '/library.zip' ? (await project.exportLibrary(payload)).buffer : await project.exportBeforeRestore(requested.searchParams.get('backupId'));
+          response.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(pathname === '/library.zip' ? '简历整库备份.zip' : '恢复前简历整库.zip')}` }); response.end(buffer);
         }
         else if (pathname === '/api/preview' || pathname === '/document.pdf') {
           lastSeen = Date.now();
@@ -141,12 +147,16 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
           } else json({ error: { message: '接口不存在' } }, 404);
           return;
         }
-        const actions = { '/api/save': project.save, '/api/entries/change': project.changeEntry, '/api/template': project.useTemplate, '/api/resumes/create': project.create, '/api/resumes/duplicate': project.duplicate, '/api/resumes/rename': project.rename, '/api/resumes/switch': project.switchResume, '/api/backup': project.createBackup, '/api/restore': project.restore };
+        const actions = { '/api/save': project.save, '/api/entries/change': project.changeEntry, '/api/template': project.useTemplate, '/api/resumes/create': project.create, '/api/resumes/duplicate': project.duplicate, '/api/resumes/rename': project.rename, '/api/resumes/trash': project.trashResume, '/api/resumes/restore-trash': project.restoreTrash, '/api/resumes/switch': project.switchResume, '/api/backup': project.createBackup, '/api/restore': project.restore };
         if (actions[pathname]) {
           if (request.headers['content-type']?.split(';')[0] !== 'application/json') throw new ResumeError('请求格式不正确');
           let payload; try { payload = JSON.parse((await bytes(request, 2_000_000)).toString('utf8')); } catch (error) { if (error instanceof ResumeError) throw error; throw new ResumeError('请求格式不正确'); }
           const state = await actions[pathname](payload);
           json(state);
+        } else if (pathname === '/api/library/inspect' || pathname === '/api/library/restore-upload') {
+          const buffer = await bytes(request, libraryBackupLimit);
+          if (pathname === '/api/library/inspect') json(await project.inspectLibrary(buffer));
+          else json(await project.restoreLibrary({ resumeId: request.headers['x-resume-id'], revision: request.headers['x-resume-revision'], libraryRevision: requested.searchParams.get('libraryRevision'), sha256: requested.searchParams.get('sha256') }, buffer));
         } else if (pathname === '/api/restore-upload') {
           const payload = { resumeId: request.headers['x-resume-id'], revision: request.headers['x-resume-revision'] };
           json(await project.restore(payload, await bytes(request, backupLimit)));

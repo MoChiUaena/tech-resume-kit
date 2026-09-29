@@ -44,6 +44,8 @@ jobs:
           python scripts/render-pdfs.py --directory tmp/pdfs/install
           python scripts/verify-pdf.py --directory tmp/pdfs/library
           python scripts/render-pdfs.py --directory tmp/pdfs/library
+          python scripts/verify-pdf.py --directory tmp/pdfs/library-management
+          python scripts/render-pdfs.py --directory tmp/pdfs/library-management
           python scripts/verify-pdf.py --directory tmp/pdfs/editing
           python scripts/render-pdfs.py --directory tmp/pdfs/editing
           python scripts/verify-pdf.py --directory tmp/pdfs/storage

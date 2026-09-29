@@ -1,7 +1,6 @@
 import { readFile, mkdir, readdir, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { z } from 'zod';
 import { openProject } from './project.mjs';
 import { initializeProject, saveFile } from './files.mjs';
 import { captureBackup, decodeBackup, applyBackup } from './backup.mjs';
@@ -9,9 +8,9 @@ import { ResumeError } from './errors.mjs';
 import { assetPath } from './assets.mjs';
 import { imageSize } from 'image-size';
 import { listResumeEntries, changeResumeEntry } from './entries.mjs';
+import { uuid, catalogSchema, readTrash, validateCatalogs, recoverCatalog, commitCatalogPair } from './catalog.mjs';
+import { captureLibraryBackup, decodeLibraryBackup, restoreLibraryBackup, recoverLibraryRestore, readLibraryRestoreRecord, previousLibraryBackup } from './library-backup.mjs';
 
-const uuid = z.string().uuid(), idSchema = z.union([z.literal('legacy'), uuid]);
-const catalogSchema = z.object({ schemaVersion: z.literal(1), activeId: idSchema, resumes: z.array(z.object({ id: idSchema, name: z.string().trim().min(1).max(60), createdAt: z.string() }).strict()).min(1).max(100) }).strict();
 const sha = data => createHash('sha256').update(data).digest('hex');
 function name(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 60 || /[\x00-\x1f\x7f]/.test(value)) throw new ResumeError('简历名称需要 1 到 60 个字符');
@@ -21,7 +20,9 @@ const kinds = { initial: '初始版本', manual: '手动备份', auto: '自动�
 
 export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}) {
   const root = path.resolve(directory), catalogFile = path.join(root, 'library.json');
-  let catalog;
+  await recoverLibraryRestore(root); await recoverCatalog(root);
+  let catalog, trash = await readTrash(root), restoreRecord, restoreWarning = '', fatal;
+  try { restoreRecord = await readLibraryRestoreRecord(root); } catch (error) { restoreWarning = error.message; }
   try { catalog = catalogSchema.parse(JSON.parse(await readFile(catalogFile, 'utf8'))); }
   catch (error) {
     if (error.code !== 'ENOENT') throw new ResumeError('简历列表文件无法读取，请保留 library.json，不要覆盖现有数据', { file: catalogFile });
@@ -29,15 +30,14 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     catalog = { schemaVersion: 1, activeId: 'legacy', resumes: [{ id: 'legacy', name: '我的简历', createdAt: new Date().toISOString() }] };
     await saveFile(catalogFile, JSON.stringify(catalog, null, 2));
   }
-  const ids = catalog.resumes.map(item => item.id);
-  if (new Set(ids).size !== ids.length || !ids.includes(catalog.activeId)) throw new ResumeError('简历列表存在重复或未知 ID，请保留数据目录');
+  validateCatalogs(catalog, trash);
   let queue = Promise.resolve(), timer, historyWarning = '';
   const projects = new Map(), dirty = new Set();
-  function mutate(action) { const result = queue.then(action); queue = result.catch(() => {}); return result; }
+  function mutate(action) { const result = queue.then(() => { if (fatal) throw fatal; return action(); }).catch(error => { if (error.code === 'LIBRARY_RECOVERY') fatal = error; throw error; }); queue = result.catch(() => {}); return result; }
   async function persistCatalog() { await saveFile(catalogFile, JSON.stringify(catalog, null, 2), true); }
   function entry(id = catalog.activeId) { const item = catalog.resumes.find(item => item.id === id); if (!item) throw new ResumeError('这份简历不存在', { code: 'CONFLICT' }); return item; }
   async function projectFor(id = catalog.activeId) {
-    entry(id);
+    if (!catalog.resumes.some(item => item.id === id) && !trash.resumes.some(item => item.id === id)) entry(id);
     if (!projects.has(id)) {
       const target = id === 'legacy' ? root : path.join(root, 'resumes', id);
       const info = await lstat(target); if (info.isSymbolicLink() || !info.isDirectory()) throw new ResumeError('简历数据目录不正确');
@@ -46,12 +46,18 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     return projects.get(id);
   }
   async function state() {
+    if (fatal) throw fatal;
     const active = entry(), project = await projectFor(active.id);
-    return { ...(await project.read()), resumeId: active.id, resumeName: active.name, resumes: catalog.resumes.map(item => ({ ...item })), libraryRevision: sha(JSON.stringify(catalog)), historyWarning };
+    return { ...(await project.read()), resumeId: active.id, resumeName: active.name, resumes: catalog.resumes.map(item => ({ ...item })), trash: trash.resumes.map(item => ({ ...item })), libraryRevision: sha(JSON.stringify([catalog, trash])), libraryBackupBeforeRestore: restoreRecord, libraryBackupWarning: restoreWarning, historyWarning };
   }
   async function check(payload) {
     const current = await state();
     if (payload.resumeId !== current.resumeId || payload.revision !== current.revision || payload.libraryRevision && payload.libraryRevision !== current.libraryRevision) throw new ResumeError('简历已经切换或修改，请重新载入后再操作', { code: 'CONFLICT' });
+    return current;
+  }
+  async function checkLibrary(payload) {
+    const current = await check(payload);
+    if (payload.libraryRevision !== current.libraryRevision) throw new ResumeError('简历库已变化，请重新载入后再操作', { code: 'CONFLICT' });
     return current;
   }
   function historyDirectory(id) { entry(id); return path.join(root, 'history', id); }
@@ -143,6 +149,57 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     try { await persistCatalog(); } catch (error) { item.name = previous; throw error; }
     return state();
   });
+  const trashResume = payload => mutate(async () => {
+    const current = await checkLibrary(payload);
+    if (catalog.resumes.length === 1) throw new ResumeError('请至少保留一份简历，可以先新建另一份');
+    if (trash.resumes.length >= 1000) throw new ResumeError('回收站已达到 1000 份，请先导出整库并整理资料');
+    if (dirty.has(current.resumeId)) await checkpoint(current.resumeId, 'auto', false);
+    const nextCatalog = structuredClone(catalog), nextTrash = structuredClone(trash), index = nextCatalog.resumes.findIndex(item => item.id === current.resumeId);
+    const [removed] = nextCatalog.resumes.splice(index, 1); nextCatalog.activeId = nextCatalog.resumes[Math.min(index, nextCatalog.resumes.length - 1)].id;
+    nextTrash.resumes.unshift({ ...removed, deletedAt: new Date().toISOString() });
+    await (await projectFor(nextCatalog.activeId)).read();
+    await commitCatalogPair(root, { catalog, trash }, { catalog: nextCatalog, trash: nextTrash });
+    catalog = nextCatalog; trash = nextTrash; return state();
+  });
+  const restoreTrash = payload => mutate(async () => {
+    await checkLibrary(payload);
+    if (catalog.resumes.length >= 100) throw new ResumeError('简历数量已达到 100 份，请先整理');
+    const index = trash.resumes.findIndex(item => item.id === payload.targetId);
+    if (index < 0) throw new ResumeError('回收站中的简历已变化，请重新载入', { code: 'CONFLICT' });
+    const proposed = uniqueName(payload.name), nextCatalog = structuredClone(catalog), nextTrash = structuredClone(trash);
+    const [restored] = nextTrash.resumes.splice(index, 1); const { deletedAt, ...item } = restored;
+    await (await projectFor(item.id)).read();
+    nextCatalog.resumes.push({ ...item, name: proposed });
+    await commitCatalogPair(root, { catalog, trash }, { catalog: nextCatalog, trash: nextTrash });
+    catalog = nextCatalog; trash = nextTrash; return state();
+  });
+  async function checkpointDirty() { for (const id of [...dirty]) await checkpoint(id, 'auto', false); }
+  const exportLibrary = payload => mutate(async () => {
+    await checkLibrary(payload); await checkpointDirty();
+    for (const item of [...catalog.resumes, ...trash.resumes]) await (await projectFor(item.id)).read();
+    return captureLibraryBackup(root);
+  });
+  const inspectLibrary = async buffer => {
+    const decoded = decodeLibraryBackup(buffer);
+    return { activeName: decoded.catalog.resumes.find(item => item.id === decoded.catalog.activeId).name, resumeCount: decoded.catalog.resumes.length, trashCount: decoded.trash.resumes.length, fileCount: decoded.manifest.files.length, createdAt: decoded.manifest.createdAt, sha256: sha(buffer) };
+  };
+  const restoreLibrary = (payload, buffer) => mutate(async () => {
+    await checkLibrary(payload);
+    if (payload.sha256 !== sha(buffer)) throw new ResumeError('备份文件发生变化，请重新选择并核验');
+    const decoded = decodeLibraryBackup(buffer);
+    await checkpointDirty();
+    for (const item of [...catalog.resumes, ...trash.resumes]) await (await projectFor(item.id)).read();
+    try { restoreRecord = await restoreLibraryBackup(root, decoded); restoreWarning = ''; }
+    finally { projects.clear(); dirty.clear(); }
+    catalog = catalogSchema.parse(JSON.parse(await readFile(catalogFile, 'utf8'))); trash = await readTrash(root);
+    return state();
+  });
+  const exportBeforeRestore = async backupId => {
+    await queue;
+    if (fatal) throw fatal;
+    if (!restoreRecord || backupId !== restoreRecord.backupId) throw new ResumeError('请选择当前恢复前的整库副本');
+    return previousLibraryBackup(root, restoreRecord);
+  };
   const restore = (payload, upload) => mutate(async () => {
     const current = await check(payload), project = await projectFor();
     const decoded = upload ? decodeBackup(upload) : (await readBackup(current.resumeId, payload.backupId)).decoded;
@@ -182,5 +239,5 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   }
   if (!(await historyFor(catalog.activeId)).length) await checkpoint(catalog.activeId, 'initial');
   if (historyIntervalMs > 0) { timer = setInterval(() => autoCheckpoint().catch(error => { historyWarning = `自动版本未保存：${error.message}`; }), Math.min(historyIntervalMs, 60000)); timer.unref(); }
-  return { root, read, save, entries, changeEntry, useTemplate, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); await flush(); } };
+  return { root, read, save, entries, changeEntry, useTemplate, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
 }

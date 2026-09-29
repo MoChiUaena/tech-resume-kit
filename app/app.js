@@ -2,12 +2,13 @@ import { createCropModel, normalizeCrop, rotateCrop, paintCrop, exportCrop } fro
 import { insertResumeEntry } from './entries.mjs';
 import { wireSystem } from './system.mjs';
 import { wireEntries } from './entry-manager.mjs';
+import { wireLibrary } from './library-manager.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
 let cropSession, cropDrag, entryKind;
 let viewerReference;
-let entryManager;
+let entryManager, libraryManager;
 async function request(url, data, raw = false) {
   const options = data === undefined ? {} : { method: 'POST', headers: { 'X-Resume-Token': token, ...(raw ? { 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision } : { 'Content-Type': 'application/json' }) }, body: raw ? data : JSON.stringify({ resumeId: state?.resumeId, ...data }) };
   const response = await fetch(url, options), result = await response.json();
@@ -51,6 +52,7 @@ function populate() {
   $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
   for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
   entryManager?.refresh();
+  libraryManager?.render();
 }
 async function refreshPreview(revision, expectedTick = tick) {
   const sequence = ++previewSequence, resumeId = state.resumeId; previewReady = false; $('page-status').textContent = '正在排版…'; $('pdf-download').disabled = true;
@@ -101,6 +103,7 @@ async function managed(action) {
     $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
     for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
     entryManager?.refresh();
+    libraryManager?.render();
   }
 }
 function acceptState(result) { state = result; tick = savedTick = 0; previewSequence++; viewerReference = undefined; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); }
@@ -283,4 +286,5 @@ $('entry-submit').addEventListener('click', async () => {
   } catch (error) { $('entry-error').textContent = error.message; $('entry-error').hidden = false; }
 });
 entryManager = wireEntries({ request, managed, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast });
+libraryManager = wireLibrary({ request, managed, settle, operationPayload, acceptState, getState: () => state, toast });
 wireSystem({ request, managed, settle, operationPayload, acceptState });

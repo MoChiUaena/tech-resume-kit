@@ -81,6 +81,21 @@ try {
   state = await post('api/resumes/duplicate', { resumeId: state.resumeId, revision: state.revision, name: '另一份求职版本' });
   assert.notEqual(state.resumeId, originalId);
   const otherId = state.resumeId;
+  state = await post('api/resumes/trash', { resumeId: state.resumeId, revision: state.revision, libraryRevision: state.libraryRevision });
+  assert.equal(state.resumeId, originalId); assert.equal(state.trash[0].id, otherId);
+  const libraryZip = await fetch(url + `library.zip?${new URLSearchParams({ resumeId: state.resumeId, revision: state.revision, libraryRevision: state.libraryRevision })}`);
+  assert.equal(libraryZip.status, 200); const libraryBytes = Buffer.from(await libraryZip.arrayBuffer());
+  const raw = async endpoint => {
+    const response = await fetch(url + endpoint, { method: 'POST', headers: { Origin: url.slice(0, -1), 'X-Resume-Token': token, 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision }, body: libraryBytes });
+    const result = await response.json(); assert.equal(response.status, 200, JSON.stringify(result)); return result;
+  };
+  const reviewed = await raw('api/library/inspect'); assert.equal(reviewed.resumeCount, 1); assert.equal(reviewed.trashCount, 1);
+  state = await post('api/resumes/restore-trash', { resumeId: state.resumeId, revision: state.revision, libraryRevision: state.libraryRevision, targetId: otherId, name: '另一份求职版本' });
+  state = await raw(`api/library/restore-upload?${new URLSearchParams({ libraryRevision: state.libraryRevision, sha256: reviewed.sha256 })}`);
+  assert.equal(state.resumes.length, 1); assert.equal(state.trash[0].id, otherId);
+  const prior = await fetch(url + `library-before-restore.zip?backupId=${state.libraryBackupBeforeRestore.backupId}`); assert.equal(prior.status, 200);
+  state = await post('api/resumes/restore-trash', { resumeId: state.resumeId, revision: state.revision, libraryRevision: state.libraryRevision, targetId: otherId, name: '另一份求职版本' });
+  state = await post('api/resumes/switch', { resumeId: state.resumeId, revision: state.revision, targetId: otherId });
   state.front.person.name = '第二份简历';
   state = await post('api/save', { resumeId: state.resumeId, revision: state.revision, front: state.front, body: state.body, layout: state.layout });
   state = await post('api/resumes/switch', { resumeId: state.resumeId, revision: state.revision, targetId: originalId });
@@ -110,7 +125,7 @@ try {
   assert.equal((await (await fetch(url + 'api/state')).json()).resumeId, otherId);
   await post('api/exit', {});
   for (let i = 0; i < 50; i++) { try { await readFile(sessionFile); } catch (error) { if (error.code === 'ENOENT') break; throw error; } await new Promise(resolve => setTimeout(resolve, 100)); }
-  await writeFile(path.join(root, 'tmp/packages/windows-smoke.json'), JSON.stringify({ version, bundledNode: true, noNodeInPath: true, independentBrowserCache: true, offlineProxy: true, singletonAcrossProgramDirectories: true, autosave: true, pdfPages: [1, 2], offlineCanvasPreview: true, selectablePreviewText: true, noRemotePreviewRequests: true, multipleResumes: true, completeBackup: true, restore: true, restartPersistence: true, separateDataDirectory: true, legacyMigration: true, verifiedUpdateExtraction: true, versionSwitchPersistence: true, startupFailureFallback: true, cleanExit: true }, null, 2));
+  await writeFile(path.join(root, 'tmp/packages/windows-smoke.json'), JSON.stringify({ version, bundledNode: true, noNodeInPath: true, independentBrowserCache: true, offlineProxy: true, singletonAcrossProgramDirectories: true, autosave: true, pdfPages: [1, 2], offlineCanvasPreview: true, selectablePreviewText: true, noRemotePreviewRequests: true, multipleResumes: true, recycleBin: true, wholeLibraryZip: true, wholeLibraryRestore: true, completeBackup: true, restore: true, restartPersistence: true, separateDataDirectory: true, legacyMigration: true, verifiedUpdateExtraction: true, versionSwitchPersistence: true, startupFailureFallback: true, cleanExit: true }, null, 2));
   console.log('Windows EXE passed: offline export, complete library migration, separate data, cross-version singleton, verified extraction, version switch and failed-start fallback.');
 } finally {
   await browser?.close();
