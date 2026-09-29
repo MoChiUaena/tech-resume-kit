@@ -7,24 +7,37 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { fileHash, inventory } from '../src/storage.mjs';
+import { loadResume } from '../src/index.mjs';
+import { pdfExpectations } from './pdf-expectations.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), exec = promisify(execFile);
 assert.equal(process.platform, 'win32');
 const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
-const oldVersion = '0.7.0', oldArchive = path.join(root, `tmp/packages/tech-resume-windows-x64-${oldVersion}.zip`);
-assert.equal(await fileHash(oldArchive), 'f62840b209dc37d57b01ef91a1467cf6ede87dfc32a1425e90350a0b860177b2', 'Use the published v0.7.0 package');
-const outer = await realpath(await mkdtemp(path.join(tmpdir(), 'tech-resume-release-upgrade-')));
+const baseline = JSON.parse(await readFile(path.join(root, 'scripts/upgrade-baseline.json'), 'utf8'));
+assert.match(baseline.version, /^\d+\.\d+\.\d+$/); assert.match(baseline.sha256, /^[0-9a-f]{64}$/);
+assert.equal(baseline.archive, `tech-resume-windows-x64-${baseline.version}.zip`);
+const oldArchive = path.join(root, 'tmp/upgrade-baselines', `v${baseline.version}`, baseline.archive);
+assert.equal(await fileHash(oldArchive), baseline.sha256, 'Use the exact published baseline archive; local rebuilds are not the published download');
+const newArchive = path.join(root, 'tmp/packages', `tech-resume-windows-x64-${version}.zip`);
+const candidateSha256 = await fileHash(newArchive);
+const outer = await realpath(await mkdtemp(path.join(tmpdir(), 'tech-resume-release-upgrade-'))), qa = path.join(root, 'tmp/pdfs/upgrade');
+const settingsFile = path.join(outer, '用户设置/settings.json'), data = path.join(outer, '用户设置/data');
 let child, browser, url, token;
+const getState = async () => (await fetch(url + 'api/state')).json();
 const post = async (endpoint, body) => {
   const response = await fetch(url + endpoint, { method: 'POST', headers: { Origin: url.slice(0, -1), 'X-Resume-Token': token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const result = await response.json(); assert.equal(response.status, 200, JSON.stringify(result)); return result;
 };
-async function start(program, args, sessionFile) {
-  child = spawn(path.join(program, '启动简历.exe'), args, { cwd: program, windowsHide: true, stdio: 'ignore' });
-  for (let i = 0; i < 100; i++) {
+async function start(program) {
+  url = token = undefined;
+  child = spawn(path.join(program, '启动简历.exe'), ['--no-open', '--settings', settingsFile], { cwd: program, windowsHide: true, stdio: 'ignore', env: { ...process.env, HTTP_PROXY: 'http://127.0.0.1:9', HTTPS_PROXY: 'http://127.0.0.1:9', PLAYWRIGHT_BROWSERS_PATH: path.join(outer, 'missing-browser-cache') } });
+  const sessionFile = path.join(data, 'app-session.local.json');
+  for (let i = 0; i < 150; i++) {
     try {
       const session = JSON.parse(await readFile(sessionFile, 'utf8'));
-      url = session.url; token = /name="resume-token" content="([a-f0-9]+)"/.exec(await (await fetch(url)).text())[1]; return;
+      const html = await (await fetch(session.url)).text();
+      const matched = /name="resume-token" content="([a-f0-9]+)"/.exec(html);
+      if (matched) { url = session.url; token = matched[1]; return; }
     } catch {}
     if (child.exitCode !== null) throw new Error('Upgrade launcher exited before startup');
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -32,51 +45,117 @@ async function start(program, args, sessionFile) {
   throw new Error('Upgrade startup timed out');
 }
 async function stop() {
+  if (!url || !token) return;
   await post('api/exit', {});
   if (child.exitCode === null) await new Promise((resolve, reject) => { const timer = setTimeout(() => reject(new Error('Upgrade shutdown timed out')), 10000); child.once('exit', code => { clearTimeout(timer); assert.equal(code, 0); resolve(); }); });
+  url = token = undefined;
+}
+const resumeRoot = state => state.resumeId === 'legacy' ? data : path.join(data, 'resumes', state.resumeId);
+async function equivalent(state, expected, imageHashes) {
+  assert.equal(state.body, expected.body); assert.deepEqual(state.layout, expected.layout);
+  const front = structuredClone(state.front);
+  for (const [key, asset] of Object.entries(front.assets || {})) {
+    assert.equal(await fileHash(path.join(resumeRoot(state), asset.src)), imageHashes[key]);
+    asset.src = expected.front.assets[key].src;
+  }
+  assert.deepEqual(front, expected.front);
+}
+async function wholeBackup(state) {
+  const response = await fetch(url + `library.zip?${new URLSearchParams({ resumeId: state.resumeId, revision: state.revision, libraryRevision: state.libraryRevision })}`);
+  assert.equal(response.status, 200); return Buffer.from(await response.arrayBuffer());
+}
+async function restoreWhole(bytes) {
+  const state = await getState();
+  const raw = async endpoint => {
+    const response = await fetch(url + endpoint, { method: 'POST', headers: { Origin: url.slice(0, -1), 'X-Resume-Token': token, 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision }, body: bytes });
+    const result = await response.json(); assert.equal(response.status, 200, JSON.stringify(result)); return result;
+  };
+  const proof = await raw('api/library/inspect');
+  return raw(`api/library/restore-upload?${new URLSearchParams({ libraryRevision: state.libraryRevision, sha256: proof.sha256 })}`);
+}
+async function exportPdf(state, stem, pages) {
+  const response = await fetch(url + `document.pdf?${new URLSearchParams({ resumeId: state.resumeId, revision: state.revision })}`);
+  assert.equal(response.status, 200); await writeFile(path.join(qa, stem + '.pdf'), Buffer.from(await response.arrayBuffer()));
+  const loaded = await loadResume(path.join(resumeRoot(state), 'resume.md'));
+  const images = Object.fromEntries(Object.entries(loaded.layout.images).filter(([key, setting]) => setting.enabled && loaded.document.assets[key]).map(([key]) => [key, true]));
+  await writeFile(path.join(qa, stem + '.expected.json'), JSON.stringify(pdfExpectations({ ...loaded, images }, pages)));
 }
 try {
-  for (const archive of [oldArchive, path.join(root, 'tmp/packages', `tech-resume-windows-x64-${version}.zip`)]) {
-    await exec(process.env.TECH_RESUME_PYTHON || 'python', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert all(".." not in n.split("/") and not n.startswith("/") for n in z.namelist()); z.extractall(sys.argv[2])', archive, outer], { windowsHide: true, timeout: 120000 });
-  }
-  const oldProgram = path.join(outer, `tech-resume-windows-x64-${oldVersion}`), settingsFile = path.join(outer, '用户设置/settings.json'), data = path.join(outer, '用户设置/data');
-  await start(oldProgram, ['--no-open', '--settings', settingsFile], path.join(data, 'app-session.local.json'));
-  let state = await (await fetch(url + 'api/state')).json();
-  state = await post('api/template', { resumeId: state.resumeId, revision: state.revision, template: 'campus' });
-  state.front.person.name = '升级迁移校招样例';
+  await mkdir(qa, { recursive: true });
+  for (const archive of [oldArchive, newArchive]) await exec(process.env.TECH_RESUME_PYTHON || 'python', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert all(".." not in n.split("/") and not n.startswith("/") for n in z.namelist()); z.extractall(sys.argv[2])', archive, outer], { windowsHide: true, timeout: 120000 });
+  const oldProgram = path.join(outer, `tech-resume-windows-x64-${baseline.version}`), program = path.join(outer, `tech-resume-windows-x64-${version}`);
+  await start(oldProgram);
+  let state = await getState();
+  state = await post('api/template', { ...state, template: 'campus' });
+  await post('api/backup', state);
+  state = await post('api/resumes/duplicate', { ...state, name: '后端实习申请' });
+  state.front.person.target = 'Java 后端开发实习生';
   state = await post('api/save', { resumeId: state.resumeId, revision: state.revision, front: state.front, body: state.body, layout: state.layout });
-  await post('api/backup', { resumeId: state.resumeId, revision: state.revision });
-  state = await post('api/resumes/duplicate', { resumeId: state.resumeId, revision: state.revision, name: '后端实习申请' });
-  state.front.person.name = '升级迁移实习样例';
-  state = await post('api/save', { resumeId: state.resumeId, revision: state.revision, front: state.front, body: state.body, layout: state.layout });
-  await post('api/backup', { resumeId: state.resumeId, revision: state.revision });
-  const selected = state.resumeId; await stop();
-  const before = await inventory(data), oldState = state, program = path.join(outer, `tech-resume-windows-x64-${version}`);
-  await start(program, ['--no-open', '--settings', settingsFile], path.join(data, 'app-session.local.json'));
+  const manual = await post('api/backup', state), selected = state.resumeId, oldState = state;
+  const images = Object.fromEntries(await Promise.all(Object.entries(state.front.assets).map(async ([key, asset]) => [key, await fileHash(path.join(resumeRoot(state), asset.src))])));
+  state = await post('api/resumes/create', { ...state, name: '工作经验申请', template: 'experience' });
+  await post('api/backup', state);
+  state = await post('api/resumes/create', { ...state, name: '旧版已删除', template: 'blank' });
+  const trashed = state.resumeId;
+  state = await post('api/resumes/trash', state);
+  state = await post('api/resumes/switch', { ...state, targetId: selected });
+  const libraryBytes = await wholeBackup(state);
+  await stop();
+  const before = await inventory(data), beforeSettings = await readFile(settingsFile);
+  const untouched = before.filter(file => !file.name.startsWith(`resumes/${selected}/`) && !file.name.startsWith(`history/${selected}/`) && !['library.json', 'trash.json'].includes(file.name));
+  await start(program);
   const info = await (await fetch(url + 'api/app-info')).json(); assert.equal(info.version, version); assert.equal(info.storage.directory, data);
-  assert.deepEqual(await inventory(data), before);
-  assert.equal(JSON.parse(await readFile(settingsFile, 'utf8')).dataDirectory, data);
-  state = await (await fetch(url + 'api/state')).json(); assert.equal(state.resumeId, selected); assert.equal(state.resumes.length, 2); assert.equal(state.front.person.name, '升级迁移实习样例');
-  const history = await (await fetch(url + `api/history?resumeId=${selected}`)).json(); assert.ok(history.backups.some(entry => entry.kind === 'manual'));
+  assert.deepEqual(await inventory(data), before); assert.deepEqual(await readFile(settingsFile), beforeSettings);
+  state = await getState(); assert.equal(state.resumeId, selected); assert.equal(state.resumes.length, 3); assert.equal(state.trash[0].id, trashed);
+  assert.equal(state.gettingStarted.welcome, false); await equivalent(state, oldState, images);
+  assert.ok((await (await fetch(url + `api/history?resumeId=${selected}`)).json()).backups.some(entry => entry.id === manual.id));
+  await exportPdf(state, 'upgraded-original', 1);
   browser = await chromium.launch({ executablePath: path.join(program, 'runtime/browsers/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe'), headless: true });
-  const page = await browser.newPage({ viewport: { width: 1400, height: 980 } }); await page.goto(url);
-  await page.frameLocator('#pdf-frame').locator('.pdf-page[data-rendered="true"]').waitFor({ timeout: 30000 });
-  assert.match(await page.frameLocator('#pdf-frame').locator('.textLayer').innerText(), /升级迁移实习样例/);
-  const qa = path.join(root, 'tmp/pdfs/release'); await mkdir(qa, { recursive: true }); await page.screenshot({ path: path.join(qa, 'published-upgrade.png') });
+  const page = await browser.newPage({ viewport: { width: 1500, height: 1050 } }), errors = [], remote = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/*', route => { if (new URL(route.request().url()).hostname !== '127.0.0.1') { remote.push(route.request().url()); return route.abort(); } return route.continue(); });
+  await page.goto(url); await page.frameLocator('#pdf-frame').locator('.pdf-page[data-rendered=true]').waitFor({ timeout: 30000 });
+  assert.equal(await page.locator('#start-banner').isVisible(), false);
+  await page.screenshot({ path: path.join(qa, 'upgrade-existing.png') });
+  await page.locator('#guide-content').click();
+  await page.locator('#content-list [data-section-id=skills] [data-action=edit]').first().click();
+  await page.locator('#content-text').fill('使用 Spring Boot 设计接口，维护 **事务校验** 与集成测试。');
+  await page.locator('#content-submit').click(); await page.locator('#content-dialog').waitFor({ state: 'hidden' });
+  await page.locator('#guide-layout').click(); await page.locator('#max-pages').selectOption('2'); await page.getByRole('button', { name: '关闭设置' }).click();
+  await page.locator('#guide-content').click(); await page.locator('#content-lines-add').click();
+  await page.locator('#content-title').fill('协作实践');
+  await page.locator('#content-text').fill('在示例项目中整理接口约定、问题复现步骤和测试记录，参与代码审阅并记录方案取舍；保持文档与实现一致，便于团队复核修改。'.repeat(6));
+  await page.locator('#content-submit').click(); await page.locator('#content-dialog').waitFor({ state: 'hidden' });
+  state = await getState(); const edited = state;
+  await page.waitForFunction(revision => document.querySelector('#pdf-frame').src.includes(revision), state.revision);
+  await page.frameLocator('#pdf-frame').locator('.pdf-page[data-page="2"][data-rendered=true]').waitFor({ timeout: 30000 });
+  assert.equal(state.layout.bodyPt, oldState.layout.bodyPt); assert.equal(state.layout.page.maxPages, 2);
+  await exportPdf(state, 'upgraded-edited', 2); await page.screenshot({ path: path.join(qa, 'upgrade-forms.png') });
+  assert.deepEqual(remote, []); assert.deepEqual(errors, []);
   await browser.close(); browser = null;
-  const added = await post('api/resumes/create', { resumeId: state.resumeId, revision: state.revision, name: '新版回收站样例', template: 'blank' });
-  state = await post('api/resumes/trash', { resumeId: added.resumeId, revision: added.revision, libraryRevision: added.libraryRevision });
-  assert.equal(state.trash[0].id, added.resumeId); await stop();
-  await start(oldProgram, ['--no-open', '--settings', settingsFile], path.join(data, 'app-session.local.json'));
-  const backwards = await (await fetch(url + 'api/state')).json(); assert.equal(backwards.resumes.length, 2); assert.equal(backwards.source, oldState.source);
-  assert.ok((await (await fetch(url + 'api/preview')).json()).pageCount === 1); await stop();
-  await start(program, ['--no-open', '--settings', settingsFile], path.join(data, 'app-session.local.json'));
-  state = await (await fetch(url + 'api/state')).json(); assert.equal(state.resumeId, selected); assert.equal(state.front.person.name, '升级迁移实习样例'); assert.equal(state.trash.length, 1); await stop();
-  await writeFile(path.join(root, 'tmp/packages/upgrade-smoke.json'), JSON.stringify({ from: oldVersion, to: version, publishedOldPackage: true, checkedFiles: before.length, sameDataDirectory: true, originalFilesVerified: true, oldVersionCanReopen: true, recycleBinSurvivesRollback: true, multipleResumes: true, selectedResumePreserved: true, imagesAndHistoryPreserved: true, offlinePdfViewer: true, restartPersistence: true }, null, 2));
-  console.log(`Published v${oldVersion} → v${version}: ${before.length} files verified, two resumes, images/history/selection, offline preview and restart passed.`);
+  for (const file of untouched) assert.equal(await fileHash(path.join(data, file.name)), file.sha256, file.name);
+  state = await post('api/restore', { ...state, backupId: manual.id }); await equivalent(state, oldState, images);
+  state = await post('api/save', { resumeId: state.resumeId, revision: state.revision, front: edited.front, body: edited.body, layout: edited.layout });
+  const beforeWhole = state;
+  state = await restoreWhole(libraryBytes); await equivalent(state, oldState, images);
+  assert.equal(state.trash[0].id, trashed); assert.equal(state.resumes.length, 3);
+  const currentBackup = await fetch(url + `library-before-restore.zip?backupId=${state.libraryBackupBeforeRestore.backupId}`);
+  assert.equal(currentBackup.status, 200);
+  state = await restoreWhole(Buffer.from(await currentBackup.arrayBuffer())); await equivalent(state, beforeWhole, images);
+  const expected = state; await stop(); const afterEdits = await inventory(data);
+  await start(oldProgram);
+  const backwards = await getState(); await equivalent(backwards, expected, images);
+  assert.equal(backwards.resumes.length, 3); assert.equal(backwards.trash[0].id, trashed);
+  assert.equal((await (await fetch(url + 'api/preview')).json()).pageCount, 2); await stop();
+  assert.deepEqual(await inventory(data), afterEdits);
+  await start(program); state = await getState(); await equivalent(state, expected, images);
+  assert.equal(state.resumeId, selected); assert.equal(state.gettingStarted.welcome, false); assert.equal(state.trash[0].id, trashed);
+  await exportPdf(state, 'upgraded-reopened', 2); await stop();
+  const report = { schemaVersion: 1, from: baseline.version, to: version, baselineArchiveSha256: baseline.sha256, candidateArchiveSha256: candidateSha256, publishedOldPackage: true, checkedFiles: before.length, untouchedFilesAfterEditing: untouched.length, sameDataDirectory: true, originalFilesVerified: true, oldVersionCanReopen: true, recycleBinSurvivesRollback: true, multipleResumes: true, resumeCount: 3, trashCount: 1, selectedResumePreserved: true, imagesAndHistoryPreserved: true, existingLibrarySkipsWelcome: true, formChangesPreserved: true, singleBackupRestored: true, wholeLibraryRestored: true, offlinePdfViewer: true, restartPersistence: true, pdfPages: [1, 2, 2] };
+  await writeFile(path.join(root, 'tmp/packages/upgrade-smoke.json'), JSON.stringify(report, null, 2) + '\n');
+  console.log(`Published v${baseline.version} → v${version}: ${before.length} original files verified; forms, images/history, single/whole backups, old-program reopening and restart passed.`);
 } finally {
-  await browser?.close();
-  if (url && token) await post('api/exit', {}).catch(() => {});
+  await browser?.close(); await stop().catch(() => {});
   if (child?.pid && child.exitCode === null) await exec('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }).catch(() => {});
   const actual = await realpath(outer); assert.ok(actual.startsWith(path.join(await realpath(tmpdir()), 'tech-resume-release-upgrade-'))); await rm(actual, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
 }

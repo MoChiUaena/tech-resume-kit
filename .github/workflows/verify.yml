@@ -27,6 +27,7 @@ jobs:
         run: |
           python scripts/audit-public-files.py
           python scripts/test-macos-bundle.py
+          python scripts/test-release-proofs.py
       - name: Install locked Node dependencies and Chromium
         run: |
           npm ci
@@ -119,9 +120,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GODEBUG: http2client=0
-        run: gh release download v0.7.0 --repo MoChiUaena/tech-resume-kit --pattern tech-resume-windows-x64-0.7.0.zip --dir tmp/packages
+        run: |
+          $baseline = Get-Content scripts/upgrade-baseline.json -Raw | ConvertFrom-Json
+          gh release download "v$($baseline.version)" --repo MoChiUaena/tech-resume-kit --pattern $baseline.archive --dir "tmp/upgrade-baselines/v$($baseline.version)"
       - name: Verify published-version upgrade and reopening the old program
-        run: npm run test:upgrade
+        run: |
+          npm run test:upgrade
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          python scripts/check-release-proofs.py --version $version
+          python -m pip install -r requirements-qa.txt
+          python scripts/verify-pdf.py --directory tmp/pdfs/upgrade
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: windows-portable-validation
@@ -129,10 +137,9 @@ jobs:
           retention-days: 7
           path: |
             tmp/packages/tech-resume-windows-x64-*.zip
-            !tmp/packages/tech-resume-windows-x64-0.7.0.zip
             tmp/packages/windows-smoke.json
             tmp/packages/upgrade-smoke.json
-            tmp/pdfs/release/published-upgrade.png
+            tmp/pdfs/upgrade/
   posix-download:
     name: Portable ${{ matrix.label }}
     strategy:
@@ -187,6 +194,7 @@ jobs:
         run: |
           npm run package:macos-app
           npm run test:macos-app
+          python scripts/check-release-proofs.py --version $(node -p "require('./package.json').version") --arch ${{ matrix.arch }}
           python scripts/verify-pdf.py --directory tmp/pdfs/macos-app
           python scripts/render-pdfs.py --directory tmp/pdfs/macos-app
       - uses: actions/upload-artifact@v7.0.1
