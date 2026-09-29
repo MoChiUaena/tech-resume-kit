@@ -4,12 +4,13 @@ import { wireSystem } from './system.mjs';
 import { wireEntries } from './entry-manager.mjs';
 import { wireLibrary } from './library-manager.mjs';
 import { wireContent } from './content-manager.mjs';
+import { wireGettingStarted } from './getting-started.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
 let cropSession, cropDrag, entryKind;
 let viewerReference;
-let entryManager, libraryManager, contentManager;
+let entryManager, libraryManager, contentManager, gettingStarted;
 async function request(url, data, raw = false) {
   const options = data === undefined ? {} : { method: 'POST', headers: { 'X-Resume-Token': token, ...(raw ? { 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision } : { 'Content-Type': 'application/json' }) }, body: raw ? data : JSON.stringify({ resumeId: state?.resumeId, ...data }) };
   const response = await fetch(url, options), result = await response.json();
@@ -34,7 +35,7 @@ function renderContacts() {
     remove.addEventListener('click', () => { state.front.person.contacts.splice(index, 1); renderContacts(); edited(); });
     row.append(select, input, remove, link); $('contacts').append(row);
   }
-  $('contact-add').disabled = sourceMode || state.front.person.contacts.length >= 6;
+  $('contact-add').disabled = sourceMode || (state.front?.person?.contacts?.length || 0) >= 6;
 }
 function populate() {
   $('resume-select').replaceChildren();
@@ -54,7 +55,7 @@ function populate() {
   for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
   for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
   entryManager?.refresh(); contentManager?.refresh();
-  libraryManager?.render();
+  libraryManager?.render(); gettingStarted?.refresh();
 }
 async function refreshPreview(revision, expectedTick = tick) {
   $('preview-actions').hidden = true;
@@ -90,7 +91,7 @@ async function save() {
   busy = true; const captured = tick;
   try {
     const payload = { resumeId: state.resumeId, revision: state.revision, layout: state.layout, ...(sourceMode ? { source: $('body').value } : { front: state.front, body: $('body').value }) };
-    const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; savedTick = captured;
+    const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; state.gettingStarted = result.gettingStarted; gettingStarted?.refresh(); savedTick = captured;
     $('save-status').textContent = '已自动保存';
     if (tick === captured) { refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
   } catch (error) { $('save-status').textContent = '保存失败'; toast(error.message); pending = false; }
@@ -107,12 +108,12 @@ async function managed(action) {
     actionBusy = false; for (const [element, disabled] of controls) if (element.isConnected) element.disabled = disabled;
     $('pdf-download').disabled = !previewReady;
     for (const key of ['portrait','schoolLogo']) $(`${key}-enabled`).disabled = !state.front?.assets?.[key];
-    $('contact-add').disabled = sourceMode || state.front.person.contacts.length >= 6;
+    $('contact-add').disabled = sourceMode || (state.front?.person?.contacts?.length || 0) >= 6;
     $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
     for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
     for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
     entryManager?.refresh(); contentManager?.refresh();
-    libraryManager?.render();
+    libraryManager?.render(); gettingStarted?.refresh();
   }
 }
 function acceptState(result) { state = result; tick = savedTick = 0; previewSequence++; viewerReference = undefined; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); }
@@ -126,7 +127,7 @@ $('source-mode').addEventListener('click', async () => {
     else { sourceMode = true; $('body').value = state.source; $('person-fields').hidden = true; $('contacts').hidden = true; $('contact-add').disabled = true; $('source-mode').textContent = '返回正文编辑'; }
     for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
     for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
-    entryManager?.refresh(); contentManager?.refresh();
+    entryManager?.refresh(); contentManager?.refresh(); gettingStarted?.refresh();
   } catch (error) { toast(error.message); }
 });
 $('contact-add').addEventListener('click', () => { state.front.person.contacts.push({ text: '', href: 'mailto:' }); renderContacts(); edited(); });
@@ -307,3 +308,5 @@ entryManager = wireEntries({ request, managed, operationPayload, acceptState, ge
 contentManager = wireContent({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast });
 libraryManager = wireLibrary({ request, managed, settle, operationPayload, acceptState, getState: () => state, toast });
 wireSystem({ request, managed, settle, operationPayload, acceptState });
+
+gettingStarted = wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, toast });

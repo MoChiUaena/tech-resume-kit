@@ -21,13 +21,25 @@ const kinds = { initial: '初始版本', manual: '手动备份', auto: '自动�
 
 export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}) {
   const root = path.resolve(directory), catalogFile = path.join(root, 'library.json');
+  const preferencesFile = path.join(root, 'editor-preferences.local.json');
+  let preferences = {};
+  try {
+    const stored = JSON.parse(await readFile(preferencesFile, 'utf8'));
+    if (stored?.schemaVersion === 1) preferences = stored;
+  } catch (error) { if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error; }
   await recoverLibraryRestore(root); await recoverCatalog(root);
   let catalog, trash = await readTrash(root), restoreRecord, restoreWarning = '', fatal;
   try { restoreRecord = await readLibraryRestoreRecord(root); } catch (error) { restoreWarning = error.message; }
   try { catalog = catalogSchema.parse(JSON.parse(await readFile(catalogFile, 'utf8'))); }
   catch (error) {
     if (error.code !== 'ENOENT') throw new ResumeError('简历列表文件无法读取，请保留 library.json，不要覆盖现有数据', { file: catalogFile });
-    await openProject(root);
+    let fresh = false;
+    try { await lstat(root); } catch (error) { if (error.code !== 'ENOENT') throw error; fresh = true; }
+    const initial = await openProject(root);
+    if (fresh) {
+      preferences = { schemaVersion: 1, welcomeRevision: (await initial.read()).revision, welcomePending: true };
+      await saveFile(preferencesFile, JSON.stringify(preferences, null, 2), true);
+    }
     catalog = { schemaVersion: 1, activeId: 'legacy', resumes: [{ id: 'legacy', name: '我的简历', createdAt: new Date().toISOString() }] };
     await saveFile(catalogFile, JSON.stringify(catalog, null, 2));
   }
@@ -49,7 +61,9 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   async function state() {
     if (fatal) throw fatal;
     const active = entry(), project = await projectFor(active.id);
-    return { ...(await project.read()), resumeId: active.id, resumeName: active.name, resumes: catalog.resumes.map(item => ({ ...item })), trash: trash.resumes.map(item => ({ ...item })), libraryRevision: sha(JSON.stringify([catalog, trash])), libraryBackupBeforeRestore: restoreRecord, libraryBackupWarning: restoreWarning, historyWarning };
+    const current = await project.read();
+    const welcome = preferences.welcomePending === true && preferences.welcomeRevision === current.revision && active.id === 'legacy' && catalog.resumes.length === 1 && trash.resumes.length === 0;
+    return { ...current, gettingStarted: { welcome }, resumeId: active.id, resumeName: active.name, resumes: catalog.resumes.map(item => ({ ...item })), trash: trash.resumes.map(item => ({ ...item })), libraryRevision: sha(JSON.stringify([catalog, trash])), libraryBackupBeforeRestore: restoreRecord, libraryBackupWarning: restoreWarning, historyWarning };
   }
   async function check(payload) {
     const current = await state();
@@ -111,13 +125,34 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     const item = { id, name: proposed, createdAt: new Date().toISOString() };
     catalog.resumes.push(item); catalog.activeId = id; projects.set(id, project);
     try { await persistCatalog(); } catch (error) { catalog.resumes.pop(); catalog.activeId = current.resumeId; projects.delete(id); throw error; }
-    await checkpoint(id, 'initial'); return state();
+    await checkpoint(id, 'initial'); await dismissWelcome(); return state();
   }
   const read = async () => { await queue; return state(); };
+  async function dismissWelcome() {
+    if (preferences.welcomePending !== true) return;
+    const next = { ...preferences, welcomePending: false };
+    await saveFile(preferencesFile, JSON.stringify(next, null, 2), true); preferences = next;
+  }
+  const dismissGettingStarted = payload => mutate(async () => {
+    await check(payload); await dismissWelcome(); return state();
+  });
+  const startFromTemplate = payload => mutate(async () => {
+    const current = await checkLibrary(payload);
+    if (!['blank', 'campus', 'experience'].includes(payload.template)) throw new ResumeError('请选择空白、校招或工作经验模板');
+    if (payload.mode === 'initial') {
+      if (!current.gettingStarted.welcome) throw new ResumeError('已经开始填写或简历库发生变化，请重新载入；可从模板新建一份简历', { code: 'CONFLICT' });
+      if (payload.template !== 'blank') {
+        await checkpoint(current.resumeId, 'template');
+        await (await projectFor()).useTemplate(payload); dirty.add(current.resumeId);
+      }
+    } else if (payload.mode === 'create') await createInternal(payload);
+    else throw new ResumeError('请选择开始填写或新建简历');
+    await dismissWelcome(); return state();
+  });
   const save = payload => mutate(async () => {
     const current = await check(payload);
     if (payload.importing) await checkpoint(current.resumeId, 'import');
-    await (await projectFor()).save(payload); dirty.add(current.resumeId);
+    await (await projectFor()).save(payload); dirty.add(current.resumeId); await dismissWelcome();
     return state();
   });
   const entries = async (resumeId, revision) => {
@@ -131,11 +166,11 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     if (changed.source === current.source) return state();
     if (payload.action === 'delete') await checkpoint(current.resumeId, 'entry');
     await (await projectFor()).save({ ...changed, revision: current.revision });
-    dirty.add(current.resumeId); return state();
+    dirty.add(current.resumeId); await dismissWelcome(); return state();
   });
   const useTemplate = payload => mutate(async () => {
     const current = await check(payload); await checkpoint(current.resumeId, 'template');
-    await (await projectFor()).useTemplate(payload); dirty.add(current.resumeId); return state();
+    await (await projectFor()).useTemplate(payload); dirty.add(current.resumeId); await dismissWelcome(); return state();
   });
   const content = async (resumeId, revision) => {
     await queue;
@@ -147,7 +182,7 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     if (changed.source === current.source) return state();
     if (payload.action === 'delete') await checkpoint(current.resumeId, 'content');
     await (await projectFor()).save({ ...changed, revision: current.revision });
-    dirty.add(current.resumeId); return state();
+    dirty.add(current.resumeId); await dismissWelcome(); return state();
   });
   const switchResume = payload => mutate(async () => {
     const current = await check(payload); entry(payload.targetId);
@@ -217,7 +252,7 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     const current = await check(payload), project = await projectFor();
     const decoded = upload ? decodeBackup(upload) : (await readBackup(current.resumeId, payload.backupId)).decoded;
     await checkpoint(current.resumeId, 'restore');
-    await applyBackup(project, decoded); dirty.add(current.resumeId); return state();
+    await applyBackup(project, decoded); dirty.add(current.resumeId); await dismissWelcome(); return state();
   });
   async function preview(revision, resumeId) {
     await queue;
@@ -252,5 +287,5 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   }
   if (!(await historyFor(catalog.activeId)).length) await checkpoint(catalog.activeId, 'initial');
   if (historyIntervalMs > 0) { timer = setInterval(() => autoCheckpoint().catch(error => { historyWarning = `自动版本未保存：${error.message}`; }), Math.min(historyIntervalMs, 60000)); timer.unref(); }
-  return { root, read, save, entries, changeEntry, content, changeContent, useTemplate, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
+  return { root, read, save, entries, changeEntry, content, changeContent, useTemplate, startFromTemplate, dismissGettingStarted, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
 }

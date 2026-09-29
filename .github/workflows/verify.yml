@@ -59,6 +59,8 @@ jobs:
           python scripts/render-pdfs.py --directory tmp/pdfs/workbench
           python scripts/verify-pdf.py --directory tmp/pdfs/content-forms
           python scripts/render-pdfs.py --directory tmp/pdfs/content-forms
+          python scripts/verify-pdf.py --directory tmp/pdfs/getting-started
+          python scripts/render-pdfs.py --directory tmp/pdfs/getting-started
       - name: Build and check only anonymous samples
         run: |
           npm run sample
@@ -89,6 +91,11 @@ jobs:
           name: content-form-validation
           retention-days: 7
           path: tmp/pdfs/content-forms/
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: getting-started-validation
+          retention-days: 7
+          path: tmp/pdfs/getting-started/
   windows-download:
     runs-on: windows-latest
     timeout-minutes: 20

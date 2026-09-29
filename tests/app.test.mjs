@@ -65,7 +65,7 @@ test('browser editor autosaves, exports actual PDFs, recovers from errors and ba
   await page.waitForFunction(() => document.querySelector('#name').value === '奶龙');
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   assert.equal((await readdir(path.join(app.project.root, 'backups'))).length, 1);
-  await page.getByRole('button', { name: '版式与图片' }).click();
+  await page.getByRole('button', { name: '版式与图片', exact: true }).click();
   await page.locator('#portrait-upload').setInputFiles(path.join(kitRoot, 'assets/images/nailong-avatar.jpg'));
   await page.locator('#crop-apply').click();
   await page.waitForFunction(() => document.querySelector('#save-status').textContent === '已自动保存');
