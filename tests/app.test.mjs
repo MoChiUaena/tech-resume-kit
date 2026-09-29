@@ -122,7 +122,7 @@ test('browser manages independent resumes and restores a full downloadable backu
   const archive = decodeBackup(await readFile(archivePath)); assert.ok(Object.keys(archive.files).some(key => key.startsWith('assets/')));
   await page.getByRole('button', { name: '关闭备份与恢复' }).click(); await page.locator('#resume-select').selectOption(aiId);
   await page.waitForFunction(() => document.querySelector('#name').value === 'AI 版本修改'); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
-  await page.locator('#history-open').click(); await page.locator('#backup-import').setInputFiles(archivePath); await page.locator('#restore-confirm').click();
+  await page.locator('#history-open').click(); await page.locator('#history-dialog[open]').waitFor(); await page.locator('#backup-import').setInputFiles(archivePath); await page.locator('#restore-dialog[open]').waitFor(); await page.locator('#restore-confirm').click();
   await page.waitForFunction(() => document.querySelector('#name').value === '多版本填写示例'); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   assert.equal((await app.project.read()).resumeId, aiId);
   await page.getByRole('button', { name: '关闭备份与恢复' }).click(); await page.reload();
