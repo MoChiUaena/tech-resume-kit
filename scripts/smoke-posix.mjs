@@ -63,7 +63,7 @@ try {
   page.on('request', request => { if (/^https?:/.test(request.url()) && new URL(request.url()).origin !== new URL(url).origin) remote.push(request.url()); }); page.on('pageerror', error => errors.push(error.message));
   await page.goto(url); const viewer = page.frameLocator('#pdf-frame'); await viewer.locator('.pdf-page[data-rendered=true]').waitFor({ timeout: 30000 });
   assert.match(await viewer.locator('.textLayer').innerText(), /奶龙/);
-  await page.locator('#system-open').click(); assert.equal(await page.locator('#storage-browse').isVisible(), false); assert.equal(await page.locator('#storage-open').isVisible(), true); await page.getByRole('button', { name: '关闭数据与更新' }).click();
+  await page.locator('#system-open').click(); await page.locator('#system-dialog[open]').waitFor(); assert.equal(await page.locator('#storage-browse').isVisible(), false); assert.equal(await page.locator('#storage-open').isVisible(), true); await page.getByRole('button', { name: '关闭数据与更新' }).click();
   await page.locator('#entry-manager-summary').click(); await page.locator('[data-section-id=education] [data-action=edit]').click(); await page.locator('#entry-date').fill('2023.09 - 2027.07（预计）'); await page.locator('#entry-submit').click(); await page.locator('#entry-dialog').waitFor({ state: 'hidden' });
   await viewer.locator('.textLayer').filter({ hasText: '2027.07' }).waitFor({ timeout: 30000 });
   state = await (await fetch(url + 'api/state')).json(); const pdf = await fetch(url + `document.pdf?revision=${state.revision}&resumeId=${state.resumeId}`); assert.equal(pdf.status, 200);
