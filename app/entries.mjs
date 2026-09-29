@@ -1,6 +1,7 @@
 const sections = {
   education: { id: 'education', title: '教育背景' },
   internship: { id: 'internship', title: '实习经历' },
+  work: { id: 'experience', title: '工作经历' },
   project: { id: 'projects', title: '项目经历' },
 };
 const presets = {
@@ -34,7 +35,7 @@ function scanSections(body) {
 
 export function insertResumeEntry(body, input, layout = {}) {
   const target = sections[input.kind];
-  if (!target) throw new Error('请选择教育、实习或项目经历');
+  if (!target) throw new Error('请选择教育、实习、工作或项目经历');
   body = body.replace(/\r\n?/g, '\n');
   const title = oneLine(input.title, '名称', true), date = oneLine(input.date, '时间', true);
   const subtitle = oneLine(input.subtitle, '专业或职责'), stack = oneLine(input.stack, '技术栈');

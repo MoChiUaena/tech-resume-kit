@@ -15,7 +15,7 @@ package = json.loads((root / 'package.json').read_text(encoding='utf-8'))
 version = package['version']
 packed = json.loads(subprocess.check_output([shutil.which('npm'), 'pack', '--json', '--pack-destination', str(output)], cwd=root, text=True, encoding='utf-8'))[0]
 paths = {entry['path'] for entry in packed['files']}
-required = {'src/index.mjs', 'src/index.d.mts', 'src/resume.css', 'src/cli.mjs', 'src/pdf-viewer.mjs', 'src/entries.mjs', 'src/portable.mjs', 'src/catalog.mjs', 'src/library-backup.mjs', 'src/workbench.mjs', 'src/json-source.mjs', 'app/library-manager.mjs', 'app/entry-manager.mjs', 'app/pdf-viewer.html', 'app/pdf-viewer.mjs', 'app/pdf-viewer.css', 'assets/fonts/OFL.txt', 'assets/fonts/ResumeSansSC-Regular.ttf', 'templates/blank/resume.md', 'examples/json/resume.json', 'examples/workbench/resume.json', 'examples/workbench/conversion.json'}
+required = {"src/content.mjs", "app/content-manager.mjs", 'src/index.mjs', 'src/index.d.mts', 'src/resume.css', 'src/cli.mjs', 'src/pdf-viewer.mjs', 'src/entries.mjs', 'src/portable.mjs', 'src/catalog.mjs', 'src/library-backup.mjs', 'src/workbench.mjs', 'src/json-source.mjs', 'app/library-manager.mjs', 'app/entry-manager.mjs', 'app/pdf-viewer.html', 'app/pdf-viewer.mjs', 'app/pdf-viewer.css', 'assets/fonts/OFL.txt', 'assets/fonts/ResumeSansSC-Regular.ttf', 'templates/blank/resume.md', 'examples/json/resume.json', 'examples/workbench/resume.json', 'examples/workbench/conversion.json'}
 assert required <= paths, f'Missing package resources: {required - paths}'
 for name in paths:
     parts = PurePosixPath(name).parts
