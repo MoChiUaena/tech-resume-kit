@@ -15,6 +15,18 @@ def sha(file):
     with Path(file).open('rb') as stream:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
+def verified_draft_assets(expected, existing):
+    planned = {asset['name']: asset for asset in expected}
+    require(len(planned) == len(expected), 'Duplicate planned release asset.')
+    found = set()
+    for asset in existing:
+        name = asset.get('name')
+        require(name in planned and name not in found, 'Unknown or duplicate draft asset.')
+        wanted = planned[name]
+        require(asset.get('state') == 'uploaded' and asset.get('size') == wanted['size'] and asset.get('digest') == 'sha256:' + wanted['sha256'], 'Draft asset differs from the verified candidate: ' + name)
+        found.add(name)
+    return found
+
 def verify_upgrade(report, version, candidate_sha256):
     baseline = json.loads(Path(__file__).with_name('upgrade-baseline.json').read_text(encoding='utf-8'))
     require(report.get('schemaVersion') == 1, 'Upgrade report schema does not match.')

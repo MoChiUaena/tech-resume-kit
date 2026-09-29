@@ -1,6 +1,6 @@
 # 内容模型与接口
 
-`ResumeDocument` 与 `LayoutConfig` 的 `schemaVersion` 均为 `0.2.0`。GitHub v0.8.0 提供可安装 TGZ、公共 ESM 入口和 TypeScript 类型声明，见[调用接口](api.md)。与阶段 A 的 `0.1.0` 相比，条目和普通章节改用 `blocks`，以保留“段落 → 列表 → 段落”的原始阅读顺序。0.1.0 JSON 仅作为回归基准，不能直接传入新版渲染器。
+`ResumeDocument` 与 `LayoutConfig` 的 `schemaVersion` 均为 `0.2.0`。GitHub v0.9.0 提供可安装 TGZ、公共 ESM 入口和 TypeScript 类型声明，见[调用接口](api.md)。与阶段 A 的 `0.1.0` 相比，条目和普通章节改用 `blocks`，以保留“段落 → 列表 → 段落”的原始阅读顺序。0.1.0 JSON 仅作为回归基准，不能直接传入新版渲染器。
 
 ## ResumeDocument
 
@@ -40,7 +40,7 @@ type ResumeDocument = {
 
 标题、联系方式显示文本与元数据是纯文本；`Block.text`、`Block.items` 与技能说明使用受限 Markdown 行内语法，渲染时再次校验。数组保留内容顺序。日期不从标题或空格中猜测，图片不写开发者电脑的绝对路径。
 
-main 的 `0.9.0-dev.1` 允许结构化 JSON 条目省略 `date`，适用于没有日期的技能组及工作台的完整元信息。Markdown 条目的日期规则保持不变，已发布 v0.8.0 的结构化条目仍需要 `date`。
+v0.9.0 允许结构化 JSON 条目省略 `date`，适用于没有日期的技能组及工作台的完整元信息。Markdown 条目的日期规则保持不变，已发布 v0.8.0 的结构化条目仍需要 `date`。
 
 ## LayoutConfig
 
