@@ -59,6 +59,16 @@ jobs:
           python scripts/verify-pdf.py --directory tmp/pdfs/boundary
           python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
           python scripts/collect-qa-report.py
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: release-source-validation
+          retention-days: 7
+          path: |
+            tmp/packages/tech-resume-kit-*.tgz
+            tmp/packages/tech-resume-starter-*.zip
+            output/pdf/
+            assets/images/nailong-avatar.jpg
+            docs/phase-c-evidence.json
   windows-download:
     runs-on: windows-latest
     timeout-minutes: 20

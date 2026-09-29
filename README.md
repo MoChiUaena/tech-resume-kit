@@ -1,6 +1,6 @@
 # tech-resume-kit
 
-在本地页面填写中文技术简历，用 Markdown 编辑经历，实时预览并下载 PDF。Windows 版下载解压后双击启动。
+在本地页面填写中文技术简历，用 Markdown 编辑经历，实时预览并下载 PDF。Windows / macOS / Linux 启动包随包提供运行组件。
 
 [![Verify anonymous samples](https://github.com/MoChiUaena/tech-resume-kit/actions/workflows/verify.yml/badge.svg)](https://github.com/MoChiUaena/tech-resume-kit/actions/workflows/verify.yml)
 
@@ -8,31 +8,38 @@
 
 [校招样张 PDF](output/pdf/campus-ink-blue.pdf) · [AI 实习样张 PDF](output/pdf/ai-intern-ink-blue.pdf) · [两页经验样张 PDF](output/pdf/experienced-ink-blue.pdf) · [可直接填写的 resume.md](resume.md) · [版式配置](layout.yaml)
 
-**公开版本 v0.7.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持照片裁剪、经历表单、多份简历、数据目录迁移、备份恢复，以及可翻页和缩放的离线 PDF 预览。
+**公开版本 v0.8.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持照片裁剪、经历管理、多份简历、回收站、整库 ZIP、数据目录迁移，以及可翻页和缩放的离线 PDF 预览。
 
 校招样张使用“奶龙”姓名和白底竖版头像。图片来源与许可信息集中记录在[素材说明](assets/README.md)。
 
 ## 下载使用
 
-[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.7.0/tech-resume-windows-x64-0.7.0.zip) · Windows 10 / 11 x64 · 约 197 MB
+[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.8.0/tech-resume-windows-x64-0.8.0.zip) · Windows 10 / 11 x64 · 约 197 MB
 
-1. 完整解压，双击 **启动简历.exe**。
+| 其他系统 | 下载 | 启动入口 |
+| --- | --- | --- |
+| macOS Apple Silicon | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.8.0/tech-resume-macos-arm64-0.8.0.tar.gz) | 启动简历.command |
+| macOS Intel | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.8.0/tech-resume-macos-x64-0.8.0.tar.gz) | 启动简历.command |
+| Linux x64 | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.8.0/tech-resume-linux-x64-0.8.0.tar.gz) | ./启动简历.sh |
+| Linux ARM64 | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.8.0/tech-resume-linux-arm64-0.8.0.tar.gz) | ./启动简历.sh |
+
+macOS 打开方式、签名状态与 Linux 系统依赖见[跨平台使用说明](docs/portable.md)。
+
+1. 完整解压，运行对应系统的启动入口；Windows 双击 **启动简历.exe**。
 2. 在打开的页面填写基本信息和 Markdown 经历，右侧自动更新实际 PDF 预览。
 3. 点击 **下载 PDF**。
 
-照片、校徽和版式通过“版式与图片”设置，照片可裁剪为 23:31。正文上方可用表单添加教育、实习和项目经历，修改自动保存，重启后可以继续编辑。
+照片、校徽和版式通过“版式与图片”设置，照片可裁剪为 23:31。正文上方可用表单添加教育、实习和项目经历，“管理已有经历”支持编辑、复制、上下移动和删除。修改自动保存，重启后可以继续编辑。
 
 “当前简历”支持新建、复制、重命名和切换，每份简历有独立正文、版式、图片与历史。“备份与恢复”可以立即备份、下载包含图片的完整 ZIP，以及恢复历史版本或备份文件；恢复前先保留当前内容。有修改时每 5 分钟生成自动版本，切换或退出前也会保存。
 
-数据默认保存到 `%LOCALAPPDATA%\TechResumeKit\data`，与程序分开。“数据与更新”显示实际位置，可迁移全部资料或打开已有简历库。从 v0.6.0 升级时会识别旧版 `my-resume`，迁移前保存整库副本并核对文件，原目录保留。完整备份 ZIP 对应当前选中的一份简历；复制整个数据文件夹可保存全部简历与历史。
+数据默认保存到 `%LOCALAPPDATA%\TechResumeKit\data`，与程序分开。“数据与更新”显示实际位置，可迁移全部资料或打开已有简历库。从 v0.6.0 升级时会识别旧版 `my-resume`，迁移前保存整库副本并核对文件，原目录保留。单份备份 ZIP 对应当前简历。“简历库管理”提供回收站与整库 ZIP；整库包含全部简历、图片、历史和当前选择，恢复前保留可下载的原库副本。
 
 “检查正式版本”可以下载并核验新版安装包，支持暂停、断线续传和重启后继续。点击“保存并打开新版”才切换程序，切换前会保存整库副本，启动失败时尝试返回原程序。
 
-运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.7.0/tech-resume-kit-0.7.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
+运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.8.0/tech-resume-kit-0.8.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
 
 ## 从源码开始
-
-当前源码开发版在正文上方提供“管理已有经历”：编辑、复制、在同一章节内上移或下移，以及删除。编辑正文支持段落和 Markdown 列表；删除前的内容可从“备份与恢复”还原。“简历库管理”提供回收站与整库 ZIP 导出、恢复，恢复前保留可下载的原库副本。源码中另有 macOS / Linux 原生启动包构建流程，CI 提供经过验证的开发包；Linux 系统库与 macOS 打开方式见[跨平台使用说明](docs/portable.md)。这组功能将在后续正式版本发布。
 
 需要 Node.js 22.13 或更高版本。首次安装需要联网下载 npm 依赖和 Chromium；准备好后预览和导出可断网运行。
 

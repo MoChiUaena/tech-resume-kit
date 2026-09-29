@@ -2,7 +2,7 @@
 
 “数据与更新”显示正在使用的数据目录。Windows 默认路径为 `%LOCALAPPDATA%\TechResumeKit\data`，位置设置在同级的 `settings.json`，所有程序版本共用这份设置。用 `--dir` 启动时直接使用指定位置。
 
-数据目录包含 `library.json`、第一份简历的 `resume.md` / `layout.yaml`、`assets/`、`resumes/` 和 `history/`。旧版 `backups/` 和原图片也保留。复制整个数据文件夹可迁移整库。“备份与恢复”导出的 ZIP 对应当前一份简历；源码开发版中的“简历库管理”可导出和恢复整库 ZIP。
+数据目录包含 `library.json`、第一份简历的 `resume.md` / `layout.yaml`、`assets/`、`resumes/` 和 `history/`。旧版 `backups/` 和原图片也保留。复制整个数据文件夹可迁移整库。“备份与恢复”导出的 ZIP 对应当前一份简历；“简历库管理”可导出和恢复整库 ZIP。
 
 “移入回收站”保留正文、图片和历史，回收站记录在 `trash.json`。恢复时可修改名称，避免与在用简历重名；至少保留一份在用简历。
 
