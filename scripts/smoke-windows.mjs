@@ -9,11 +9,12 @@ import { PDFDocument } from 'pdf-lib';
 import { pdfExpectations } from './pdf-expectations.mjs';
 import { initializeProject } from '../src/files.mjs';
 import { extractPackage } from '../src/updates.mjs';
+import { chromium } from 'playwright';
 const exec = promisify(execFile), root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 assert.equal(process.platform, 'win32');
 const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
 const outside = await realpath(await mkdtemp(path.join(tmpdir(), 'tech-resume-免安装 验证-')));
-let child, url, token;
+let child, url, token, browser;
 try {
   await exec(process.env.TECH_RESUME_PYTHON || 'python', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert all(".." not in n.split("/") and not n.startswith("/") for n in z.namelist()); z.extractall(sys.argv[2])', path.join(root, 'tmp/packages', `tech-resume-windows-x64-${version}.zip`), outside], { windowsHide: true, timeout: 120000 });
   const portable = path.join(outside, `tech-resume-windows-x64-${version}`), executable = path.join(portable, '启动简历.exe');
@@ -48,6 +49,12 @@ try {
   const preview = await (await fetch(url + 'api/preview')).json(); assert.equal(preview.pageCount, 1);
   state.front.person.name = '免安装填写示例';
   state = await post('api/save', { resumeId: state.resumeId, revision: state.revision, front: state.front, body: state.body, layout: state.layout });
+  browser = await chromium.launch({ executablePath: path.join(portable, 'runtime/browsers/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe'), headless: true });
+  const page = await browser.newPage({ viewport: { width: 1400, height: 980 } }), remoteRequests = [];
+  page.on('request', request => { if (/^https?:/.test(request.url()) && new URL(request.url()).origin !== new URL(url).origin) remoteRequests.push(request.url()); });
+  await page.goto(url); const viewer = page.frameLocator('#pdf-frame');
+  await viewer.locator('.pdf-page[data-page="1"][data-rendered="true"]').waitFor({ timeout: 30000 });
+  assert.match(await viewer.locator('.textLayer').innerText(), /免安装填写示例/);
   const document = await fetch(url + `document.pdf?revision=${state.revision}&download=1`); assert.equal(document.status, 200);
   const buffer = Buffer.from(await document.arrayBuffer()); assert.equal((await PDFDocument.load(buffer)).getPageCount(), 1);
   const qa = path.join(root, 'tmp/pdfs/editor'); await mkdir(qa, { recursive: true });
@@ -57,6 +64,8 @@ try {
   await writeFile(path.join(qa, 'portable-blank.expected.json'), JSON.stringify(pdfExpectations({ document: model, layout: state.layout, images: {} }, 1)));
   state = await post('api/template', { resumeId: state.resumeId, template: 'experience', revision: state.revision });
   const twoPages = await (await fetch(url + 'api/preview')).json(); assert.equal(twoPages.pageCount, 2);
+  await page.reload(); await viewer.locator('.pdf-page[data-page="2"][data-rendered="true"]').waitFor({ timeout: 30000 });
+  assert.deepEqual(remoteRequests, []); await browser.close(); browser = null;
   assert.match(await readFile(path.join(directory, 'resume.md'), 'utf8'), /后端/);
   const originalId = state.resumeId;
   const snapshot = await post('api/backup', { resumeId: state.resumeId, revision: state.revision });
@@ -94,9 +103,10 @@ try {
   assert.equal((await (await fetch(url + 'api/state')).json()).resumeId, otherId);
   await post('api/exit', {});
   for (let i = 0; i < 50; i++) { try { await readFile(sessionFile); } catch (error) { if (error.code === 'ENOENT') break; throw error; } await new Promise(resolve => setTimeout(resolve, 100)); }
-  await writeFile(path.join(root, 'tmp/packages/windows-smoke.json'), JSON.stringify({ version, bundledNode: true, noNodeInPath: true, independentBrowserCache: true, offlineProxy: true, singletonAcrossProgramDirectories: true, autosave: true, pdfPages: [1, 2], multipleResumes: true, completeBackup: true, restore: true, restartPersistence: true, separateDataDirectory: true, legacyMigration: true, verifiedUpdateExtraction: true, versionSwitchPersistence: true, startupFailureFallback: true, cleanExit: true }, null, 2));
+  await writeFile(path.join(root, 'tmp/packages/windows-smoke.json'), JSON.stringify({ version, bundledNode: true, noNodeInPath: true, independentBrowserCache: true, offlineProxy: true, singletonAcrossProgramDirectories: true, autosave: true, pdfPages: [1, 2], offlineCanvasPreview: true, selectablePreviewText: true, noRemotePreviewRequests: true, multipleResumes: true, completeBackup: true, restore: true, restartPersistence: true, separateDataDirectory: true, legacyMigration: true, verifiedUpdateExtraction: true, versionSwitchPersistence: true, startupFailureFallback: true, cleanExit: true }, null, 2));
   console.log('Windows EXE passed: offline export, complete library migration, separate data, cross-version singleton, verified extraction, version switch and failed-start fallback.');
 } finally {
+  await browser?.close();
   if (url && token) await fetch(url + 'api/exit', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: url.slice(0, -1), 'X-Resume-Token': token }, body: '{}', signal: AbortSignal.timeout(3000) }).catch(() => {});
   if (child?.pid && child.exitCode === null) await exec('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }).catch(() => {});
   const actual = await realpath(outside); assert.ok(actual.startsWith(path.join(await realpath(tmpdir()), 'tech-resume-免安装 验证-')));

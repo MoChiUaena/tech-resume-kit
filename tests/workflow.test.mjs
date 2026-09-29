@@ -142,8 +142,7 @@ test('preview updates in an actual browser and recovers from an input error', as
   const pdfResponse = await fetch(preview.url + '/__document.pdf');
   assert.equal(pdfResponse.headers.get('content-type'), 'application/pdf');
   assert.equal((await PDFDocument.load(await pdfResponse.arrayBuffer())).getPageCount(), 2);
-  // A screenshot helps the phase C visual review verify the native PDF frame.
-  await page.waitForTimeout(1200);
+  await page.frameLocator('iframe').locator('.pdf-page[data-page="2"][data-rendered="true"]').waitFor({ timeout: 20000 });
   await page.screenshot({ path: path.join(kitRoot, 'tmp/pdfs/preview-two-pages.png') });
   await writeFile(input, source + '\n\n' + Array(5).fill(added).join('\n\n'));
   await page.locator('.preview-error').waitFor({ timeout: 30000 });

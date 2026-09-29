@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='windows-', dir=output) as staging:
         tar.extractall(Path(staging) / 'unpack', filter='data')
     shutil.move(str(Path(staging) / 'unpack/package'), toolkit)
     shutil.copy2(root / 'package-lock.json', toolkit / 'package-lock.json')
-    subprocess.run([shutil.which('npm'), 'ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], cwd=toolkit, check=True)
+    subprocess.run([shutil.which('npm'), 'ci', '--omit=dev', '--omit=optional', '--ignore-scripts', '--no-audit', '--no-fund'], cwd=toolkit, check=True)
     runtime = stage / 'runtime'
     runtime.mkdir()
     with zipfile.ZipFile(node_zip) as source:

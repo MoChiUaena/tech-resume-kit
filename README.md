@@ -30,7 +30,7 @@
 
 ## 从源码开始
 
-需要 Node.js 22 或更高版本。首次安装需要联网下载 npm 依赖和 Chromium；准备好后预览和导出可断网运行。
+需要 Node.js 22.13 或更高版本。首次安装需要联网下载 npm 依赖和 Chromium；准备好后预览和导出可断网运行。
 
 ```sh
 git clone https://github.com/MoChiUaena/tech-resume-kit.git
@@ -60,7 +60,7 @@ npm run preview -- personal/my-resume/resume.md
 npm run build -- personal/my-resume/resume.md --out personal/my-resume/output/resume.pdf
 ```
 
-预览默认是 `http://127.0.0.1:4173`，仅本机可访问，内嵌显示实际生成的 PDF；可以查看真实分页、缩放和翻页。保存 Markdown、配置或启用的图片后自动刷新。输入错误或超页时显示错误，修正后恢复，不继续展示旧 PDF。用 `--port 4174` 更换端口，用 Ctrl+C 停止；若浏览器不显示内嵌 PDF，可点击“打开 PDF”。
+预览默认是 `http://127.0.0.1:4173`，仅本机可访问。离线预览器显示实际生成的 PDF，支持翻页、缩放、文本选择和链接，字体与图片从 PDF 中读取。保存 Markdown、配置或启用的图片后自动刷新。输入错误或超页时显示错误，修正后恢复。用 `--port 4174` 更换端口，用 Ctrl+C 停止；“打开 PDF”可以在新窗口查看原文件。
 
 PDF 导出使用同一份 HTML/CSS，等待字体和图片加载完成。check、preview 和 build 都以实际 PDF 页数执行上限检查。输出已存在时会停止；确认要更新才加 `--force`。校验失败或超过页数上限时，原 PDF 保持不变。直接查看或保存已生成的 PDF 即可，不需要再次打印 HTML。
 

@@ -7,6 +7,7 @@ import path from 'node:path';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { pdfExpectations } from './pdf-expectations.mjs';
+import { chromium } from 'playwright';
 const exec = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
@@ -95,6 +96,12 @@ const bad: ResumeDocument = {schemaVersion:2};
   const address = `http://127.0.0.1:${port}`;
   assert.equal((await (await fetch(address + '/__status')).json()).valid, true);
   assert.equal((await fetch(address + '/__document.pdf')).headers.get('content-type'), 'application/pdf');
+  const browser = await chromium.launch({ channel: 'chromium' });
+  try {
+    const page = await browser.newPage(); await page.goto(address);
+    await page.frameLocator('iframe').locator('.pdf-page[data-rendered="true"]').waitFor({ timeout: 30000 });
+    assert.match(await page.frameLocator('iframe').locator('.textLayer').innerText(), /你的姓名/);
+  } finally { await browser.close(); }
   console.log('Starter ZIP: real install/export launchers, unique output filenames and local PDF preview passed.');
   await writeFile(path.join(packages, 'smoke-report.json'), JSON.stringify({ version: pkg.version, platform: process.platform, packageApi: true, types: true, cliJson: true, allStarters: true, launchers: true, preview: true, pagesReviewedSeparately: ['installed-json', 'starter-blank'] }, null, 2) + '\n');
 } finally {

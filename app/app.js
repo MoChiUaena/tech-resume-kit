@@ -5,6 +5,7 @@ const $ = id => document.getElementById(id), token = document.querySelector('met
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
 let cropSession, cropDrag, entryKind;
+let viewerReference;
 async function request(url, data, raw = false) {
   const options = data === undefined ? {} : { method: 'POST', headers: { 'X-Resume-Token': token, ...(raw ? { 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision } : { 'Content-Type': 'application/json' }) }, body: raw ? data : JSON.stringify({ resumeId: state?.resumeId, ...data }) };
   const response = await fetch(url, options), result = await response.json();
@@ -50,12 +51,15 @@ function populate() {
 }
 async function refreshPreview(revision, expectedTick = tick) {
   const sequence = ++previewSequence, resumeId = state.resumeId; previewReady = false; $('page-status').textContent = '正在排版…'; $('pdf-download').disabled = true;
+  viewerReference = undefined;
   try {
     const result = await request(`/api/preview?revision=${revision}&resumeId=${resumeId}`);
     if (sequence !== previewSequence || tick !== expectedTick || state.resumeId !== resumeId) return;
-    $('pdf-frame').src = `/document.pdf?revision=${result.revision}&resumeId=${resumeId}#view=FitH`;
+    const source = `/document.pdf?revision=${result.revision}&resumeId=${resumeId}`;
+    viewerReference = { source, sequence, tick: expectedTick };
+    $('pdf-frame').src = `/pdf-viewer.html?file=${encodeURIComponent(source)}`;
     $('pdf-frame').hidden = false; $('preview-placeholder').hidden = true; $('preview-error').hidden = true;
-    $('page-status').textContent = `${result.pageCount} 页 · A4`; previewReady = true; $('pdf-download').disabled = false;
+    $('page-status').textContent = `${result.pageCount} 页 · 正在显示`; previewReady = true; $('pdf-download').disabled = false;
     $('preview-note').hidden = !result.warnings.length; $('preview-note').textContent = result.warnings.join(' ');
   } catch (error) {
     if (sequence !== previewSequence || tick !== expectedTick || state.resumeId !== resumeId) return;
@@ -63,6 +67,11 @@ async function refreshPreview(revision, expectedTick = tick) {
     $('preview-error').hidden = false; $('preview-error').textContent = [error.details?.line ? `第 ${error.details.line} 行` : '', error.details?.field ? `字段 ${error.details.field}` : '', error.message].filter(Boolean).join('\n'); $('page-status').textContent = '需要调整内容';
   }
 }
+window.addEventListener('message', event => {
+  if (event.origin !== location.origin || event.source !== $('pdf-frame').contentWindow || !viewerReference || event.data?.source !== viewerReference.source || viewerReference.sequence !== previewSequence || tick !== viewerReference.tick) return;
+  if (event.data.type === 'resume-pdf-ready') $('page-status').textContent = `${event.data.pageCount} 页 · A4`;
+  else if (event.data.type === 'resume-pdf-error') $('page-status').textContent = '显示失败，可下载 PDF';
+});
 async function save() {
   if (busy) { pending = true; return; } if (tick === savedTick) return;
   busy = true; const captured = tick;
@@ -90,7 +99,7 @@ async function managed(action) {
     for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
   }
 }
-function acceptState(result) { state = result; tick = savedTick = 0; previewSequence++; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); }
+function acceptState(result) { state = result; tick = savedTick = 0; previewSequence++; viewerReference = undefined; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); }
 function download(contents, filename, type) { const blob = new Blob([contents], { type }); const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 for (const input of document.querySelectorAll('[data-person]')) input.addEventListener('input', () => { const key = input.dataset.person; if (input.value || ['name', 'target'].includes(key)) state.front.person[key] = input.value; else delete state.front.person[key]; edited(); });
 $('body').addEventListener('input', edited);

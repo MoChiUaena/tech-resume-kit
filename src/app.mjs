@@ -12,15 +12,17 @@ import { kitRoot } from './render.mjs';
 import { ResumeError } from './errors.mjs';
 import { openStorage, lockDirectory, snapshotLibrary, canonicalDirectory, assertInactive } from './storage.mjs';
 import { createUpdater } from './updates.mjs';
+import { createPdfViewerAssets } from './pdf-viewer.mjs';
 
 export async function startEditor(directory, { port = 0, idleSeconds = 0, historyIntervalMs, storage, desktopDirectory, updater: suppliedUpdater } = {}) {
   await assertInactive(directory);
-  let releaseLock = await lockDirectory(directory), project, updater, version;
+  let releaseLock = await lockDirectory(directory), project, updater, version, servePdfViewer;
   try {
     version = JSON.parse(await readFile(path.join(kitRoot, 'package.json'), 'utf8')).version;
     project = await openLibrary(directory, { historyIntervalMs });
     updater = suppliedUpdater || await createUpdater({ version, home: storage?.home || project.root, programDirectory: desktopDirectory });
-  } catch (error) { await project?.close().catch(() => {}); await releaseLock(); throw error; }
+    servePdfViewer = await createPdfViewerAssets();
+  } catch (error) { await updater?.close().catch(() => {}); await project?.close().catch(() => {}); await releaseLock(); throw error; }
   const token = randomBytes(24).toString('hex');
   let lastSeen = Date.now(), url, closing = false;
   let mutations = Promise.resolve();
@@ -84,6 +86,7 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
     const requested = new URL(request.url, url), pathname = requested.pathname;
     try {
       if (request.method === 'GET') {
+        if (await servePdfViewer(pathname, response)) { lastSeen = Date.now(); return; }
         if (pathname !== '/api/ping') await mutations;
         if (staticFiles[pathname]) {
           const [file, type] = staticFiles[pathname]; let contents = await readFile(path.join(kitRoot, file));

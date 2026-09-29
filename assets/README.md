@@ -47,3 +47,5 @@ python scripts/prepare-fonts.py path/to/NotoSansSC-VF.ttf
 ```
 
 字体文件始终按 OFL 分发；代码的 MIT 许可不会替换或扩张字体、人像及奶龙头像的许可范围。
+
+离线 PDF 预览使用 PDF.js `6.3.289`，按 Apache-2.0 分发；上游文件及 `LICENSE` 随 npm 依赖保留。预览在本机读取 PDF，字体、CMap 和解码资源不依赖在线服务。
