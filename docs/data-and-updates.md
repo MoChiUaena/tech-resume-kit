@@ -4,6 +4,8 @@
 
 数据目录包含 `library.json`、第一份简历的 `resume.md` / `layout.yaml`、`assets/`、`resumes/` 和 `history/`。旧版 `backups/` 和原图片也保留。复制整个数据文件夹可迁移整库。“备份与恢复”导出的 ZIP 对应当前一份简历；“简历库管理”可导出和恢复整库 ZIP。
 
+main 开发版将首次填写状态保存在数据目录的 `editor-preferences.local.json`，与简历正文和版式分开。复制或迁移整个目录会保留该偏好；单份和整库 ZIP 只包含简历资料，不含界面偏好。已有库和导入的资料不会自动弹出起步引导。
+
 “移入回收站”保留正文、图片和历史，回收站记录在 `trash.json`。恢复时可修改名称，避免与在用简历重名；至少保留一份在用简历。
 
 整库 ZIP 包含全部在用简历、回收站、图片、历史和当前选择，也保留尚未完成的 Markdown 草稿。上传上限 128 MB，解压后上限 256 MB / 5000 个文件。单份 ZIP 与整库 ZIP 使用各自的恢复入口。
@@ -20,4 +22,4 @@ Windows 的更新入口只读取正式 Release；开发版不会因较旧正式�
 
 “保存并打开新版”先保存当前库和整库副本，再关闭旧进程并打开新版。新程序读取同一份数据位置。启动失败时启动器尝试打开旧程序；新版中的“打开上一版本”也保留现有资料。`update-state.json` 记录两个程序位置及切换前副本。若后续版本升级了数据格式，应通过“打开已有简历库”选择副本中的 `data` 恢复。程序与副本均不自动删除。
 
-维护者验证命令为 `npm test`、`npm run package:release`、`npm run test:package`、`npm run package:windows` 和 `npm run test:windows`。测试隔离设置目录，覆盖旧库迁移、跨程序目录启动、资料持久化、真实安装包解压及启动失败回退。SHA-256 用于下载完整性核验；Windows 代码签名仍待完成。
+维护者验证命令为 `npm test`、`npm run package:release`、`npm run test:package`、`npm run package:windows` 和 `npm run test:windows`。测试隔离设置目录，覆盖旧库迁移、跨程序目录启动、资料持久化、真实安装包解压及启动失败回退。SHA-256 用于下载完整性核验，版本通过 GitHub Release 分发。

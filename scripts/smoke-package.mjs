@@ -28,6 +28,7 @@ try {
   await writeFile(path.join(outside, 'probe.mjs'), `
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { initializeProject, loadResume, loadWorkbenchResume, renderResume, inspectAndExport } from 'tech-resume-kit';
 for (const [template, pages] of [['campus',1],['blank',1],['experience',2]]) {
   await initializeProject(template, template);
@@ -43,6 +44,18 @@ const converted = await loadWorkbenchResume('node_modules/tech-resume-kit/exampl
 const convertedPdf = await inspectAndExport(await renderResume(converted.document, converted.layout, converted), {pdf:true});
 assert.equal(convertedPdf.metrics.pageCount,1); assert.equal(convertedPdf.metrics.images.length,2);
 assert.equal(converted.report.sourceSchemaVersion,4);
+const { startEditor } = await import('./node_modules/tech-resume-kit/src/app.mjs');
+const editor = await startEditor(path.resolve('editor-data'));
+try {
+  const state = await (await fetch(editor.url + 'api/state')).json();
+  assert.equal(state.gettingStarted.welcome, true);
+  const module = await fetch(editor.url + 'getting-started.mjs');
+  assert.equal(module.status, 200); assert.match(await module.text(), /wireGettingStarted/);
+  const html = await (await fetch(editor.url)).text();
+  const token = /name="resume-token" content="([a-f0-9]+)"/.exec(html)[1];
+  const response = await fetch(editor.url + 'api/getting-started/start', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: editor.url.slice(0,-1), 'X-Resume-Token': token }, body: JSON.stringify({ ...state, mode: 'initial', template: 'blank' }) });
+  assert.equal(response.status, 200); assert.equal((await response.json()).gettingStarted.welcome, false);
+} finally { await editor.close(); }
 `);
   await run(process.execPath, [path.join(outside, 'probe.mjs')]);
   await writeFile(path.join(outside, 'types.mts'), `
@@ -72,7 +85,7 @@ const bad: ResumeDocument = {schemaVersion:2};
   await copyFile(jsonPdf, path.join(qa, 'installed-json.pdf'));
   const apiModel = JSON.parse(await readFile(path.join(outside, 'api-result.json'), 'utf8'));
   await writeFile(path.join(qa, 'installed-json.expected.json'), JSON.stringify(pdfExpectations(apiModel, 1)));
-  console.log('Installed TGZ: CLI bin, ESM API, TypeScript, all three starters and JSON PDF passed.');
+  console.log('Installed TGZ: CLI bin, ESM API, TypeScript, all three starters, getting-started editor and JSON PDF passed.');
   const zipPath = path.join(packages, `tech-resume-starter-${pkg.version}.zip`);
   await run(process.env.TECH_RESUME_PYTHON || 'python', ['-X', 'utf8', '-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert all(".." not in n.split("/") and not n.startswith("/") for n in z.namelist()); z.extractall(sys.argv[2])', zipPath, outside]);
   const starter = path.join(outside, `tech-resume-starter-${pkg.version}`), runner = path.join(starter, 'toolkit/starter/runner.mjs');
@@ -112,7 +125,7 @@ const bad: ResumeDocument = {schemaVersion:2};
     assert.match(await page.frameLocator('iframe').locator('.textLayer').innerText(), /你的姓名/);
   } finally { await browser.close(); }
   console.log('Starter ZIP: real install/export launchers, unique output filenames and local PDF preview passed.');
-  await writeFile(path.join(packages, 'smoke-report.json'), JSON.stringify({ version: pkg.version, platform: process.platform, packageApi: true, types: true, cliJson: true, allStarters: true, launchers: true, preview: true, pagesReviewedSeparately: ['installed-json', 'starter-blank'] }, null, 2) + '\n');
+  await writeFile(path.join(packages, 'smoke-report.json'), JSON.stringify({ version: pkg.version, platform: process.platform, packageApi: true, types: true, cliJson: true, allStarters: true, gettingStarted: true, launchers: true, preview: true, pagesReviewedSeparately: ['installed-json', 'starter-blank'] }, null, 2) + '\n');
 } finally {
   if (preview?.pid) {
     if (process.platform === 'win32') await run('taskkill', ['/PID', String(preview.pid), '/T', '/F']).catch(() => {});
