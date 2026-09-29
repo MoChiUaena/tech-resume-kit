@@ -28,6 +28,7 @@ try {
   await writeFile(path.join(outside, 'probe.mjs'), `
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { initializeProject, loadResume, loadWorkbenchResume, renderResume, inspectAndExport } from 'tech-resume-kit';
 for (const [template, pages] of [['campus',1],['blank',1],['experience',2]]) {
   await initializeProject(template, template);
@@ -44,7 +45,7 @@ const convertedPdf = await inspectAndExport(await renderResume(converted.documen
 assert.equal(convertedPdf.metrics.pageCount,1); assert.equal(convertedPdf.metrics.images.length,2);
 assert.equal(converted.report.sourceSchemaVersion,4);
 const { startEditor } = await import('./node_modules/tech-resume-kit/src/app.mjs');
-const editor = await startEditor('editor-data');
+const editor = await startEditor(path.resolve('editor-data'));
 try {
   const state = await (await fetch(editor.url + 'api/state')).json();
   assert.equal(state.gettingStarted.welcome, true);
