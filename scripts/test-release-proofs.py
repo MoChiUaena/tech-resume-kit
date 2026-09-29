@@ -6,9 +6,20 @@ import stat
 import tempfile
 import unittest
 import zipfile
-from release_proofs import sha, verify_upgrade, verify_macos_app
+from release_proofs import sha, verify_upgrade, verify_macos_app, verified_draft_assets
 
 class ReleaseProofChecks(unittest.TestCase):
+    def test_draft_resume_skips_identical_assets_and_rejects_unverified_or_unknown_files(self):
+        expected = [{'name': 'kit.zip', 'size': 12, 'sha256': 'a' * 64}]
+        good = {'name': 'kit.zip', 'size': 12, 'digest': 'sha256:' + 'a' * 64, 'state': 'uploaded'}
+        self.assertEqual(verified_draft_assets(expected, []), set())
+        self.assertEqual(verified_draft_assets(expected, [good]), {'kit.zip'})
+        for field, value in [('name', 'other.zip'), ('size', 11), ('digest', 'sha256:' + 'b' * 64), ('state', 'new')]:
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                verified_draft_assets(expected, [{**good, field: value}])
+        with self.assertRaises(ValueError):
+            verified_draft_assets(expected, [good, good])
+
     def upgrade(self):
         baseline = json.loads(Path(__file__).with_name('upgrade-baseline.json').read_text())
         report = {'schemaVersion': 1, 'from': baseline['version'], 'to': '0.9.0', 'baselineArchiveSha256': baseline['sha256'], 'candidateArchiveSha256': 'a' * 64,
