@@ -28,7 +28,7 @@ try {
   await writeFile(path.join(outside, 'probe.mjs'), `
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
-import { initializeProject, loadResume, renderResume, inspectAndExport } from 'tech-resume-kit';
+import { initializeProject, loadResume, loadWorkbenchResume, renderResume, inspectAndExport } from 'tech-resume-kit';
 for (const [template, pages] of [['campus',1],['blank',1],['experience',2]]) {
   await initializeProject(template, template);
   const loaded = await loadResume(template + '/resume.md');
@@ -39,10 +39,14 @@ for (const [template, pages] of [['campus',1],['blank',1],['experience',2]]) {
   assert.equal(result.metrics.networkRequests.length, 0);
   if (template === 'campus') await writeFile('api-result.json', JSON.stringify({ document: rendered.document, layout: rendered.layout, images: Object.fromEntries(Object.keys(rendered.images).map(key => [key, true])) }));
 }
+const converted = await loadWorkbenchResume('node_modules/tech-resume-kit/examples/workbench/resume.json', undefined, {optionsFile:'node_modules/tech-resume-kit/examples/workbench/conversion.json'});
+const convertedPdf = await inspectAndExport(await renderResume(converted.document, converted.layout, converted), {pdf:true});
+assert.equal(convertedPdf.metrics.pageCount,1); assert.equal(convertedPdf.metrics.images.length,2);
+assert.equal(converted.report.sourceSchemaVersion,4);
 `);
   await run(process.execPath, [path.join(outside, 'probe.mjs')]);
   await writeFile(path.join(outside, 'types.mts'), `
-import { renderResume, inspectAndExport, parseResumeJson, ResumeError, type ResumeDocument, type LayoutConfig } from 'tech-resume-kit';
+import { renderResume, inspectAndExport, parseResumeJson, convertWorkbenchResume, loadWorkbenchResume, ResumeError, type ResumeDocument, type LayoutConfig, type WorkbenchDocument, type WorkbenchConversionReport } from 'tech-resume-kit';
 const document: ResumeDocument = { schemaVersion: '0.2.0', person: { name: '填写姓名', target: '开发', contacts: [{text:'a@example.com', href:'mailto:a@example.com'}] }, sections: [{id:'skills',title:'技能',kind:'skills',items:[{label:'Java',text:'测试'}]}] };
 const layout: LayoutConfig = {schemaVersion:'0.2.0'};
 const rendered = await renderResume(document, layout);
@@ -52,6 +56,11 @@ const count: number = result.metrics.pageCount;
 const width: number | undefined = rendered.images.portrait?.width;
 const parsed = parseResumeJson('{}');
 const error = new ResumeError('字段错误', {code:'INPUT'}).toJSON();
+declare const workbench: WorkbenchDocument;
+const converted = convertWorkbenchResume(workbench,{layout});
+const report: WorkbenchConversionReport = converted.report;
+const loaded = await loadWorkbenchResume('workbench.json',undefined,{optionsFile:'conversion.json'});
+const date: string | undefined = converted.document.sections[0].kind === 'entries' ? converted.document.sections[0].entries[0].date : undefined;
 // @ts-expect-error incompatible workbench model
 const bad: ResumeDocument = {schemaVersion:2};
 `);

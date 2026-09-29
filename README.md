@@ -57,6 +57,8 @@ Linux 可能需要用 `npx playwright install --with-deps chromium` 安装系统
 
 完整变更见[变更记录](docs/changelog.md)，数据位置与更新方式见[数据与更新](docs/data-and-updates.md)。日常改动先同步源码和 CI，积累一组功能后集中发布，见[维护说明](docs/maintaining.md)。
 
+main 开发版提供工作台模型 2、3、4 的显式转换 API 与 JSON 命令，返回章节映射和版式差异报告，见[工作台接入](docs/workbench-handoff.md)。该接口尚未进入 v0.8.0 下载包。
+
 如需使用命令行，先创建独立起步目录：
 
 ```sh

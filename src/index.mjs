@@ -1,5 +1,6 @@
 export { parseResume, loadResume } from './input.mjs';
 export { parseResumeJson, loadResumeJson } from './json.mjs';
+export { convertWorkbenchResume, loadWorkbenchResume } from './workbench.mjs';
 export { renderResume } from './render.mjs';
 export { inspectAndExport } from './export.mjs';
 export { initializeProject } from './files.mjs';

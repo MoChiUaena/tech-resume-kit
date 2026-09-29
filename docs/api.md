@@ -1,9 +1,9 @@
 # 安装与调用 API
 
-从 [GitHub Release](https://github.com/MoChiUaena/tech-resume-kit/releases/latest) 下载 `tech-resume-kit-0.7.0.tgz`，在自己的 Node.js 项目中安装：
+从 [GitHub Release](https://github.com/MoChiUaena/tech-resume-kit/releases/latest) 下载 `tech-resume-kit-0.8.0.tgz`，在自己的 Node.js 项目中安装：
 
 ```sh
-npm install ./tech-resume-kit-0.7.0.tgz
+npm install ./tech-resume-kit-0.8.0.tgz
 npx playwright install chromium
 npx tech-resume init --dir my-resume --template blank
 ```
@@ -26,6 +26,8 @@ console.log(result.metrics.pageCount, result.warnings);
 工作台等调用方也可直接传入套件模型 `renderResume(document, layout, { assetBase })`。`assetBase` 是运行时本地图片目录；模型里只保存相对图片路径。`renderResume` 校验结构和素材，`inspectAndExport` 检查真实 PDF 的页数、字体、离线资源和横向溢出。省略 `{ pdf: true }` 时仍检查实际分页，但不返回 PDF 字节。
 
 入口还导出 `parseResume`、`parseResumeJson`、`loadResumeJson`、`initializeProject` 和 `ResumeError`。模型版本仍为 `0.2.0`，结构见[内容模型](content-model.md)。布局可省略可选参数，`schemaVersion` 必须填写。
+
+main 开发版 `0.9.0-dev.1` 新增 `convertWorkbenchResume` 与 `loadWorkbenchResume`，显式转换工作台版本 2、3、4，并返回章节映射和版式差异报告。该接口尚不在 v0.8.0 下载包内；使用方法见[工作台接入](workbench-handoff.md)。
 
 ## JSON 命令接口
 
@@ -58,4 +60,4 @@ npx tech-resume build-json my-resume/resume.json --out resume.pdf --json
 {"ok":false,"command":"build-json","error":{"code":"EXISTS","message":"文件已存在；请换输出路径，或确认后使用 --force 覆盖","file":"/local/resume.pdf"}}
 ```
 
-成功结果包含 `ok`、`command`、`input`、`output`（导出时）、`warnings`、`sections`、`bodyPt` 和 `metrics`；`metrics.pageCount` 为实际 PDF 页数。常见错误码：`INPUT` 字段校验、`JSON` 语法、`MODEL` 不兼容模型、`CLI` 命令参数、`EXISTS` 输出已存在、`BROWSER` 浏览器不可用、`LAYOUT` 排版问题、`OVERFLOW` 超过页数上限、`NETWORK` 外部资源请求。
+成功结果包含 `ok`、`command`、`input`、`output`（导出时）、`warnings`、`sections`、`bodyPt` 和 `metrics`；`metrics.pageCount` 为实际 PDF 页数。常见错误码：`INPUT` 字段校验、`JSON` 语法、`MODEL` 不兼容模型、`CONVERSION` 工作台转换需要补充映射或明确处理差异、`CLI` 命令参数、`EXISTS` 输出已存在、`BROWSER` 浏览器不可用、`LAYOUT` 排版问题、`OVERFLOW` 超过页数上限、`NETWORK` 外部资源请求。

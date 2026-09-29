@@ -50,6 +50,8 @@ jobs:
           python scripts/render-pdfs.py --directory tmp/pdfs/editing
           python scripts/verify-pdf.py --directory tmp/pdfs/storage
           python scripts/render-pdfs.py --directory tmp/pdfs/storage
+          python scripts/verify-pdf.py --directory tmp/pdfs/workbench
+          python scripts/render-pdfs.py --directory tmp/pdfs/workbench
       - name: Build and check only anonymous samples
         run: |
           npm run sample
@@ -69,6 +71,11 @@ jobs:
             output/pdf/
             assets/images/nailong-avatar.jpg
             docs/phase-c-evidence.json
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: workbench-conversion-validation
+          retention-days: 7
+          path: tmp/pdfs/workbench/
   windows-download:
     runs-on: windows-latest
     timeout-minutes: 20

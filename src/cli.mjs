@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import path from 'node:path';
+import { realpath } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import { loadResume } from './input.mjs';
 import { loadResumeJson } from './json.mjs';
+import { loadWorkbenchResume } from './workbench.mjs';
 import { renderResume } from './render.mjs';
 import { inspectAndExport } from './export.mjs';
 import { ResumeError } from './errors.mjs';
@@ -19,6 +21,7 @@ const help = `tech-resume-kit - 本地中文简历
   tech-resume export-json [resume.md] --out resume.json [--config layout.yaml] [--force] [--json]
   tech-resume check-json resume.json [--assets directory] [--json]
   tech-resume build-json resume.json [--assets directory] [--out resume.pdf] [--force] [--json]
+  tech-resume convert-workbench workbench.json --options conversion.json --out resume.json [--assets directory] [--force] [--json]
 
 源码目录也可使用 node src/cli.mjs <命令>，或 npm run check / preview / build -- <参数>。
 Markdown 默认读取 resume.md 和同目录 layout.yaml。
@@ -36,7 +39,7 @@ function success(result, human) {
 try {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: {
     help: { type: 'boolean', short: 'h' }, config: { type: 'string', short: 'c' }, out: { type: 'string', short: 'o' }, force: { type: 'boolean' },
-    port: { type: 'string' }, dir: { type: 'string' }, template: { type: 'string' }, assets: { type: 'string' }, json: { type: 'boolean' },
+    port: { type: 'string' }, dir: { type: 'string' }, template: { type: 'string' }, assets: { type: 'string' }, options: { type: 'string' }, json: { type: 'boolean' },
   } });
   if (values.help || !positionals.length) { command = 'help'; success({ help }, help); }
   else {
@@ -46,6 +49,7 @@ try {
     const allowed = {
       init: ['dir', 'template', 'json'], check: ['config', 'json'], preview: ['config', 'port'], build: ['config', 'out', 'force', 'json'],
       'export-json': ['config', 'out', 'force', 'json'], 'check-json': ['assets', 'json'], 'build-json': ['assets', 'out', 'force', 'json'],
+      'convert-workbench': ['options', 'assets', 'out', 'force', 'json'],
     }[command];
     if (!allowed) throw new ResumeError(`未知命令 ${command}；使用 --help 查看用法`, { code: 'CLI' });
     for (const key of Object.keys(values)) if (!allowed.includes(key)) throw new ResumeError(`${command} 不支持 --${key}`, { code: 'CLI' });
@@ -53,6 +57,27 @@ try {
       if (positionals.length > 1) throw new ResumeError('init 使用 --dir 指定目录', { code: 'CLI' });
       const target = await initializeProject(values.dir || 'personal/my-resume', values.template || 'campus');
       success({ directory: target }, `已创建起步文件：${target}\n编辑 resume.md 和 layout.yaml 后运行 check / preview / build。`);
+    } else if (command === 'convert-workbench') {
+      if (positionals.length !== 2 || !values.options || !values.out) throw new ResumeError('convert-workbench 需要输入文件、--options 转换选项和 --out JSON 输出文件', { code: 'CLI' });
+      const output = path.resolve(values.out);
+      if (path.extname(output).toLowerCase() !== '.json') throw new ResumeError('输出文件扩展名必须为 .json', { file: output, code: 'CLI' });
+      const canonical = async file => {
+        const result = await realpath(path.resolve(file)).catch(() => path.resolve(file));
+        return process.platform === 'win32' ? result.toLowerCase() : result;
+      };
+      const [target, source, configured] = await Promise.all([canonical(output), canonical(input), canonical(values.options)]);
+      if (target === source || target === configured) throw new ResumeError('转换输出不能覆盖工作台原文件或转换选项；请指定独立路径', { file: output, code: 'CLI' });
+      await ensureNewOutput(output, values.force);
+      const loaded = await loadWorkbenchResume(input, undefined, { optionsFile: values.options, assetBase: values.assets });
+      const document = structuredClone(loaded.document);
+      for (const [key, asset] of Object.entries(document.assets)) {
+        const relative = path.relative(path.dirname(output), assetPath(loaded.assetBase, asset.src));
+        if (path.isAbsolute(relative)) throw new ResumeError('JSON 与素材位于不同磁盘，无法生成相对路径；请使用素材所在磁盘', { file: output, field: `assets.${key}.src` });
+        asset.src = relative.split(path.sep).join('/');
+      }
+      await saveFile(output, JSON.stringify({ document, layout: loaded.layout }, null, 2) + '\n', values.force);
+      if (!machine) for (const warning of loaded.warnings) console.warn(`提示：${warning}`);
+      success({ input: loaded.inputFile, output, warnings: loaded.warnings, conversion: loaded.report }, `已转换：${output}\n使用 build-json 生成并检查实际 PDF。`);
     } else if (command === 'preview') {
       const port = values.port === undefined ? 4173 : Number(values.port);
       if (!Number.isInteger(port) || port < 1 || port > 65535) throw new ResumeError('port 必须为 1 到 65535 的整数', { code: 'CLI' });

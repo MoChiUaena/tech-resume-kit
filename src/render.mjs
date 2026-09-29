@@ -36,7 +36,7 @@ function blocks(items, paragraphClass) {
 }
 function entry(item) {
   return `<article class="entry">
-    <div class="entry-heading"><div class="entry-title"><h3>${escape(item.title)}</h3>${item.subtitle ? `<span class="entry-subtitle">${escape(item.subtitle)}</span>` : ''}</div><span class="date">${escape(item.date)}</span></div>
+    <div class="entry-heading"><div class="entry-title"><h3>${escape(item.title)}</h3>${item.subtitle ? `<span class="entry-subtitle">${escape(item.subtitle)}</span>` : ''}</div>${item.date ? `<span class="date">${escape(item.date)}</span>` : ''}</div>
     ${item.stack ? `<p class="stack">${escape(item.stack)}</p>` : ''}
     ${blocks(item.blocks, 'entry-lines')}
   </article>`;

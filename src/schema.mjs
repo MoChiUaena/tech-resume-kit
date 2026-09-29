@@ -8,7 +8,7 @@ const block = z.discriminatedUnion('type', [
   z.object({ type: z.literal('list'), items: z.array(text).min(1), ordered: z.boolean(), start: z.number().int().positive().optional() }).strict(),
 ]);
 export const entrySchema = z.object({ subtitle: text.optional(), date: text, stack: text.optional() }).strict();
-const entry = entrySchema.extend({ title: text, blocks: z.array(block).min(1) });
+const entry = entrySchema.extend({ date: text.optional(), title: text, blocks: z.array(block).min(1) });
 const baseSection = { id, title: text };
 const asset = z.object({ src: text, alt: text }).strict();
 export const frontmatterSchema = z.object({
