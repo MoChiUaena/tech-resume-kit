@@ -28,7 +28,7 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
   let lastSeen = Date.now(), url, closing = false;
   let mutations = Promise.resolve();
   function serialized(action) { const result = mutations.then(action); mutations = result.catch(() => {}); return result; }
-  const appInfo = () => ({ version, storage: storage?.info() || { directory: project.root, managed: false }, desktop: !!desktopDirectory, updates: updater.status() });
+  const appInfo = () => ({ version, storage: storage?.info() || { directory: project.root, managed: false }, desktop: !!desktopDirectory, directoryPicker: !!desktopDirectory && process.platform === 'win32', openDirectory: !!desktopDirectory && ['win32', 'darwin', 'linux'].includes(process.platform), updates: updater.status() });
   async function checkCurrent(payload) {
     const current = await project.read();
     if (payload.resumeId !== current.resumeId || payload.revision !== current.revision || payload.libraryRevision !== current.libraryRevision) throw new ResumeError('资料已经修改，请重新载入后再操作', { code: 'CONFLICT' });
@@ -130,8 +130,9 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
           if (pathname === '/api/storage/change') json(await changeStorage(payload));
           else if (pathname === '/api/storage/open') {
             const target = payload.backup ? storage?.info().lastMigration?.backup : project.root;
-            if (!target || process.platform !== 'win32') throw new ResumeError('请复制界面中的文件夹路径打开');
-            spawn('explorer.exe', [target], { windowsHide: true }).on('error', () => {}); json({ ok: true });
+            const opener = { win32: 'explorer.exe', darwin: 'open', linux: 'xdg-open' }[process.platform];
+            if (!target || !opener) throw new ResumeError('请复制界面中的文件夹路径打开');
+            spawn(opener, [target], { windowsHide: true }).on('error', () => {}); json({ ok: true });
           } else if (pathname === '/api/updates/check') json(await updater.check());
           else if (pathname === '/api/updates/prepare') json(updater.prepare());
           else if (pathname === '/api/updates/pause') json(await updater.pause());

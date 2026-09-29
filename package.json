@@ -1,6 +1,6 @@
 {
   "name": "tech-resume-kit",
-  "version": "0.8.0-dev.2",
+  "version": "0.8.0-dev.3",
   "private": true,
   "type": "module",
   "description": "中文技术岗 Markdown 简历模板套件",
@@ -34,6 +34,7 @@
     "docs/data-and-updates.md",
     "docs/changelog.md",
     "docs/maintaining.md",
+    "docs/portable.md",
     "docs/usability.md",
     "docs/workbench-handoff.md",
     "docs/images/editor.png",
@@ -51,7 +52,10 @@
     "test:package": "node scripts/smoke-package.mjs",
     "app": "node src/app.mjs",
     "package:windows": "python scripts/package-windows.py",
-    "test:windows": "node scripts/smoke-windows.mjs"
+    "test:windows": "node scripts/smoke-windows.mjs",
+    "package:posix": "python scripts/package-posix.py",
+    "test:posix": "node scripts/smoke-posix.mjs",
+    "test:upgrade": "node scripts/smoke-upgrade.mjs"
   },
   "engines": {
     "node": ">=22.13.0"

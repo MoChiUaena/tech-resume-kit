@@ -36,16 +36,16 @@ export function wireSystem({ request, managed, settle, operationPayload, acceptS
   function renderApp(result) {
     info = result; $('storage-path').textContent = info.storage.directory;
     $('storage-controls').hidden = !info.storage.managed;
-    $('storage-browse').hidden = !info.desktop;
-    sourceBrowse.hidden = !info.desktop; candidates.replaceChildren();
+    $('storage-browse').hidden = !(info.directoryPicker ?? info.desktop);
+    sourceBrowse.hidden = !(info.directoryPicker ?? info.desktop); candidates.replaceChildren();
     for (const directory of info.storage.legacyDirectories || []) { const option = document.createElement('option'); option.value = directory; candidates.append(option); }
     if (info.storage.legacyDirectories?.length === 1) sourceInput.value = info.storage.legacyDirectories[0];
     $('storage-help').textContent = info.storage.managed ? '所有简历、图片和历史保存在此处，更新程序后继续使用。' : '当前使用指定的数据目录；更换位置请修改启动命令中的 --dir。';
     const migration = info.storage.lastMigration;
     $('storage-result').hidden = !migration?.backup;
     $('storage-result').textContent = migration?.backup ? `已核对 ${migration.fileCount} 个文件。整库副本：${migration.backup}` : '';
-    $('storage-backup-open').hidden = !info.desktop || !migration?.backup;
-    $('storage-open').hidden = !info.desktop;
+    $('storage-backup-open').hidden = !(info.openDirectory ?? info.desktop) || !migration?.backup;
+    $('storage-open').hidden = !(info.openDirectory ?? info.desktop);
     renderUpdate(info.updates);
   }
   $('system-open').addEventListener('click', async () => {

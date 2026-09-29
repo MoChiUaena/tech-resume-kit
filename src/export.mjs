@@ -12,7 +12,7 @@ export async function inspectAndExport(rendered, { pdf = false } = {}) {
   let temporaryDirectory;
   try {
     try { browser = await chromium.launch({ headless: true }); }
-    catch { throw new ResumeError('Chromium 无法启动；首次使用请运行 npx playwright install chromium（Linux 还可能需要 --with-deps）', { code: 'BROWSER' }); }
+    catch { throw new ResumeError(process.env.TECH_RESUME_PORTABLE ? 'Chromium 无法启动，请运行包内“检查环境”脚本，并按使用说明检查系统组件' : 'Chromium 无法启动；首次使用请运行 npx playwright install chromium（Linux 还可能需要 --with-deps）', { code: 'BROWSER' }); }
     const context = await browser.newContext({ offline: true });
     const page = await context.newPage();
     const requests = [];

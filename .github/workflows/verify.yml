@@ -78,3 +78,87 @@ jobs:
           npm run package:release
           npm run package:windows
           npm run test:windows
+      - name: Download the published upgrade baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GODEBUG: http2client=0
+        run: gh release download v0.7.0 --repo MoChiUaena/tech-resume-kit --pattern tech-resume-windows-x64-0.7.0.zip --dir tmp/packages
+      - name: Verify published-version upgrade and reopening the old program
+        run: npm run test:upgrade
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: windows-portable-validation
+          compression-level: 0
+          retention-days: 7
+          path: |
+            tmp/packages/tech-resume-windows-x64-*.zip
+            !tmp/packages/tech-resume-windows-x64-0.7.0.zip
+            tmp/packages/windows-smoke.json
+            tmp/packages/upgrade-smoke.json
+            tmp/pdfs/release/published-upgrade.png
+  posix-download:
+    name: Portable ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x64
+            label: linux-x64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            label: linux-arm64
+          - runner: macos-15-intel
+            arch: x64
+            label: macos-x64
+          - runner: macos-15
+            arch: arm64
+            label: macos-arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.18.0'
+          cache: npm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Prepare native browser and PDF verification
+        shell: bash
+        run: |
+          node -e "if(process.arch !== '${{ matrix.arch }}') throw new Error('Unexpected runner architecture')"
+          npm ci
+          if [ '${{ runner.os }}' = 'Linux' ]; then
+            npx playwright install --with-deps chromium --only-shell
+            sudo apt-get install -y poppler-utils
+          else
+            npx playwright install chromium --only-shell
+            brew install poppler
+          fi
+          python -m pip install -r requirements-qa.txt
+      - name: Build and launch the native portable package
+        run: |
+          npm run package:release
+          npm run package:posix
+          npm run test:posix
+          python scripts/verify-pdf.py --directory tmp/pdfs/portable
+          python scripts/render-pdfs.py --directory tmp/pdfs/portable
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: portable-${{ matrix.label }}
+          compression-level: 0
+          retention-days: 7
+          path: |
+            tmp/packages/tech-resume-${{ matrix.label }}-*.tar.gz
+            tmp/packages/${{ matrix.label }}-SHA256SUMS.txt
+            tmp/packages/${{ matrix.label }}-smoke.json
+            tmp/pdfs/portable/
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: portable-evidence-${{ matrix.label }}
+          retention-days: 7
+          path: |
+            tmp/packages/${{ matrix.label }}-smoke.json
+            tmp/pdfs/portable/
