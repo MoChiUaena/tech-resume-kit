@@ -1,0 +1,88 @@
+name: Stage verified release draft
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without v
+        required: true
+        type: string
+      candidate_sha:
+        description: Exact commit that passed all six Verify jobs
+        required: true
+        type: string
+      candidate_run:
+        description: Successful Verify workflow run ID
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  stage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+      CANDIDATE_RUN: ${{ inputs.candidate_run }}
+      GH_TOKEN: ${{ github.token }}
+      GODEBUG: http2client=0
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Verify candidate before downloading its files
+        run: |
+          python - <<'PY'
+          import json,os,re,subprocess
+          from pathlib import Path
+          version=os.environ['RELEASE_VERSION']; head=os.environ['CANDIDATE_SHA']; run=os.environ['CANDIDATE_RUN']
+          assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',version)
+          assert re.fullmatch(r'[0-9a-f]{40}',head) and run.isdigit()
+          state=json.loads(subprocess.check_output(['gh','run','view',run,'--repo','MoChiUaena/tech-resume-kit','--json','status,conclusion,headSha,jobs']))
+          assert state['headSha']==head and state['status']=='completed' and state['conclusion']=='success'
+          assert len(state['jobs'])==6 and all(job['conclusion']=='success' for job in state['jobs'])
+          folder=Path('tmp')/('release-v'+version);folder.mkdir(parents=True)
+          (folder/'ci.json').write_text(json.dumps(state))
+          PY
+      - name: Download the exact verified build outputs
+        run: |
+          gh run download "$CANDIDATE_RUN" --repo MoChiUaena/tech-resume-kit --name release-source-validation --dir "tmp/release-v$RELEASE_VERSION/artifacts/source"
+          gh run download "$CANDIDATE_RUN" --repo MoChiUaena/tech-resume-kit --name windows-portable-validation --dir "tmp/release-v$RELEASE_VERSION/artifacts/windows"
+          for label in linux-x64 linux-arm64 macos-x64 macos-arm64; do
+            gh run download "$CANDIDATE_RUN" --repo MoChiUaena/tech-resume-kit --name "portable-$label" --dir "tmp/release-v$RELEASE_VERSION/artifacts/$label"
+          done
+      - name: Inspect versions, executable modes and runtime hashes
+        run: |
+          python -m pip install -r requirements-qa.txt
+          python scripts/stage-release.py
+      - name: Upload checked files into a draft only
+        run: |
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          version=os.environ['RELEASE_VERSION'];head=os.environ['CANDIDATE_SHA'];tag='v'+version
+          base=Path('tmp')/('release-v'+version);assets=base/'assets'
+          body=(assets/'release-validation.json').read_text();data=json.loads(body)
+          assert data['commit']==head and data['version']==version
+          notes=base/'notes.md'
+          notes.write_text('经历条目支持编辑、复制、排序和删除；简历库提供回收站与整库 ZIP。Windows、macOS Intel / Apple Silicon、Linux x64 / ARM64 启动包内置 Node、Chromium、字体和依赖。\n\n从 v0.7.0 升级验收核对了 23 个原文件，简历、图片、历史和当前选择保留，旧程序可重新打开资料。78 项测试和六项 CI 通过。\n\nWindows EXE 未签名，macOS 包未签名、公证；Linux 系统依赖说明随包提供。附 SHA256SUMS.txt 与 release-validation.json。\n')
+          result=subprocess.run(['gh','release','view',tag,'--repo','MoChiUaena/tech-resume-kit','--json','isDraft,targetCommitish'],capture_output=True,text=True)
+          if result.returncode==0:
+            existing=json.loads(result.stdout);assert existing['isDraft'] and existing['targetCommitish']==head
+          else:
+            subprocess.run(['gh','release','create',tag,'--repo','MoChiUaena/tech-resume-kit','--target',head,'--title',tag+' - 简历管理与跨平台启动','--notes-file',str(notes),'--draft'],check=True)
+          for file in sorted(assets.iterdir()):
+            subprocess.run(['gh','release','upload',tag,str(file),'--repo','MoChiUaena/tech-resume-kit'],check=True)
+          PY
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: staged-release-metadata
+          retention-days: 7
+          path: |
+            tmp/release-v*/assets/release-validation.json
+            tmp/release-v*/assets/SHA256SUMS.txt
