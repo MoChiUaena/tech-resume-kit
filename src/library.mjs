@@ -8,6 +8,7 @@ import { ResumeError } from './errors.mjs';
 import { assetPath } from './assets.mjs';
 import { imageSize } from 'image-size';
 import { listResumeEntries, changeResumeEntry } from './entries.mjs';
+import { listResumeContent, changeResumeContent } from './content.mjs';
 import { uuid, catalogSchema, readTrash, validateCatalogs, recoverCatalog, commitCatalogPair } from './catalog.mjs';
 import { captureLibraryBackup, decodeLibraryBackup, restoreLibraryBackup, recoverLibraryRestore, readLibraryRestoreRecord, previousLibraryBackup } from './library-backup.mjs';
 
@@ -16,7 +17,7 @@ function name(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 60 || /[\x00-\x1f\x7f]/.test(value)) throw new ResumeError('简历名称需要 1 到 60 个字符');
   return value.trim();
 }
-const kinds = { initial: '初始版本', manual: '手动备份', auto: '自动版本', template: '切换模板前', import: '导入正文前', restore: '恢复前', photo: '裁剪照片前', entry: '删除经历前' };
+const kinds = { initial: '初始版本', manual: '手动备份', auto: '自动版本', template: '切换模板前', import: '导入正文前', restore: '恢复前', photo: '裁剪照片前', entry: '删除经历前', content: '删除技能或补充信息前' };
 
 export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}) {
   const root = path.resolve(directory), catalogFile = path.join(root, 'library.json');
@@ -136,6 +137,18 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     const current = await check(payload); await checkpoint(current.resumeId, 'template');
     await (await projectFor()).useTemplate(payload); dirty.add(current.resumeId); return state();
   });
+  const content = async (resumeId, revision) => {
+    await queue;
+    const current = await check({ resumeId, revision });
+    return { resumeId, revision, sections: listResumeContent(current.source) };
+  };
+  const changeContent = payload => mutate(async () => {
+    const current = await check(payload), changed = changeResumeContent(current.source, current.layout, payload);
+    if (changed.source === current.source) return state();
+    if (payload.action === 'delete') await checkpoint(current.resumeId, 'content');
+    await (await projectFor()).save({ ...changed, revision: current.revision });
+    dirty.add(current.resumeId); return state();
+  });
   const switchResume = payload => mutate(async () => {
     const current = await check(payload); entry(payload.targetId);
     if (dirty.has(current.resumeId)) await checkpoint(current.resumeId, 'auto', false);
@@ -239,5 +252,5 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   }
   if (!(await historyFor(catalog.activeId)).length) await checkpoint(catalog.activeId, 'initial');
   if (historyIntervalMs > 0) { timer = setInterval(() => autoCheckpoint().catch(error => { historyWarning = `自动版本未保存：${error.message}`; }), Math.min(historyIntervalMs, 60000)); timer.unref(); }
-  return { root, read, save, entries, changeEntry, useTemplate, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
+  return { root, read, save, entries, changeEntry, content, changeContent, useTemplate, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
 }

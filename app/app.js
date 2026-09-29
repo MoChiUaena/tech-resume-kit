@@ -3,12 +3,13 @@ import { insertResumeEntry } from './entries.mjs';
 import { wireSystem } from './system.mjs';
 import { wireEntries } from './entry-manager.mjs';
 import { wireLibrary } from './library-manager.mjs';
+import { wireContent } from './content-manager.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
 let cropSession, cropDrag, entryKind;
 let viewerReference;
-let entryManager, libraryManager;
+let entryManager, libraryManager, contentManager;
 async function request(url, data, raw = false) {
   const options = data === undefined ? {} : { method: 'POST', headers: { 'X-Resume-Token': token, ...(raw ? { 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision } : { 'Content-Type': 'application/json' }) }, body: raw ? data : JSON.stringify({ resumeId: state?.resumeId, ...data }) };
   const response = await fetch(url, options), result = await response.json();
@@ -16,7 +17,7 @@ async function request(url, data, raw = false) {
   return result;
 }
 function toast(text) { $('toast').textContent = text; $('toast').hidden = false; setTimeout(() => $('toast').hidden = true, 5000); }
-function edited() { if (actionBusy) return; tick++; entryManager?.invalidate(); previewReady = false; $('save-status').textContent = '正在保存…'; $('page-status').textContent = '正在更新'; $('pdf-download').disabled = true; clearTimeout(timer); timer = setTimeout(save, 700); }
+function edited() { if (actionBusy) return; tick++; entryManager?.invalidate(); contentManager?.invalidate(); previewReady = false; $('preview-actions').hidden = true; $('save-status').textContent = '正在保存…'; $('page-status').textContent = '正在更新'; $('pdf-download').disabled = true; clearTimeout(timer); timer = setTimeout(save, 700); }
 function renderContacts() {
   $('contacts').replaceChildren();
   if (sourceMode) { $('contact-add').disabled = true; return; }
@@ -50,11 +51,13 @@ function populate() {
   $('preset').value = state.layout.preset; $('max-pages').value = state.layout.page.maxPages; $('body-size').value = state.layout.bodyPt; $('margin').value = state.layout.page.marginMm; $('accent').value = state.layout.accent;
   for (const key of ['portrait', 'schoolLogo']) { const asset = state.front?.assets?.[key]; $(`${key}-enabled`).checked = state.layout.images[key].enabled; $(`${key}-enabled`).disabled = !asset; $(`${key}-file`).textContent = asset ? asset.src.split('/').at(-1) : '尚未选择'; }
   $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
-  for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
-  entryManager?.refresh();
+  for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
+  for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
+  entryManager?.refresh(); contentManager?.refresh();
   libraryManager?.render();
 }
 async function refreshPreview(revision, expectedTick = tick) {
+  $('preview-actions').hidden = true;
   const sequence = ++previewSequence, resumeId = state.resumeId; previewReady = false; $('page-status').textContent = '正在排版…'; $('pdf-download').disabled = true;
   viewerReference = undefined;
   try {
@@ -69,7 +72,12 @@ async function refreshPreview(revision, expectedTick = tick) {
   } catch (error) {
     if (sequence !== previewSequence || tick !== expectedTick || state.resumeId !== resumeId) return;
     $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); $('preview-placeholder').hidden = true; $('preview-note').hidden = true;
-    $('preview-error').hidden = false; $('preview-error').textContent = [error.details?.line ? `第 ${error.details.line} 行` : '', error.details?.field ? `字段 ${error.details.field}` : '', error.message].filter(Boolean).join('\n'); $('page-status').textContent = '需要调整内容';
+    $('preview-error').hidden = false;
+    if (error.code === 'OVERFLOW') {
+      $('preview-error').textContent = `内容超过当前${state.layout.page.maxPages === 1 ? '一' : '两'}页上限。可以精简正文或调整版式，字号保持原设置。`;
+      $('preview-actions').hidden = false; $('preview-two-pages').hidden = state.layout.page.maxPages !== 1;
+    } else $('preview-error').textContent = [error.details?.line ? `第 ${error.details.line} 行` : '', error.details?.field ? `字段 ${error.details.field}` : '', error.message].filter(Boolean).join('\n');
+    $('page-status').textContent = '需要调整内容';
   }
 }
 window.addEventListener('message', event => {
@@ -84,7 +92,7 @@ async function save() {
     const payload = { resumeId: state.resumeId, revision: state.revision, layout: state.layout, ...(sourceMode ? { source: $('body').value } : { front: state.front, body: $('body').value }) };
     const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; savedTick = captured;
     $('save-status').textContent = '已自动保存';
-    if (tick === captured) { refreshPreview(result.revision, captured); entryManager?.refresh(); } else pending = true;
+    if (tick === captured) { refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
   } catch (error) { $('save-status').textContent = '保存失败'; toast(error.message); pending = false; }
   finally { busy = false; if (pending && tick !== savedTick) { pending = false; save(); } }
 }
@@ -101,8 +109,9 @@ async function managed(action) {
     for (const key of ['portrait','schoolLogo']) $(`${key}-enabled`).disabled = !state.front?.assets?.[key];
     $('contact-add').disabled = sourceMode || state.front.person.contacts.length >= 6;
     $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
-    for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
-    entryManager?.refresh();
+    for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
+    for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
+    entryManager?.refresh(); contentManager?.refresh();
     libraryManager?.render();
   }
 }
@@ -115,12 +124,20 @@ $('source-mode').addEventListener('click', async () => {
     await settle(); state = await request('/api/state');
     if (sourceMode) populate();
     else { sourceMode = true; $('body').value = state.source; $('person-fields').hidden = true; $('contacts').hidden = true; $('contact-add').disabled = true; $('source-mode').textContent = '返回正文编辑'; }
-    for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
-    entryManager?.refresh();
+    for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
+    for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
+    entryManager?.refresh(); contentManager?.refresh();
   } catch (error) { toast(error.message); }
 });
 $('contact-add').addEventListener('click', () => { state.front.person.contacts.push({ text: '', href: 'mailto:' }); renderContacts(); edited(); });
 $('settings-open').addEventListener('click', () => $('settings').showModal());
+$('preview-layout').addEventListener('click', () => $('settings').showModal());
+$('preview-two-pages').addEventListener('click', async () => {
+  if (state.layout.page.maxPages !== 1) return;
+  state.layout.page.maxPages = 2; $('max-pages').value = '2'; $('preview-actions').hidden = true;
+  edited();
+  try { await settle(); } catch (error) { toast(error.message); }
+});
 for (const [id, apply] of Object.entries({ preset: value => { state.layout.preset = value; delete state.layout.sectionOrder; }, 'max-pages': value => state.layout.page.maxPages = Number(value), 'body-size': value => state.layout.bodyPt = Number(value), margin: value => state.layout.page.marginMm = Number(value), accent: value => state.layout.accent = value })) $(id).addEventListener('change', event => { apply(event.target.value); edited(); });
 for (const key of ['portrait', 'schoolLogo']) {
   $(`${key}-enabled`).addEventListener('change', event => { state.layout.images[key].enabled = event.target.checked; edited(); });
@@ -262,6 +279,7 @@ $('crop-apply').addEventListener('click', async () => {
 const entryLabels = {
   education: ['添加教育经历','学校名称','专业 / 学历','课程、成绩或奖项，每行一条'],
   internship: ['添加实习经历','公司名称','岗位 / 职责','负责的工作、关键做法和结果，每行一条'],
+  work: ['添加工作经历','公司名称','岗位 / 职责','负责的工作、关键做法和结果，每行一条'],
   project: ['添加项目经历','项目名称','负责角色','项目目标、技术做法和结果，每行一条'],
 };
 for (const kind of Object.keys(entryLabels)) $(`entry-${kind}`).addEventListener('click', () => {
@@ -286,5 +304,6 @@ $('entry-submit').addEventListener('click', async () => {
   } catch (error) { $('entry-error').textContent = error.message; $('entry-error').hidden = false; }
 });
 entryManager = wireEntries({ request, managed, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast });
+contentManager = wireContent({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast });
 libraryManager = wireLibrary({ request, managed, settle, operationPayload, acceptState, getState: () => state, toast });
 wireSystem({ request, managed, settle, operationPayload, acceptState });

@@ -1,0 +1,125 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, writeFile, mkdir, realpath, rm } from 'node:fs/promises';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
+import { chromium } from 'playwright';
+import { startEditor } from '../src/app.mjs';
+import { initializeProject, loadResume } from '../src/index.mjs';
+import { parseResume } from '../src/input.mjs';
+import { openLibrary } from '../src/library.mjs';
+import { kitRoot } from '../src/render.mjs';
+import { pdfExpectations } from '../scripts/pdf-expectations.mjs';
+
+async function fixture(t) {
+  const root = await mkdtemp(path.join(tmpdir(), 'tech-resume-content-ui-')), directory = path.join(root, '表单 简历');
+  await initializeProject(directory, 'campus'); const app = await startEditor(directory);
+  const browser = await chromium.launch({ channel: 'chromium' }), page = await browser.newPage({ viewport: { width: 1500, height: 1050 } });
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  t.after(async () => { await browser.close(); await app.close(); const actual = await realpath(root); assert.ok(actual.startsWith(path.join(await realpath(tmpdir()), 'tech-resume-content-ui-'))); await rm(actual, { recursive: true, force: true, maxRetries: 3 }); });
+  await page.goto(app.url); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.locator('#content-manager-summary').click(); await page.locator('#content-list [data-section-id=skills] .entry-row').first().waitFor();
+  return { root, directory, app, browser, page, errors };
+}
+
+test('forms edit skills and additional information, add working experience and export the same campus style with both images', async t => {
+  const { directory, app, page, errors } = await fixture(t);
+  const original = await readFile(path.join(directory, 'resume.md'), 'utf8');
+  const originalModel = parseResume(original).document;
+  const rows = page.locator('#content-list [data-section-id=skills] .entry-row');
+  await rows.first().locator('[data-action=edit]').click();
+  await page.locator('#content-label').fill('Java 平台');
+  await page.locator('#content-text').fill('使用 Spring Boot 设计接口，熟悉 **事务** 与输入校验。');
+  await page.locator('#content-submit').click(); await page.locator('#content-dialog').waitFor({ state: 'hidden' });
+  await rows.first().getByText('Java 平台', { exact: true }).waitFor();
+  await page.locator('#content-skill-add').click(); await page.locator('#content-label').fill('协作实践');
+  await page.locator('#content-text').fill('维护接口文档和验证记录。');
+  await page.locator('#content-submit').click(); await page.locator('#content-dialog').waitFor({ state: 'hidden' });
+  await rows.filter({ hasText: '协作实践' }).locator('[data-action=duplicate]').click();
+  await page.waitForFunction(() => document.querySelectorAll('#content-list [data-section-id=skills] .entry-row').length === 6);
+  await rows.filter({ hasText: '协作实践' }).last().locator('[data-action=up]').click();
+  await rows.filter({ hasText: '协作实践' }).last().locator('[data-action=delete]').click();
+  await page.locator('#content-delete-dialog[open]').waitFor(); await page.locator('#content-delete-confirm').click();
+  await page.locator('#content-delete-dialog').waitFor({ state: 'hidden' });
+  await page.waitForFunction(() => document.querySelectorAll('#content-list [data-section-id=skills] .entry-row').length === 5);
+  await rows.filter({ hasText: '协作实践' }).locator('[data-action=delete]').click();
+  await page.locator('#content-delete-confirm').click(); await page.locator('#content-delete-dialog').waitFor({ state: 'hidden' });
+  await page.waitForFunction(() => document.querySelectorAll('#content-list [data-section-id=skills] .entry-row').length === 4);
+  const info = page.locator('#content-list [data-section-id=additional]');
+  await info.locator('[data-action=edit]').click();
+  await page.locator('#content-text').fill('**英语与协作**：阅读英文技术文档。' + '参与接口讨论与代码审阅，整理测试步骤、设计取舍和问题复现方法；通过文档协作记录修改范围与验证结果。'.repeat(10) + '\n\n3. 整理接口说明。\n4. 记录协作与验证结果。');
+  await page.locator('#content-submit').click(); await page.locator('#content-dialog').waitFor({ state: 'hidden' });
+  const source = await readFile(path.join(directory, 'resume.md'), 'utf8'), model = parseResume(source).document;
+  assert.deepEqual(model.sections.find(section => section.id === 'projects'), originalModel.sections.find(section => section.id === 'projects'));
+  assert.deepEqual(model.assets, originalModel.assets);
+  const state = await (await fetch(app.url + 'api/state')).json();
+  const backups = (await (await fetch(app.url + 'api/history?resumeId=' + state.resumeId)).json()).backups;
+  assert.ok(backups.some(backup => backup.kind === 'content'));
+  const additional = model.sections.find(section => section.id === 'additional'); assert.deepEqual(additional.blocks.map(block => block.type), ['paragraph','list']); assert.equal(additional.blocks[1].start, 3);
+  const checked = await (await fetch(app.url + `api/preview?revision=${state.revision}&resumeId=${state.resumeId}`)).json();
+  assert.equal(checked.error.code, 'OVERFLOW');
+  await page.locator('#preview-two-pages:not([hidden])').waitFor({ timeout: 30000 });
+  assert.ok(!(await page.locator('#preview-error').innerText()).includes('page.maxPages'));
+  await page.locator('#preview-two-pages').click();
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  const viewer = page.frameLocator('#pdf-frame'); await viewer.locator('.textLayer').filter({ hasText: 'Java 平台' }).waitFor({ timeout: 30000 });
+  const qa = path.join(kitRoot, 'tmp/pdfs/content-forms'); await mkdir(qa, { recursive: true });
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#pdf-download').click()]);
+  await download.saveAs(path.join(qa, 'form-campus.pdf'));
+  const loaded = await loadResume(path.join(directory, 'resume.md'));
+  assert.equal(loaded.layout.page.maxPages, 2); assert.equal(loaded.layout.bodyPt, 10.5);
+  await writeFile(path.join(qa, 'form-campus.expected.json'), JSON.stringify(pdfExpectations({ ...loaded, images: { portrait: true, schoolLogo: true } }, 2)));
+  await page.screenshot({ path: path.join(qa, 'desktop-editor.png') });
+  await page.locator('#content-skill-add').click(); await page.setViewportSize({ width: 680, height: 720 });
+  await page.screenshot({ path: path.join(qa, 'small-skill-dialog.png') }); await page.getByRole('button', { name: '关闭内容编辑' }).click();
+  await page.setViewportSize({ width: 1500, height: 1050 });
+  await page.locator('#entry-work').click(); await page.locator('#entry-title').fill('示例团队'); await page.locator('#entry-subtitle').fill('后端开发');
+  await page.locator('#entry-date').fill('2025.06 - 至今'); await page.locator('#entry-details').fill('设计接口并维护验证用例。');
+  await page.locator('#entry-submit').click(); await page.locator('#entry-dialog').waitFor({ state: 'hidden' });
+  await page.locator('#save-status').filter({ hasText: '已自动保存' }).waitFor();
+  const working = parseResume(await readFile(path.join(directory, 'resume.md'), 'utf8')).document.sections.find(section => section.id === 'experience');
+  assert.equal(working.entries[0].title, '示例团队'); assert.deepEqual(errors, []);
+});
+
+test('forms retain invalid input, refuse stale edits and disable content tools in full-source mode', async t => {
+  const { directory, app, page, errors } = await fixture(t);
+  await page.locator('#content-list [data-section-id=skills] [data-action=edit]').first().click();
+  await page.locator('#content-text').fill('<img src=x>'); await page.locator('#content-submit').click();
+  await page.locator('#content-error:not([hidden])').waitFor(); assert.match(await page.locator('#content-error').innerText(), /HTML/);
+  assert.equal(await page.locator('#content-text').inputValue(), '<img src=x>');
+  await page.locator('#content-text').fill('保留输入。');
+  const current = await readFile(path.join(directory, 'resume.md'), 'utf8');
+  await writeFile(path.join(directory, 'resume.md'), current.replace('英语与协作', '英语与协作（外部修改）'));
+  await page.locator('#content-submit').click(); await page.locator('#content-error:not([hidden])').waitFor();
+  assert.match(await page.locator('#content-error').innerText(), /变化|修改|载入/);
+  assert.equal(await readFile(path.join(directory, 'resume.md'), 'utf8'), current.replace('英语与协作', '英语与协作（外部修改）'));
+  await page.getByRole('button', { name: '关闭内容编辑' }).click(); await page.locator('#reload').click();
+  await page.locator('#source-mode').click(); await page.locator('#content-skill-add:disabled').waitFor();
+  assert.equal(await page.locator('#entry-work').isDisabled(), true);
+  assert.deepEqual(errors, []);
+});
+
+test('skill and additional changes persist independently, preserve deletion backups and reject outdated library revisions', async t => {
+  const root = await mkdtemp(path.join(tmpdir(), 'tech-resume-content-library-'));
+  t.after(async () => { const actual = await realpath(root); assert.ok(actual.startsWith(path.join(await realpath(tmpdir()), 'tech-resume-content-library-'))); await rm(actual, { recursive: true, force: true }); });
+  await initializeProject(path.join(root, 'data'), 'campus');
+  let library = await openLibrary(path.join(root, 'data'), { historyIntervalMs: 0 }); t.after(() => library.close());
+  const original = await library.read(), copy = await library.duplicate({ ...original, name: '副本' });
+  await library.switchResume({ ...copy, targetId: original.resumeId });
+  let current = await library.read();
+  current = await library.changeContent({ ...current, kind: 'skills', action: 'edit', sectionId: 'skills', index: 0, input: { label: '服务开发', text: '维护服务接口与验证。' } });
+  await assert.rejects(library.changeContent({ ...original, kind: 'skills', action: 'delete', sectionId: 'skills', index: 0 }), error => error.code === 'CONFLICT');
+  const beforeDelete = current.source;
+  current = await library.changeContent({ ...current, kind: 'lines', action: 'delete', sectionId: 'additional' });
+  const backup = (await library.backups(current.resumeId)).find(backup => backup.kind === 'content'); assert.ok(backup);
+  await library.restore({ ...current, backupId: backup.id });
+  const restored = await library.read(), restoredModel = parseResume(restored.source).document, expectedModel = parseResume(beforeDelete).document;
+  for (const [key, asset] of Object.entries(restoredModel.assets)) {
+    assert.deepEqual(await readFile(path.join(root, 'data', asset.src)), await readFile(path.join(root, 'data', expectedModel.assets[key].src)));
+    asset.src = expectedModel.assets[key].src;
+  }
+  assert.deepEqual(restoredModel, expectedModel);
+  await library.close(); library = await openLibrary(path.join(root, 'data'), { historyIntervalMs: 0 });
+  assert.equal((await library.read()).source, restored.source);
+  current = await library.read(); await library.switchResume({ ...current, targetId: copy.resumeId }); assert.equal((await library.read()).source, copy.source);
+});
