@@ -1,0 +1,15 @@
+{
+  "layout": {
+    "schemaVersion": "0.2.0",
+    "preset": "campus",
+    "page": { "maxPages": 1 },
+    "images": {
+      "portrait": { "widthMm": 23, "heightMm": 31, "slot": "start" },
+      "schoolLogo": { "widthMm": 34, "heightMm": 25, "slot": "end" }
+    }
+  },
+  "assets": {
+    "portrait": { "id": "00000000-0000-4000-8000-000000000001", "src": "../../assets/images/nailong-avatar.jpg", "alt": "奶龙头像" },
+    "schoolLogo": { "id": "00000000-0000-4000-8000-000000000002", "src": "../../assets/images/chengchuan-logo.png", "alt": "澄川理工大学学校 Logo" }
+  }
+}

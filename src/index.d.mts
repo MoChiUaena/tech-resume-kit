@@ -1,7 +1,7 @@
 export interface Contact { text: string; href: string }
 export interface Asset { src: string; alt: string }
 export type Block = { type: 'paragraph'; text: string } | { type: 'list'; items: string[]; ordered: boolean; start?: number };
-export interface Entry { title: string; date: string; subtitle?: string; stack?: string; blocks: Block[] }
+export interface Entry { title: string; date?: string; subtitle?: string; stack?: string; blocks: Block[] }
 export type Section = { id: string; title: string } & (
   { kind: 'entries'; entries: Entry[] } | { kind: 'skills'; items: { label: string; text: string }[] } | { kind: 'lines'; blocks: Block[] }
 );
@@ -55,6 +55,39 @@ export function parseResume(source: string, file?: string): { document: Normaliz
 export function loadResume(inputPath: string, configPath?: string): Promise<LoadedResume>;
 export function parseResumeJson(source: string, file?: string): Pick<LoadedResume, 'document' | 'layout' | 'locations' | 'layoutLocations'>;
 export function loadResumeJson(inputPath: string, options?: { assetBase?: string }): Promise<LoadedResume>;
+export interface WorkbenchImageSlot {
+  id: string | null; visible: boolean; widthMm: number; heightMm: number; fit: 'cover' | 'contain';
+  quarterTurns: number; zoom: number; positionX: number; positionY: number;
+}
+export interface WorkbenchPresentation {
+  language: 'zh' | 'en'; accentColor: string; alignment: 'left' | 'center' | 'justify';
+  contactStyle: 'labels' | 'icons' | 'plain'; headingStyle: 'template' | 'line' | 'bar' | 'plain';
+  marginHorizontalMm: number; marginTopMm: number; marginBottomMm: number; entryGapMm: number; paragraphGapMm: number;
+}
+export interface WorkbenchDocument {
+  schemaVersion: 2 | 3 | 4;
+  content: { name: string; headline: string; email: string; phone: string; location: string; sections: {
+    id: string; type: 'education' | 'experience' | 'project' | 'skills' | 'custom'; title: string; visible: boolean; pageBreakBefore: boolean;
+    entries: { id: string; title: string; meta: string; bulleted: boolean; bullets: string[] }[];
+  }[] };
+  layout: { template: 'classic' | 'banner' | 'card' | 'rail'; font: 'sans' | 'serif'; fontSize: number; lineHeight: number;
+    sectionGapMm: number; marginMm: number; swapImages: boolean; photo: WorkbenchImageSlot; logo: WorkbenchImageSlot; presentation?: WorkbenchPresentation;
+  };
+}
+export interface WorkbenchAssetMapping { id: string; src: string; alt?: string; prepared?: boolean }
+export interface WorkbenchConversionOptions {
+  layout: LayoutConfig; assets?: { portrait?: WorkbenchAssetMapping; schoolLogo?: WorkbenchAssetMapping }; pageBreaks?: 'natural';
+}
+export interface WorkbenchConversionReport {
+  sourceSchemaVersion: 2 | 3 | 4; targetSchemaVersion: '0.2.0';
+  sections: { sourceId: string; targetId: string; kind: 'entries' | 'lines'; entryIds: string[] }[];
+  omitted: { field: string; id: string; reason: 'hidden' | 'empty' }[];
+  layoutChanges: { field: string; from: string | number | boolean; to: string | number }[];
+}
+export interface WorkbenchConversion { document: NormalizedDocument; layout: NormalizedLayout; report: WorkbenchConversionReport; warnings: string[] }
+export function convertWorkbenchResume(input: WorkbenchDocument, options: WorkbenchConversionOptions): WorkbenchConversion;
+export function loadWorkbenchResume(inputPath: string, options: WorkbenchConversionOptions): Promise<WorkbenchConversion & { inputFile: string; assetBase: string }>;
+export function loadWorkbenchResume(inputPath: string, options: WorkbenchConversionOptions | undefined, context: { assetBase?: string; optionsFile?: string }): Promise<WorkbenchConversion & { inputFile: string; assetBase: string }>;
 export function renderResume(document: ResumeDocument, layout: LayoutConfig, options?: RenderOptions): Promise<RenderedResume>;
 export function inspectAndExport(rendered: RenderedResume, options: { pdf: true }): Promise<PdfExportResult>;
 export function inspectAndExport(rendered: RenderedResume, options?: { pdf?: false }): Promise<ExportResult>;

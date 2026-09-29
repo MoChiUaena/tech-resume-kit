@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 4,
+  "content": {
+    "name": "奶龙",
+    "headline": "Java 后端 / AI 应用开发实习",
+    "email": "nailong@example.invalid",
+    "phone": "138 0000 0000",
+    "location": "杭州 · 2027 届",
+    "sections": [
+      {
+        "id": "50f5c140-8aa0-43b6-bec1-baf405f69cf0", "type": "education", "title": "教育背景", "visible": true, "pageBreakBefore": false,
+        "entries": [{ "id": "education-entry", "title": "澄川理工大学 · 软件工程", "meta": "2023.09 - 2027.06 · 本科", "bulleted": true,
+          "bullets": ["主修数据结构、计算机网络、操作系统与数据库系统。", "学习 **Java 并发基础**，通过课程项目练习接口设计与异常处理。"] }]
+      },
+      {
+        "id": "skills-section", "type": "skills", "title": "专业技能", "visible": true, "pageBreakBefore": false,
+        "entries": [{ "id": "skills-entry", "title": "Java 后端 / AI 应用", "meta": "", "bulleted": true,
+          "bullets": ["**Java / Spring Boot：**熟悉集合、线程池、事务与 REST API，能够使用 Bean Validation 校验请求。", "**数据与工程：**PostgreSQL、Redis、Git、Docker；了解 Spring AI 的工具调用与检索流程。"] }]
+      },
+      {
+        "id": "internship-section", "type": "experience", "title": "实习经历", "visible": true, "pageBreakBefore": false,
+        "entries": [{ "id": "internship-entry", "title": "示例软件团队 · 后端开发实习", "meta": "2026.06 - 2026.08", "bulleted": true,
+          "bullets": ["参与内部任务管理 API 开发，整理请求校验、分页查询和统一错误响应。", "为权限边界与版本冲突编写集成验证，将可复现样例整理到接口文档。"] }]
+      },
+      {
+        "id": "project-section", "type": "project", "title": "项目经历", "visible": true, "pageBreakBefore": false,
+        "entries": [
+          { "id": "resume-project", "title": "中文技术简历套件", "meta": "个人项目 · Node.js / Chromium", "bulleted": true,
+            "bullets": ["将内容与版式分开，支持独立学校 Logo 和 23:31 证件照，预览与 PDF 共用一套模板。", "**离线导出：**等待字体与图片完成加载后生成 A4 PDF，保留可搜索文本，并检查页数和阅读顺序。", "参考链接文本：https://example.invalid/portfolio/resume；转换保留普通文字，不自动创建链接。"] },
+          { "id": "api-project", "title": "任务管理 API", "meta": "课程项目 · Spring Boot / PostgreSQL", "bulleted": false,
+            "bullets": ["按控制器、服务和存储接口划分职责，用数据库迁移管理表结构变更。", "编写输入校验和事务回退验证，记录运行环境与复现步骤。"] }
+        ]
+      },
+      {
+        "id": "additional-section", "type": "custom", "title": "荣誉与其他", "visible": true, "pageBreakBefore": false,
+        "entries": [{ "id": "additional-entry", "title": "", "meta": "", "bulleted": false,
+          "bullets": ["完成课程项目与团队协作练习，持续记录工程设计、验证方法和可复现问题。"] }]
+      }
+    ]
+  },
+  "layout": {
+    "template": "classic", "font": "sans", "fontSize": 10.5, "lineHeight": 1.36, "sectionGapMm": 4, "marginMm": 15, "swapImages": false,
+    "photo": { "id": "00000000-0000-4000-8000-000000000001", "visible": true, "widthMm": 23, "heightMm": 31, "fit": "cover", "quarterTurns": 0, "zoom": 1, "positionX": 50, "positionY": 42 },
+    "logo": { "id": "00000000-0000-4000-8000-000000000002", "visible": true, "widthMm": 34, "heightMm": 25, "fit": "contain", "quarterTurns": 0, "zoom": 1, "positionX": 100, "positionY": 0 },
+    "presentation": { "language": "zh", "accentColor": "#244f63", "alignment": "left", "contactStyle": "plain", "headingStyle": "template", "marginHorizontalMm": 15, "marginTopMm": 15, "marginBottomMm": 15, "entryGapMm": 3, "paragraphGapMm": 0.9 }
+  }
+}
