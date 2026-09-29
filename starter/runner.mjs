@@ -22,7 +22,8 @@ function openBrowser(url) {
   child.on('error', () => console.log(`请在浏览器打开：${url}`));
 }
 try {
-  if (Number(process.versions.node.split('.')[0]) < 22) throw new Error('请先安装 Node.js 22 或更高版本。');
+  const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
+  if (nodeMajor < 22 || nodeMajor === 22 && nodeMinor < 13) throw new Error('请先安装 Node.js 22.13 或更高版本。');
   const { values, positionals } = parseArgs({ allowPositionals: true, options: { 'with-deps': { type: 'boolean' }, port: { type: 'string' }, 'no-open': { type: 'boolean' } } });
   const [command, ...extra] = positionals;
   const allowed = { install: ['with-deps'], preview: ['port', 'no-open'], build: [], check: [] }[command];

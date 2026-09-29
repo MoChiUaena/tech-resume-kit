@@ -1,6 +1,6 @@
 {
   "name": "tech-resume-kit",
-  "version": "0.7.0-dev.4",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "中文技术岗 Markdown 简历模板套件",
@@ -31,6 +31,12 @@
     "docs/api.md",
     "docs/content-model.md",
     "docs/input-format.md",
+    "docs/data-and-updates.md",
+    "docs/changelog.md",
+    "docs/maintaining.md",
+    "docs/usability.md",
+    "docs/workbench-handoff.md",
+    "docs/images/editor.png",
     "starter/"
   ],
   "scripts": {

@@ -1,14 +1,14 @@
 # 安装与调用 API
 
-从 [GitHub Release](https://github.com/MoChiUaena/tech-resume-kit/releases/latest) 下载 `tech-resume-kit-0.6.0.tgz`，在自己的 Node.js 项目中安装：
+从 [GitHub Release](https://github.com/MoChiUaena/tech-resume-kit/releases/latest) 下载 `tech-resume-kit-0.7.0.tgz`，在自己的 Node.js 项目中安装：
 
 ```sh
-npm install ./tech-resume-kit-0.6.0.tgz
+npm install ./tech-resume-kit-0.7.0.tgz
 npx playwright install chromium
 npx tech-resume init --dir my-resume --template blank
 ```
 
-需要 Node.js 22+，公共入口为 ESM，附带 TypeScript 类型声明。代码与字体随包提供，首次下载依赖和浏览器后可以离线导出。当前通过 GitHub 分发，没有发布到 npm 注册表。
+需要 Node.js 22.13+，公共入口为 ESM，附带 TypeScript 类型声明。代码与字体随包提供，首次下载依赖和浏览器后可以离线导出。当前通过 GitHub 分发，没有发布到 npm 注册表。
 
 ## JavaScript / TypeScript
 

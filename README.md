@@ -8,25 +8,27 @@
 
 [校招样张 PDF](output/pdf/campus-ink-blue.pdf) · [AI 实习样张 PDF](output/pdf/ai-intern-ink-blue.pdf) · [两页经验样张 PDF](output/pdf/experienced-ink-blue.pdf) · [可直接填写的 resume.md](resume.md) · [版式配置](layout.yaml)
 
-**公开版本 v0.6.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持一页/两页 PDF、独立图片配置、模块排序，以及实际 PDF 的本地自动刷新预览。长标题、长链接、内容增减、长项目续页和照片方向已通过专项验证。
+**公开版本 v0.7.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持照片裁剪、经历表单、多份简历、数据目录迁移、备份恢复，以及可翻页和缩放的离线 PDF 预览。
 
 校招样张使用“奶龙”姓名和白底竖版头像。图片来源与许可信息集中记录在[素材说明](assets/README.md)。
 
 ## 下载使用
 
-[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.6.0/tech-resume-windows-x64-0.6.0.zip) · Windows 10 / 11 x64 · 约 187 MB
+[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.7.0/tech-resume-windows-x64-0.7.0.zip) · Windows 10 / 11 x64 · 约 197 MB
 
 1. 完整解压，双击 **启动简历.exe**。
 2. 在打开的页面填写基本信息和 Markdown 经历，右侧自动更新实际 PDF 预览。
 3. 点击 **下载 PDF**。
 
-照片、校徽和版式通过“版式与图片”设置。修改自动保存到 `my-resume/`，再次启动可以继续编辑。
+照片、校徽和版式通过“版式与图片”设置，照片可裁剪为 23:31。正文上方可用表单添加教育、实习和项目经历，修改自动保存，重启后可以继续编辑。
 
 “当前简历”支持新建、复制、重命名和切换，每份简历有独立正文、版式、图片与历史。“备份与恢复”可以立即备份、下载包含图片的完整 ZIP，以及恢复历史版本或备份文件；恢复前先保留当前内容。有修改时每 5 分钟生成自动版本，切换或退出前也会保存。
 
-旧版 `resume.md`、`layout.yaml`、图片与 `backups/` 留在原位置，升级后作为第一份简历。新简历存入 `my-resume/resumes/`，新版完整备份在 `my-resume/history/`，列表保存在 `my-resume/library.json`。复制整个 `my-resume/` 文件夹即可迁移全部资料；完整备份 ZIP 对应当前选中的一份简历。
+数据默认保存到 `%LOCALAPPDATA%\TechResumeKit\data`，与程序分开。“数据与更新”显示实际位置，可迁移全部资料或打开已有简历库。从 v0.6.0 升级时会识别旧版 `my-resume`，迁移前保存整库副本并核对文件，原目录保留。完整备份 ZIP 对应当前选中的一份简历；复制整个数据文件夹可保存全部简历与历史。
 
-运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.6.0/tech-resume-kit-0.6.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
+“检查正式版本”可以下载并核验新版安装包，支持暂停、断线续传和重启后继续。点击“保存并打开新版”才切换程序，切换前会保存整库副本，启动失败时尝试返回原程序。
+
+运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.7.0/tech-resume-kit-0.7.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
 
 ## 从源码开始
 
@@ -44,7 +46,7 @@ Linux 可能需要用 `npx playwright install --with-deps chromium` 安装系统
 
 `npm run app` 打开同一套本地编辑页面，默认使用独立数据目录；Windows 为 `%LOCALAPPDATA%\TechResumeKit\data`。“数据与更新”显示实际路径，可迁移整库或打开已有简历库。指定位置可用 `npm run app -- --dir personal/my-resume`。macOS 默认保存在 `~/Library/Application Support/TechResumeKit/data`，Linux 为 `~/.local/share/TechResumeKit/data`（支持 `XDG_DATA_HOME`）。
 
-源码开发版增加了照片裁剪、经历表单和数据目录管理。首次启动会识别程序旁或同级旧版下载目录中的 `my-resume`；找到唯一旧库时自动迁入，也可以手动迁入。迁移先保存整库副本，再核对所有文件，原目录保留。Windows 开发包还支持检查正式版本、核验下载包、保存后切换和启动失败回退。当前正式下载仍为 v0.6.0；开发变更见[变更记录](docs/changelog.md)，集中发布规则见[维护说明](docs/maintaining.md)。
+完整变更见[变更记录](docs/changelog.md)，数据位置与更新方式见[数据与更新](docs/data-and-updates.md)。日常改动先同步源码和 CI，积累一组功能后集中发布，见[维护说明](docs/maintaining.md)。
 
 如需使用命令行，先创建独立起步目录：
 

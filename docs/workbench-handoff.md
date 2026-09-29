@@ -1,6 +1,6 @@
 # 本地简历工作台接入说明
 
-套件版本 `0.6.0`，内容与版式模型 `schemaVersion: "0.2.0"`。GitHub Release 提供可安装的 TGZ，公共 ESM 入口和 TypeScript 类型声明见[调用接口](api.md)。
+套件版本 `0.7.0`，内容与版式模型 `schemaVersion: "0.2.0"`。GitHub Release 提供可安装的 TGZ，公共 ESM 入口和 TypeScript 类型声明见[调用接口](api.md)。
 
 Node.js 调用方可直接使用 `renderResume(document, layout, { assetBase })`，再调用 `inspectAndExport(rendered, { pdf: true })` 取得 PDF 字节、真实页数和排版检查结果。Java 等调用方可用 `ProcessBuilder` 执行：
 
