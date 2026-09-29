@@ -8,6 +8,7 @@ import { captureBackup, decodeBackup, applyBackup } from './backup.mjs';
 import { ResumeError } from './errors.mjs';
 import { assetPath } from './assets.mjs';
 import { imageSize } from 'image-size';
+import { listResumeEntries, changeResumeEntry } from './entries.mjs';
 
 const uuid = z.string().uuid(), idSchema = z.union([z.literal('legacy'), uuid]);
 const catalogSchema = z.object({ schemaVersion: z.literal(1), activeId: idSchema, resumes: z.array(z.object({ id: idSchema, name: z.string().trim().min(1).max(60), createdAt: z.string() }).strict()).min(1).max(100) }).strict();
@@ -16,7 +17,7 @@ function name(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 60 || /[\x00-\x1f\x7f]/.test(value)) throw new ResumeError('简历名称需要 1 到 60 个字符');
   return value.trim();
 }
-const kinds = { initial: '初始版本', manual: '手动备份', auto: '自动版本', template: '切换模板前', import: '导入正文前', restore: '恢复前', photo: '裁剪照片前' };
+const kinds = { initial: '初始版本', manual: '手动备份', auto: '自动版本', template: '切换模板前', import: '导入正文前', restore: '恢复前', photo: '裁剪照片前', entry: '删除经历前' };
 
 export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}) {
   const root = path.resolve(directory), catalogFile = path.join(root, 'library.json');
@@ -112,6 +113,19 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     await (await projectFor()).save(payload); dirty.add(current.resumeId);
     return state();
   });
+  const entries = async (resumeId, revision) => {
+    await queue;
+    const current = await check({ resumeId, revision });
+    return { resumeId, revision, sections: listResumeEntries(current.source) };
+  };
+  const changeEntry = payload => mutate(async () => {
+    const current = await check(payload);
+    const changed = changeResumeEntry(current.source, current.layout, payload);
+    if (changed.source === current.source) return state();
+    if (payload.action === 'delete') await checkpoint(current.resumeId, 'entry');
+    await (await projectFor()).save({ ...changed, revision: current.revision });
+    dirty.add(current.resumeId); return state();
+  });
   const useTemplate = payload => mutate(async () => {
     const current = await check(payload); await checkpoint(current.resumeId, 'template');
     await (await projectFor()).useTemplate(payload); dirty.add(current.resumeId); return state();
@@ -168,5 +182,5 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   }
   if (!(await historyFor(catalog.activeId)).length) await checkpoint(catalog.activeId, 'initial');
   if (historyIntervalMs > 0) { timer = setInterval(() => autoCheckpoint().catch(error => { historyWarning = `自动版本未保存：${error.message}`; }), Math.min(historyIntervalMs, 60000)); timer.unref(); }
-  return { root, read, save, useTemplate, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); await flush(); } };
+  return { root, read, save, entries, changeEntry, useTemplate, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); await flush(); } };
 }

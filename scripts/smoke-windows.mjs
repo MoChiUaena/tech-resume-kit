@@ -55,6 +55,13 @@ try {
   await page.goto(url); const viewer = page.frameLocator('#pdf-frame');
   await viewer.locator('.pdf-page[data-page="1"][data-rendered="true"]').waitFor({ timeout: 30000 });
   assert.match(await viewer.locator('.textLayer').innerText(), /免安装填写示例/);
+  await page.locator('#entry-manager-summary').click();
+  const entry = page.locator('[data-section-id=projects] .entry-row').first();
+  await entry.locator('[data-action=edit]').click(); await page.locator('#entry-title').fill('免安装项目示例');
+  await page.locator('#entry-submit').click(); await page.locator('#entry-dialog').waitFor({ state: 'hidden' });
+  await viewer.locator('.textLayer').filter({ hasText: '免安装项目示例' }).waitFor({ timeout: 30000 });
+  assert.match(await viewer.locator('.textLayer').innerText(), /免安装项目示例/);
+  state = await (await fetch(url + 'api/state')).json();
   const document = await fetch(url + `document.pdf?revision=${state.revision}&download=1`); assert.equal(document.status, 200);
   const buffer = Buffer.from(await document.arrayBuffer()); assert.equal((await PDFDocument.load(buffer)).getPageCount(), 1);
   const qa = path.join(root, 'tmp/pdfs/editor'); await mkdir(qa, { recursive: true });

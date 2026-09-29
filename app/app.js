@@ -1,11 +1,13 @@
 import { createCropModel, normalizeCrop, rotateCrop, paintCrop, exportCrop } from './crop.mjs';
 import { insertResumeEntry } from './entries.mjs';
 import { wireSystem } from './system.mjs';
+import { wireEntries } from './entry-manager.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
 let cropSession, cropDrag, entryKind;
 let viewerReference;
+let entryManager;
 async function request(url, data, raw = false) {
   const options = data === undefined ? {} : { method: 'POST', headers: { 'X-Resume-Token': token, ...(raw ? { 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision } : { 'Content-Type': 'application/json' }) }, body: raw ? data : JSON.stringify({ resumeId: state?.resumeId, ...data }) };
   const response = await fetch(url, options), result = await response.json();
@@ -13,7 +15,7 @@ async function request(url, data, raw = false) {
   return result;
 }
 function toast(text) { $('toast').textContent = text; $('toast').hidden = false; setTimeout(() => $('toast').hidden = true, 5000); }
-function edited() { if (actionBusy) return; tick++; previewReady = false; $('save-status').textContent = '正在保存…'; $('page-status').textContent = '正在更新'; $('pdf-download').disabled = true; clearTimeout(timer); timer = setTimeout(save, 700); }
+function edited() { if (actionBusy) return; tick++; entryManager?.invalidate(); previewReady = false; $('save-status').textContent = '正在保存…'; $('page-status').textContent = '正在更新'; $('pdf-download').disabled = true; clearTimeout(timer); timer = setTimeout(save, 700); }
 function renderContacts() {
   $('contacts').replaceChildren();
   if (sourceMode) { $('contact-add').disabled = true; return; }
@@ -48,6 +50,7 @@ function populate() {
   for (const key of ['portrait', 'schoolLogo']) { const asset = state.front?.assets?.[key]; $(`${key}-enabled`).checked = state.layout.images[key].enabled; $(`${key}-enabled`).disabled = !asset; $(`${key}-file`).textContent = asset ? asset.src.split('/').at(-1) : '尚未选择'; }
   $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
   for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
+  entryManager?.refresh();
 }
 async function refreshPreview(revision, expectedTick = tick) {
   const sequence = ++previewSequence, resumeId = state.resumeId; previewReady = false; $('page-status').textContent = '正在排版…'; $('pdf-download').disabled = true;
@@ -79,7 +82,7 @@ async function save() {
     const payload = { resumeId: state.resumeId, revision: state.revision, layout: state.layout, ...(sourceMode ? { source: $('body').value } : { front: state.front, body: $('body').value }) };
     const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; savedTick = captured;
     $('save-status').textContent = '已自动保存';
-    if (tick === captured) refreshPreview(result.revision, captured); else pending = true;
+    if (tick === captured) { refreshPreview(result.revision, captured); entryManager?.refresh(); } else pending = true;
   } catch (error) { $('save-status').textContent = '保存失败'; toast(error.message); pending = false; }
   finally { busy = false; if (pending && tick !== savedTick) { pending = false; save(); } }
 }
@@ -97,6 +100,7 @@ async function managed(action) {
     $('contact-add').disabled = sourceMode || state.front.person.contacts.length >= 6;
     $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
     for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
+    entryManager?.refresh();
   }
 }
 function acceptState(result) { state = result; tick = savedTick = 0; previewSequence++; viewerReference = undefined; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); }
@@ -109,6 +113,7 @@ $('source-mode').addEventListener('click', async () => {
     if (sourceMode) populate();
     else { sourceMode = true; $('body').value = state.source; $('person-fields').hidden = true; $('contacts').hidden = true; $('contact-add').disabled = true; $('source-mode').textContent = '返回正文编辑'; }
     for (const key of ['education','internship','project']) $(`entry-${key}`).disabled = sourceMode;
+    entryManager?.refresh();
   } catch (error) { toast(error.message); }
 });
 $('contact-add').addEventListener('click', () => { state.front.person.contacts.push({ text: '', href: 'mailto:' }); renderContacts(); edited(); });
@@ -259,6 +264,8 @@ const entryLabels = {
 for (const kind of Object.keys(entryLabels)) $(`entry-${kind}`).addEventListener('click', () => {
   if (sourceMode) { toast('请先返回正文编辑'); return; }
   entryKind = kind;
+  $('entry-dialog').dataset.mode = 'add'; $('entry-submit').textContent = '添加到正文'; $('entry-content-help').hidden = true;
+  $('entry-details').maxLength = 10000; $('entry-details').rows = 4; $('entry-details').placeholder = '填写负责的工作、关键做法和结果；支持加粗与链接。';
   const labels = entryLabels[kind];
   $('entry-dialog-title').textContent = labels[0]; $('entry-title-label').textContent = labels[1]; $('entry-subtitle-label').textContent = labels[2]; $('entry-details-label').textContent = labels[3];
   $('entry-stack-field').hidden = kind === 'education';
@@ -266,6 +273,7 @@ for (const kind of Object.keys(entryLabels)) $(`entry-${kind}`).addEventListener
   $('entry-error').hidden = true; $('entry-dialog').showModal(); $('entry-title').focus();
 });
 $('entry-submit').addEventListener('click', async () => {
+  if ($('entry-dialog').dataset.mode === 'edit') return;
   try {
     if (sourceMode) throw new Error('请先返回正文编辑');
     const result = insertResumeEntry($('body').value, { kind: entryKind, title: $('entry-title').value, subtitle: $('entry-subtitle').value, date: $('entry-date').value, stack: entryKind === 'education' ? '' : $('entry-stack').value, details: $('entry-details').value }, state.layout);
@@ -274,4 +282,5 @@ $('entry-submit').addEventListener('click', async () => {
     $('body').focus(); $('body').setSelectionRange(result.selectionStart, result.selectionStart); await settle();
   } catch (error) { $('entry-error').textContent = error.message; $('entry-error').hidden = false; }
 });
+entryManager = wireEntries({ request, managed, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast });
 wireSystem({ request, managed, settle, operationPayload, acceptState });

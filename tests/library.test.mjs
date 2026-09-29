@@ -19,6 +19,31 @@ async function fixture(t, template = 'blank') {
   return { root, outer, library };
 }
 
+test('entry changes reject stale revisions, persist across restart and restore deletion without changing other resumes', async t => {
+  const { root, library } = await fixture(t, 'campus');
+  const original = await library.read();
+  let copy = await library.duplicate({ ...original, name: '经历管理测试' });
+  const listed = await library.entries(copy.resumeId, copy.revision);
+  const education = listed.sections.find(section => section.id === 'education').entries[0];
+  copy = await library.changeEntry({ ...copy, action: 'edit', sectionId: 'education', index: 0, input: { ...education, date: '2023.09 - 2027.07' } });
+  await assert.rejects(library.changeEntry({ ...original, action: 'delete', sectionId: 'education', index: 0 }), error => error.code === 'CONFLICT');
+  await assert.rejects(library.entries(copy.resumeId, listed.revision), error => error.code === 'CONFLICT');
+  const beforeDelete = copy;
+  copy = await library.changeEntry({ ...copy, action: 'delete', sectionId: 'education', index: 0 });
+  assert.ok(!copy.body.includes('{#education .entries}'));
+  const backup = (await library.backups(copy.resumeId)).find(item => item.kind === 'entry');
+  assert.equal(backup.label, '删除经历前');
+  copy = await library.restore({ ...copy, backupId: backup.id }); assert.equal(copy.source, beforeDelete.source);
+  for (const key of ['portrait', 'schoolLogo']) assert.deepEqual(await readFile(path.join(root, 'resumes', copy.resumeId, copy.front.assets[key].src)), await readFile(path.join(root, original.front.assets[key].src)));
+  await library.close();
+  const reopened = await openLibrary(root, { historyIntervalMs: 0 });
+  try {
+    const persisted = await reopened.read(); assert.equal(persisted.source, beforeDelete.source);
+    const old = await reopened.switchResume({ ...persisted, targetId: original.resumeId }); assert.equal(old.source, original.source);
+    await assert.rejects(reopened.changeEntry({ ...copy, action: 'delete', sectionId: 'education', index: 0 }), error => error.code === 'CONFLICT');
+  } finally { await reopened.close(); }
+});
+
 test('legacy files stay in place; multiple resumes persist their selected document across restart', async t => {
   const { root, library } = await fixture(t);
   const before = await readFile(path.join(root, 'resume.md'));
