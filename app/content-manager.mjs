@@ -98,6 +98,7 @@ export function wireContent({ request, managed, settle, operationPayload, accept
   });
   $('content-submit').addEventListener('click', async () => {
     if (!editChoice) return;
+    $('content-error').hidden = true;
     try {
       const skills = editChoice.kind === 'skills';
       const choice = { ...editChoice, ...(skills && editChoice.action === 'add' ? { sectionId: $('content-section').value || undefined } : {}) };
@@ -110,6 +111,7 @@ export function wireContent({ request, managed, settle, operationPayload, accept
   $('content-delete-dialog').addEventListener('close', () => deleteChoice = undefined);
   $('content-delete-confirm').addEventListener('click', async () => {
     if (!deleteChoice) return;
+    $('content-delete-error').hidden = true;
     try { await change(deleteChoice, 'delete'); $('content-delete-dialog').close(); toast('已删除，可从“备份与恢复”找回原内容。'); }
     catch (error) { $('content-delete-error').textContent = error.message; $('content-delete-error').hidden = false; }
   });

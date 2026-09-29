@@ -90,7 +90,8 @@ test('forms retain invalid input, refuse stale edits and disable content tools i
   await page.locator('#content-text').fill('保留输入。');
   const current = await readFile(path.join(directory, 'resume.md'), 'utf8');
   await writeFile(path.join(directory, 'resume.md'), current.replace('英语与协作', '英语与协作（外部修改）'));
-  await page.locator('#content-submit').click(); await page.locator('#content-error:not([hidden])').waitFor();
+  await page.locator('#content-submit').click();
+  await page.waitForFunction(() => !document.querySelector('#content-error').hidden && /变化|修改|载入/.test(document.querySelector('#content-error').textContent));
   assert.match(await page.locator('#content-error').innerText(), /变化|修改|载入/);
   assert.equal(await readFile(path.join(directory, 'resume.md'), 'utf8'), current.replace('英语与协作', '英语与协作（外部修改）'));
   await page.getByRole('button', { name: '关闭内容编辑' }).click(); await page.locator('#reload').click();
