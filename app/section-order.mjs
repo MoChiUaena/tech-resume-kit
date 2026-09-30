@@ -1,7 +1,7 @@
 const $ = id => document.getElementById(id);
 
-export function wireSectionOrder({ request, settle, edited, getState }) {
-  let sequence = 0, sections = [], order = [];
+export function wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState }) {
+  let sequence = 0, sections = [], order = [], renameChoice;
   function render() {
     $('order-list').replaceChildren();
     for (const [index, id] of order.entries()) {
@@ -9,6 +9,14 @@ export function wireSectionOrder({ request, settle, edited, getState }) {
       const row = document.createElement('div'); row.className = 'order-row'; row.dataset.sectionId = id; row.setAttribute('role', 'listitem');
       const title = document.createElement('span'); title.textContent = section?.title || id;
       const actions = document.createElement('div'); actions.className = 'order-actions';
+      const rename = document.createElement('button'); rename.dataset.action = 'rename'; rename.textContent = '改名';
+      rename.setAttribute('aria-label', `修改${title.textContent}章节名称`);
+      rename.addEventListener('click', () => {
+        const state = getState(); renameChoice = { resumeId: state.resumeId, revision: state.revision, sectionId: id };
+        $('section-title').value = title.textContent; $('section-title-error').hidden = true;
+        $('section-title-dialog').showModal(); $('section-title').focus(); $('section-title').select();
+      });
+      actions.append(rename);
       for (const [action, change, label] of [['up', -1, '上移'], ['down', 1, '下移']]) {
         const button = document.createElement('button'); button.dataset.action = action; button.textContent = action === 'up' ? '↑' : '↓';
         button.setAttribute('aria-label', `${label}${title.textContent}`); button.disabled = index + change < 0 || index + change >= order.length;
@@ -23,7 +31,7 @@ export function wireSectionOrder({ request, settle, edited, getState }) {
       row.append(title, actions); $('order-list').append(row);
     }
     $('order-reset').disabled = !getState()?.layout?.sectionOrder;
-    $('order-status').textContent = '使用箭头调整当前简历的章节；更换信息编排会恢复对应预设。';
+    $('order-status').textContent = '改名保留章节内容；使用箭头调整顺序，更换信息编排会恢复预设顺序。';
   }
   async function refresh() {
     const requested = ++sequence;
@@ -45,6 +53,21 @@ export function wireSectionOrder({ request, settle, edited, getState }) {
   $('order-reset').addEventListener('click', async () => {
     const state = getState(); if (!state?.layout?.sectionOrder) return;
     delete state.layout.sectionOrder; edited(); await refresh();
+  });
+  $('section-title-dialog').addEventListener('close', () => renameChoice = undefined);
+  $('section-title').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); $('section-title-submit').click(); } });
+  $('section-title-submit').addEventListener('click', async () => {
+    if (!renameChoice) return;
+    $('section-title-error').hidden = true;
+    try {
+      const choice = renameChoice;
+      await managed(async () => {
+        const state = getState();
+        if (choice.resumeId !== state.resumeId || choice.revision !== state.revision) throw new Error('正文或简历已变化，请关闭弹窗后重新选择章节');
+        acceptState(await request('/api/sections/rename', { ...operationPayload(), sectionId: choice.sectionId, title: $('section-title').value }));
+      });
+      $('section-title-dialog').close();
+    } catch (error) { $('section-title-error').textContent = error.message; $('section-title-error').hidden = false; }
   });
   return { refresh };
 }
