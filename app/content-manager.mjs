@@ -28,7 +28,7 @@ export function wireContent({ request, managed, settle, operationPayload, accept
       const option = document.createElement('option'); option.value = section.id; option.textContent = section.title; $('content-section').append(option);
     }
     $('content-section').value = choice.sectionId || $('content-section').options[0]?.value || '';
-    $('content-label-field').hidden = !skills; $('content-title-field').hidden = skills || !adding;
+    $('content-label-field').hidden = !skills; $('content-title-field').hidden = skills;
     $('content-label').value = choice.label || ''; $('content-title').value = adding ? '其他信息' : choice.title || '';
     $('content-text-label').textContent = skills ? '掌握的技术与使用场景' : '补充内容';
     $('content-text').value = skills ? choice.text || '' : choice.content || '';
