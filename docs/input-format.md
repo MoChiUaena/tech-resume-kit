@@ -1,6 +1,6 @@
 # 输入格式 0.2.0
 
-日常编辑仅需 `resume.md` 与 `layout.yaml`。文件采用 UTF-8；Windows CRLF 和 UTF-8 BOM 均可读取。
+日常编辑仅需 `resume.md` 与 `layout.yaml`。文件采用 UTF-8；Windows CRLF 和 UTF-8 BOM 均可读取。当前源码开发版的表单编辑会保留未改的正文、YAML 注释和原文件换行方式。
 
 ## 顶部元数据
 
