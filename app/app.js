@@ -28,9 +28,9 @@ function renderContacts() {
     for (const [key, text] of [['email', '邮箱'], ['phone', '电话'], ['url', '链接']]) { const option = document.createElement('option'); option.value = key; option.textContent = text; select.append(option); }
     select.value = contact.href.startsWith('mailto:') ? 'email' : contact.href.startsWith('tel:') ? 'phone' : 'url';
     const input = document.createElement('input'); input.value = contact.text; input.setAttribute('aria-label', `联系方式 ${index + 1} 显示内容`);
-    const link = document.createElement('input'); link.value = contact.href; link.className = 'contact-link'; link.placeholder = 'https://example.com'; link.setAttribute('aria-label', `联系方式 ${index + 1} 链接地址`); link.hidden = select.value !== 'url';
+    const link = document.createElement('input'); link.value = select.value === 'url' ? contact.href : ''; link.className = 'contact-link'; link.placeholder = 'https://example.com'; link.setAttribute('aria-label', `联系方式 ${index + 1} 链接地址`); link.hidden = select.value !== 'url';
     function update() { contact.text = input.value; contact.href = select.value === 'email' ? `mailto:${input.value.trim()}` : select.value === 'phone' ? `tel:${input.value.replace(/\s/g, '')}` : link.value; edited(); }
-    input.addEventListener('input', update); link.addEventListener('input', update); select.addEventListener('change', () => { link.hidden = select.value !== 'url'; update(); });
+    input.addEventListener('input', update); link.addEventListener('input', update); select.addEventListener('change', () => { link.hidden = select.value !== 'url'; if (select.value === 'url' && !/^https?:\/\//i.test(link.value)) link.value = ''; update(); });
     const remove = document.createElement('button'); remove.textContent = '×'; remove.setAttribute('aria-label', `删除联系方式 ${index + 1}`); remove.disabled = state.front.person.contacts.length === 1;
     remove.addEventListener('click', () => { state.front.person.contacts.splice(index, 1); renderContacts(); edited(); });
     row.append(select, input, remove, link); $('contacts').append(row);

@@ -1,0 +1,66 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
+import { chromium } from 'playwright';
+import { initializeProject } from '../src/files.mjs';
+import { startEditor } from '../src/app.mjs';
+import { kitRoot } from '../src/render.mjs';
+import { pdfExpectations } from '../scripts/pdf-expectations.mjs';
+
+test('changing email to a website keeps an incomplete local draft and exports the new clickable URL after completion', async t => {
+  const outer = await mkdtemp(path.join(tmpdir(), 'tech-resume-contact-ui-'));
+  const directory = path.join(outer, '联系 方式'); await initializeProject(directory, 'campus');
+  const app = await startEditor(directory), browser = await chromium.launch({ channel: 'chromium' });
+  const page = await browser.newPage({ viewport: { width: 1500, height: 1050 } }), errors = [], remote = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/*', route => {
+    if (new URL(route.request().url()).hostname !== '127.0.0.1') { remote.push(route.request().url()); return route.abort(); }
+    return route.continue();
+  });
+  t.after(async () => {
+    await browser.close(); await app.close(); const actual = await realpath(outer);
+    assert.ok(actual.startsWith(path.join(await realpath(tmpdir()), 'tech-resume-contact-ui-')));
+    await rm(actual, { recursive: true, force: true, maxRetries: 3 });
+  });
+  await page.goto(app.url); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  const original = await app.project.read();
+  const index = original.front.person.contacts.findIndex(contact => contact.href.startsWith('mailto:'));
+  assert.ok(index >= 0);
+  const row = page.locator('#contacts .contact-row').nth(index);
+  await row.locator('select').selectOption('url');
+  const address = row.locator('.contact-link');
+  assert.equal(await address.isVisible(), true);
+  assert.equal(await address.inputValue(), '');
+  await page.locator('#save-status').filter({ hasText: '已自动保存' }).waitFor();
+  assert.equal((await app.project.read()).front.person.contacts[index].href, '');
+  await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 });
+  await page.reload(); await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 });
+  assert.equal(await row.locator('select').inputValue(), 'url');
+  assert.equal(await address.inputValue(), '');
+  await address.fill('https://example.com/portfolio');
+  await row.locator('input:not(.contact-link)').fill('作品集');
+  await page.locator('#save-status').filter({ hasText: '已自动保存' }).waitFor();
+  const saved = await app.project.read();
+  assert.deepEqual(saved.front.person.contacts[index], { text: '作品集', href: 'https://example.com/portfolio' });
+  for (const [item, contact] of saved.front.person.contacts.entries()) if (item !== index) assert.deepEqual(contact, original.front.person.contacts[item]);
+  assert.deepEqual(saved.front.assets, original.front.assets);
+  await page.waitForFunction(revision => document.querySelector('#pdf-frame').src.includes(revision), saved.revision);
+  await page.frameLocator('#pdf-frame').locator('.pdf-page[data-rendered=true]').waitFor({ timeout: 30000 });
+  await page.frameLocator('#pdf-frame').locator('.link-layer a[href="https://example.com/portfolio"]').waitFor({ timeout: 30000 });
+  const rendered = await app.project.preview();
+  assert.equal(rendered.metrics.pageCount, 1);
+  assert.equal(rendered.metrics.images.length, 2);
+  const expected = pdfExpectations({ ...rendered, images: { portrait: true, schoolLogo: true } }, 1);
+  assert.ok(expected.links.includes('https://example.com/portfolio'));
+  assert.ok(!expected.links.includes(original.front.person.contacts[index].href));
+  const qa = path.join(kitRoot, 'tmp/pdfs/contact-links'); await mkdir(qa, { recursive: true });
+  await writeFile(path.join(qa, 'contact-website.pdf'), rendered.buffer);
+  await writeFile(path.join(qa, 'contact-website.expected.json'), JSON.stringify(expected));
+  await page.screenshot({ path: path.join(qa, 'contact-editor.png') });
+  await page.reload(); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  assert.equal(await row.locator('select').inputValue(), 'url');
+  assert.equal(await address.inputValue(), 'https://example.com/portfolio');
+  assert.deepEqual(remote, []); assert.deepEqual(errors, []);
+});
