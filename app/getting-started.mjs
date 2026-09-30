@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 
-export function wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState, isSourceMode, toast }) {
+export function wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState, isSourceMode, toast, openSettings }) {
   let choice;
   function refresh() {
     $('start-banner').hidden = !getState()?.gettingStarted?.welcome;
@@ -47,6 +47,6 @@ export function wireGettingStarted({ request, managed, settle, operationPayload,
   $('guide-person').addEventListener('click', () => focusSection('person-card', 'name'));
   $('guide-entries').addEventListener('click', () => focusSection('entry-manager', 'entry-manager-summary'));
   $('guide-content').addEventListener('click', () => focusSection('content-manager', 'content-manager-summary'));
-  $('guide-layout').addEventListener('click', () => $('settings').showModal());
+  $('guide-layout').addEventListener('click', openSettings);
   return { refresh };
 }
