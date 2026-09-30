@@ -64,6 +64,8 @@ jobs:
           python scripts/render-pdfs.py --directory tmp/pdfs/getting-started
           python scripts/verify-pdf.py --directory tmp/pdfs/contact-links
           python scripts/render-pdfs.py --directory tmp/pdfs/contact-links
+          python scripts/verify-pdf.py --directory tmp/pdfs/frontmatter-save
+          python scripts/render-pdfs.py --directory tmp/pdfs/frontmatter-save
       - name: Build and check only anonymous samples
         run: |
           npm run sample
@@ -104,6 +106,11 @@ jobs:
           name: contact-link-validation
           retention-days: 7
           path: tmp/pdfs/contact-links/
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: frontmatter-save-validation
+          retention-days: 7
+          path: tmp/pdfs/frontmatter-save/
   windows-download:
     runs-on: windows-latest
     timeout-minutes: 20

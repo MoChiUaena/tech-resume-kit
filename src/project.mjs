@@ -9,6 +9,7 @@ import { renderResume, kitRoot } from './render.mjs';
 import { inspectAndExport } from './export.mjs';
 import { ResumeError } from './errors.mjs';
 import { assetPath } from './assets.mjs';
+import { saveStructuredSource } from './frontmatter.mjs';
 
 export async function openProject(directory) {
   const root = path.resolve(directory);
@@ -56,7 +57,7 @@ export async function openProject(directory) {
     if (typeof payload.source === 'string') source = payload.source;
     else {
       if (!payload.front || typeof payload.front !== 'object' || Array.isArray(payload.front) || typeof payload.body !== 'string') throw new ResumeError('填写内容格式不正确');
-      source = `---\n${stringify(payload.front)}---\n\n${payload.body.replace(/^\s*\n/, '')}`;
+      source = saveStructuredSource(state.source, state.front, payload.front, payload.body);
     }
     return write(source, payload.layout);
   });
