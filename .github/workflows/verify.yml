@@ -62,6 +62,8 @@ jobs:
           python scripts/render-pdfs.py --directory tmp/pdfs/content-forms
           python scripts/verify-pdf.py --directory tmp/pdfs/getting-started
           python scripts/render-pdfs.py --directory tmp/pdfs/getting-started
+          python scripts/verify-pdf.py --directory tmp/pdfs/contact-links
+          python scripts/render-pdfs.py --directory tmp/pdfs/contact-links
       - name: Build and check only anonymous samples
         run: |
           npm run sample
@@ -97,6 +99,11 @@ jobs:
           name: getting-started-validation
           retention-days: 7
           path: tmp/pdfs/getting-started/
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: contact-link-validation
+          retention-days: 7
+          path: tmp/pdfs/contact-links/
   windows-download:
     runs-on: windows-latest
     timeout-minutes: 20
