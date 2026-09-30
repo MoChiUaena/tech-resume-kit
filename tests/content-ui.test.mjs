@@ -47,6 +47,8 @@ test('forms edit skills and additional information, add working experience and e
   await page.waitForFunction(() => document.querySelectorAll('#content-list [data-section-id=skills] .entry-row').length === 4);
   const info = page.locator('#content-list [data-section-id=additional]');
   await info.locator('[data-action=edit]').click();
+  assert.equal(await page.locator('#content-title').isVisible(), true);
+  await page.locator('#content-title').fill('开源与语言');
   await page.locator('#content-text').fill('**英语与协作**：阅读英文技术文档。' + '参与接口讨论与代码审阅，整理测试步骤、设计取舍和问题复现方法；通过文档协作记录修改范围与验证结果。'.repeat(10) + '\n\n3. 整理接口说明。\n4. 记录协作与验证结果。');
   await page.locator('#content-submit').click(); await page.locator('#content-dialog').waitFor({ state: 'hidden' });
   const source = await readFile(path.join(directory, 'resume.md'), 'utf8'), model = parseResume(source).document;
@@ -55,7 +57,7 @@ test('forms edit skills and additional information, add working experience and e
   const state = await (await fetch(app.url + 'api/state')).json();
   const backups = (await (await fetch(app.url + 'api/history?resumeId=' + state.resumeId)).json()).backups;
   assert.ok(backups.some(backup => backup.kind === 'content'));
-  const additional = model.sections.find(section => section.id === 'additional'); assert.deepEqual(additional.blocks.map(block => block.type), ['paragraph','list']); assert.equal(additional.blocks[1].start, 3);
+  const additional = model.sections.find(section => section.id === 'additional'); assert.equal(additional.title, '开源与语言'); assert.deepEqual(additional.blocks.map(block => block.type), ['paragraph','list']); assert.equal(additional.blocks[1].start, 3);
   const checked = await (await fetch(app.url + `api/preview?revision=${state.revision}&resumeId=${state.resumeId}`)).json();
   assert.equal(checked.error.code, 'OVERFLOW');
   await page.locator('#preview-two-pages:not([hidden])').waitFor({ timeout: 30000 });

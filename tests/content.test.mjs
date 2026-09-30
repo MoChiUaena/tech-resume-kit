@@ -22,6 +22,10 @@ test('skills and additional forms list custom sections and preserve unchanged CR
   const windows = '\uFEFF' + source.replace(/\n/g, '\r\n'), original = listResumeContent(windows);
   assert.equal(changeResumeContent(windows, layout, { kind: 'skills', action: 'edit', sectionId: 'custom-skills', index: 0, input: original[0].items[0] }).source, windows);
   assert.equal(changeResumeContent(windows, layout, { kind: 'lines', action: 'edit', sectionId: 'other', input: { content: original[1].content } }).source, windows);
+  const renamed = changeResumeContent(windows, layout, { kind: 'lines', action: 'edit', sectionId: 'other', input: { title: '开源贡献', content: original[1].content } });
+  assert.equal(renamed.source, windows.replace('## 其他 {#other .lines}', '## 开源贡献 {#other .lines}'));
+  assert.deepEqual(renamed.layout.sectionOrder, layout.sectionOrder);
+  assert.equal(parseResume(renamed.source).document.sections[1].title, '开源贡献');
 });
 
 test('skill editing, copying, sorting and adding preserve the rest of the original source', () => {
@@ -54,6 +58,10 @@ test('additional content keeps mixed paragraphs and ordered lists and rejects st
   const updated = changeResumeContent(source, layout, { kind: 'lines', action: 'edit', sectionId: 'other', input: { content } });
   assert.ok(updated.source.startsWith(source.slice(0, source.indexOf('## 其他'))));
   assert.deepEqual(parseResume(updated.source).document.sections[1].blocks.map(block => block.type), ['paragraph','list','paragraph']);
+  const renamed = changeResumeContent(source, layout, { kind: 'lines', action: 'edit', sectionId: 'other', input: { title: '开源贡献', content } });
+  assert.equal(parseResume(renamed.source).document.sections[1].title, '开源贡献');
+  assert.deepEqual(parseResume(renamed.source).document.sections[1].blocks, parseResume(updated.source).document.sections[1].blocks);
+  assert.throws(() => changeResumeContent(source, layout, { kind: 'lines', action: 'edit', sectionId: 'other', input: { title: ' ', content } }), /章节名称/);
   assert.throws(() => changeResumeContent(source, layout, { kind: 'lines', action: 'edit', sectionId: 'other', input: { content: content + '\n\n## 偷加章节 {#injected .lines}\n\n内容' } }), /不应添加章节标题/);
   assert.throws(() => change('edit', 0, { label: 'Java', text: '文字\n\n- **新增**：绕过表单' }), /其他条目|嵌套|普通段落|不支持/);
   assert.throws(() => change('edit', 0, { label: 'Java', text: '<img src=x>' }), /HTML/);

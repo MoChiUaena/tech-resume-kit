@@ -81,10 +81,14 @@ export function changeResumeContent(source, layout, { kind, action, sectionId, i
     if (!section) throw new ResumeError('章节已变化，请重新载入', { code: 'CONFLICT' });
     if (kind === 'lines') {
       if (action === 'edit') {
-        if (typeof input?.content === 'string' && normalized(input.content) === normalized(section.content)) return { source, layout: nextLayout };
-        const next = content(input?.content);
-        if (next === normalized(section.content)) return { source, layout: nextLayout };
-        updated = source.slice(0, section.contentStart) + eol + next.replace(/\n/g, eol) + eol.repeat(2) + source.slice(section.end);
+        const title = input?.title === undefined ? section.title : line(input.title, '章节名称');
+        const sameContent = typeof input?.content === 'string' && normalized(input.content) === normalized(section.content);
+        const next = sameContent ? normalized(section.content) : content(input?.content);
+        const titleChanged = title !== section.title, contentChanged = next !== normalized(section.content);
+        if (!titleChanged && !contentChanged) return { source, layout: nextLayout };
+        const heading = titleChanged ? `## ${title} {#${section.id} .lines}${eol}` : source.slice(section.start, section.contentStart);
+        const body = contentChanged ? eol + next.replace(/\n/g, eol) + eol.repeat(2) : source.slice(section.contentStart, section.end);
+        updated = source.slice(0, section.start) + heading + body + source.slice(section.end);
       } else if (action !== 'delete') throw new ResumeError('补充信息支持编辑或删除');
     } else {
       if (action === 'add') {
