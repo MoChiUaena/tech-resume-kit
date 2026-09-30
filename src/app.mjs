@@ -14,6 +14,7 @@ import { ResumeError } from './errors.mjs';
 import { openStorage, lockDirectory, snapshotLibrary, canonicalDirectory, assertInactive } from './storage.mjs';
 import { createUpdater } from './updates.mjs';
 import { createPdfViewerAssets } from './pdf-viewer.mjs';
+import { resumeFilename, safeFilenamePart } from './filename.mjs';
 
 export async function startEditor(directory, { port = 0, idleSeconds = 0, historyIntervalMs, storage, desktopDirectory, updater: suppliedUpdater } = {}) {
   await assertInactive(directory);
@@ -72,7 +73,7 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
     const child = spawn(path.join(directory, '启动简历.exe'), args, { detached: true, windowsHide: true, stdio: 'ignore' });
     child.once('error', error => { console.error(`新版启动失败：${error.message}；请打开原来的启动简历.exe。`); }); child.unref();
   }
-  const staticFiles = { '/getting-started.mjs': ['app/getting-started.mjs', 'text/javascript; charset=utf-8'], '/': ['app/index.html', 'text/html; charset=utf-8'], '/app.js': ['app/app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app/app.css', 'text/css; charset=utf-8'], '/crop.mjs': ['app/crop.mjs', 'text/javascript; charset=utf-8'], '/entries.mjs': ['app/entries.mjs', 'text/javascript; charset=utf-8'], '/entry-manager.mjs': ['app/entry-manager.mjs', 'text/javascript; charset=utf-8'], '/content-manager.mjs': ['app/content-manager.mjs', 'text/javascript; charset=utf-8'], '/library-manager.mjs': ['app/library-manager.mjs', 'text/javascript; charset=utf-8'], '/system.mjs': ['app/system.mjs', 'text/javascript; charset=utf-8'] };
+  const staticFiles = { '/filename.mjs': ['src/filename.mjs', 'text/javascript; charset=utf-8'], '/getting-started.mjs': ['app/getting-started.mjs', 'text/javascript; charset=utf-8'], '/': ['app/index.html', 'text/html; charset=utf-8'], '/app.js': ['app/app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app/app.css', 'text/css; charset=utf-8'], '/crop.mjs': ['app/crop.mjs', 'text/javascript; charset=utf-8'], '/entries.mjs': ['app/entries.mjs', 'text/javascript; charset=utf-8'], '/entry-manager.mjs': ['app/entry-manager.mjs', 'text/javascript; charset=utf-8'], '/content-manager.mjs': ['app/content-manager.mjs', 'text/javascript; charset=utf-8'], '/library-manager.mjs': ['app/library-manager.mjs', 'text/javascript; charset=utf-8'], '/system.mjs': ['app/system.mjs', 'text/javascript; charset=utf-8'] };
   async function bytes(request, maximum) {
     const chunks = []; let size = 0;
     for await (const chunk of request) { size += chunk.length; if (size > maximum) throw new ResumeError(maximum === libraryBackupLimit ? '整库 ZIP 请控制在 128 MB 以内' : '文件太大；正文上限 500 KB，图片上限 5 MB', { code: 'SIZE' }); chunks.push(chunk); }
@@ -106,7 +107,7 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
         }
         else if (pathname === '/backup.zip') {
           const backup = await project.exportBackup(requested.searchParams.get('resumeId'), requested.searchParams.get('backupId'));
-          response.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(backup.decoded.manifest.resumeName + '-完整备份.zip')}` }); response.end(backup.buffer);
+          response.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(safeFilenamePart(backup.decoded.manifest.resumeName) + '-完整备份.zip')}` }); response.end(backup.buffer);
         }
         else if (pathname === '/library.zip' || pathname === '/library-before-restore.zip') {
           const payload = { resumeId: requested.searchParams.get('resumeId'), revision: requested.searchParams.get('revision'), libraryRevision: requested.searchParams.get('libraryRevision') };
@@ -118,7 +119,7 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
           const result = await project.preview(requested.searchParams.get('revision'), requested.searchParams.get('resumeId'));
           if (pathname === '/api/preview') json({ revision: result.revision, resumeId: result.resumeId, pageCount: result.metrics.pageCount, warnings: result.warnings });
           else {
-            response.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `${requested.searchParams.has('download') ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(result.name + '-简历.pdf')}` }); response.end(result.buffer);
+            response.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `${requested.searchParams.has('download') ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(resumeFilename(result.name, result.resumeName, 'pdf'))}` }); response.end(result.buffer);
           }
         } else json({ error: { message: '页面不存在' } }, 404);
       } else if (request.method === 'POST') {
