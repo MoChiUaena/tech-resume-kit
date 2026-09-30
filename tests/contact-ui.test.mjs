@@ -9,7 +9,7 @@ import { startEditor } from '../src/app.mjs';
 import { kitRoot } from '../src/render.mjs';
 import { pdfExpectations } from '../scripts/pdf-expectations.mjs';
 
-test('changing email to a website keeps an incomplete local draft and exports the new clickable URL after completion', async t => {
+test('contact type changes retain incomplete drafts and export the matching PDF links after completion', async t => {
   const outer = await mkdtemp(path.join(tmpdir(), 'tech-resume-contact-ui-'));
   const directory = path.join(outer, '联系 方式'); await initializeProject(directory, 'campus');
   const app = await startEditor(directory), browser = await chromium.launch({ channel: 'chromium' });
@@ -62,5 +62,38 @@ test('changing email to a website keeps an incomplete local draft and exports th
   await page.reload(); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   assert.equal(await row.locator('select').inputValue(), 'url');
   assert.equal(await address.inputValue(), 'https://example.com/portfolio');
+  async function capture(stem, href, former) {
+    const current = await app.project.read();
+    await page.waitForFunction(revision => document.querySelector('#pdf-frame').src.includes(revision), current.revision);
+    await page.frameLocator('#pdf-frame').locator(`.link-layer a[href="${href}"]`).waitFor({ timeout: 30000 });
+    const result = await app.project.preview();
+    assert.equal(result.metrics.pageCount, 1); assert.equal(result.metrics.images.length, 2);
+    const expected = pdfExpectations({ ...result, images: { portrait: true, schoolLogo: true } }, 1);
+    assert.ok(expected.links.includes(href)); assert.ok(!expected.links.includes(former));
+    await writeFile(path.join(qa, stem + '.pdf'), result.buffer);
+    await writeFile(path.join(qa, stem + '.expected.json'), JSON.stringify(expected));
+  }
+  await row.locator('select').selectOption('email');
+  await page.locator('#save-status').filter({ hasText: '已自动保存' }).waitFor();
+  assert.equal((await app.project.read()).front.person.contacts[index].href, 'mailto:');
+  await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 });
+  await page.reload(); await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 });
+  assert.equal(await row.locator('select').inputValue(), 'email');
+  assert.equal(await row.locator('input:not(.contact-link)').inputValue(), '作品集');
+  await row.locator('input:not(.contact-link)').fill('dev@example.com');
+  await page.locator('#save-status').filter({ hasText: '已自动保存' }).waitFor();
+  assert.equal((await app.project.read()).front.person.contacts[index].href, 'mailto:dev@example.com');
+  await capture('contact-email', 'mailto:dev@example.com', 'https://example.com/portfolio');
+  await row.locator('select').selectOption('phone');
+  await page.locator('#save-status').filter({ hasText: '已自动保存' }).waitFor();
+  assert.equal((await app.project.read()).front.person.contacts[index].href, 'tel:');
+  await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 });
+  await page.reload(); await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 });
+  assert.equal(await row.locator('select').inputValue(), 'phone');
+  assert.equal(await row.locator('input:not(.contact-link)').inputValue(), 'dev@example.com');
+  await row.locator('input:not(.contact-link)').fill('138 1111 0000');
+  await page.locator('#save-status').filter({ hasText: '已自动保存' }).waitFor();
+  assert.equal((await app.project.read()).front.person.contacts[index].href, 'tel:13811110000');
+  await capture('contact-phone', 'tel:13811110000', 'mailto:dev@example.com');
   assert.deepEqual(remote, []); assert.deepEqual(errors, []);
 });
