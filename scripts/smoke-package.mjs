@@ -51,6 +51,8 @@ try {
   assert.equal(state.gettingStarted.welcome, true);
   const module = await fetch(editor.url + 'getting-started.mjs');
   assert.equal(module.status, 200); assert.match(await module.text(), /wireGettingStarted/);
+  const naming = await fetch(editor.url + 'filename.mjs');
+  assert.equal(naming.status, 200); assert.match(await naming.text(), /resumeFilename/);
   const html = await (await fetch(editor.url)).text();
   const token = /name="resume-token" content="([a-f0-9]+)"/.exec(html)[1];
   const response = await fetch(editor.url + 'api/getting-started/start', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: editor.url.slice(0,-1), 'X-Resume-Token': token }, body: JSON.stringify({ ...state, mode: 'initial', template: 'blank' }) });

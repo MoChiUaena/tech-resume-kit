@@ -258,7 +258,7 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     await queue;
     const id = catalog.activeId;
     if (resumeId && resumeId !== id) throw new ResumeError('简历已经切换，请刷新预览', { code: 'CONFLICT' });
-    return { ...(await (await projectFor(id)).preview(revision)), resumeId: id };
+    return { ...(await (await projectFor(id)).preview(revision)), resumeId: id, resumeName: entry(id).name };
   }
   const storeImage = (id, src, content) => mutate(async () => {
     if (id !== catalog.activeId) throw new ResumeError('简历已经切换，请重新选择图片', { code: 'CONFLICT' });
