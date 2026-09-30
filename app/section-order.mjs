@@ -1,0 +1,50 @@
+const $ = id => document.getElementById(id);
+
+export function wireSectionOrder({ request, settle, edited, getState }) {
+  let sequence = 0, sections = [], order = [];
+  function render() {
+    $('order-list').replaceChildren();
+    for (const [index, id] of order.entries()) {
+      const section = sections.find(item => item.id === id);
+      const row = document.createElement('div'); row.className = 'order-row'; row.dataset.sectionId = id; row.setAttribute('role', 'listitem');
+      const title = document.createElement('span'); title.textContent = section?.title || id;
+      const actions = document.createElement('div'); actions.className = 'order-actions';
+      for (const [action, change, label] of [['up', -1, '上移'], ['down', 1, '下移']]) {
+        const button = document.createElement('button'); button.dataset.action = action; button.textContent = action === 'up' ? '↑' : '↓';
+        button.setAttribute('aria-label', `${label}${title.textContent}`); button.disabled = index + change < 0 || index + change >= order.length;
+        button.addEventListener('click', () => {
+          const moved = [...order]; [moved[index], moved[index + change]] = [moved[index + change], moved[index]];
+          order = moved; getState().layout.sectionOrder = [...moved]; edited(); render();
+          const next = $('order-list').children[index + change];
+          (next?.querySelector(`[data-action="${action}"]:not(:disabled)`) || next?.querySelector('button:not(:disabled)'))?.focus({ preventScroll: true });
+        });
+        actions.append(button);
+      }
+      row.append(title, actions); $('order-list').append(row);
+    }
+    $('order-reset').disabled = !getState()?.layout?.sectionOrder;
+    $('order-status').textContent = '使用箭头调整当前简历的章节；更换信息编排会恢复对应预设。';
+  }
+  async function refresh() {
+    const requested = ++sequence;
+    $('order-list').replaceChildren(); $('order-reset').disabled = !getState()?.layout?.sectionOrder;
+    $('order-status').textContent = '正在读取章节…';
+    try {
+      await settle();
+      const state = getState(); if (!state) return;
+      const result = await request(`/api/section-order?resumeId=${state.resumeId}&revision=${state.revision}`);
+      if (requested !== sequence || !$('settings').open) return;
+      if (getState().resumeId !== result.resumeId || getState().revision !== result.revision) { refresh(); return; }
+      sections = result.sections; order = result.order; render();
+    } catch (error) {
+      if (requested !== sequence) return;
+      $('order-status').textContent = `暂时无法调整章节：${error.message}`;
+      $('order-reset').disabled = !getState()?.layout?.sectionOrder;
+    }
+  }
+  $('order-reset').addEventListener('click', async () => {
+    const state = getState(); if (!state?.layout?.sectionOrder) return;
+    delete state.layout.sectionOrder; edited(); await refresh();
+  });
+  return { refresh };
+}

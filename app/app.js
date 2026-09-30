@@ -5,13 +5,14 @@ import { wireEntries } from './entry-manager.mjs';
 import { wireLibrary } from './library-manager.mjs';
 import { wireContent } from './content-manager.mjs';
 import { wireGettingStarted } from './getting-started.mjs';
+import { wireSectionOrder } from './section-order.mjs';
 import { resumeFilename } from './filename.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
 let cropSession, cropDrag, entryKind;
 let viewerReference;
-let entryManager, libraryManager, contentManager, gettingStarted;
+let entryManager, libraryManager, contentManager, gettingStarted, sectionOrder;
 async function request(url, data, raw = false) {
   const options = data === undefined ? {} : { method: 'POST', headers: { 'X-Resume-Token': token, ...(raw ? { 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision } : { 'Content-Type': 'application/json' }) }, body: raw ? data : JSON.stringify({ resumeId: state?.resumeId, ...data }) };
   const response = await fetch(url, options), result = await response.json();
@@ -68,7 +69,7 @@ function populate() {
   for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
   for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
   entryManager?.refresh(); contentManager?.refresh();
-  libraryManager?.render(); gettingStarted?.refresh();
+  libraryManager?.render(); gettingStarted?.refresh(); if ($('settings').open) sectionOrder?.refresh();
 }
 async function refreshPreview(revision, expectedTick = tick) {
   $('preview-actions').hidden = true;
@@ -144,8 +145,9 @@ $('source-mode').addEventListener('click', async () => {
   } catch (error) { toast(error.message); }
 });
 $('contact-add').addEventListener('click', () => { state.front.person.contacts.push({ text: '', href: 'mailto:' }); renderContacts(); edited(); });
-$('settings-open').addEventListener('click', () => $('settings').showModal());
-$('preview-layout').addEventListener('click', () => $('settings').showModal());
+function openSettings() { $('settings').showModal(); sectionOrder?.refresh(); }
+$('settings-open').addEventListener('click', openSettings);
+$('preview-layout').addEventListener('click', openSettings);
 $('preview-two-pages').addEventListener('click', async () => {
   if (state.layout.page.maxPages !== 1) return;
   state.layout.page.maxPages = 2; $('max-pages').value = '2'; $('preview-actions').hidden = true;
@@ -153,6 +155,7 @@ $('preview-two-pages').addEventListener('click', async () => {
   try { await settle(); } catch (error) { toast(error.message); }
 });
 for (const [id, apply] of Object.entries({ preset: value => { state.layout.preset = value; delete state.layout.sectionOrder; }, 'max-pages': value => state.layout.page.maxPages = Number(value), 'body-size': value => state.layout.bodyPt = Number(value), margin: value => state.layout.page.marginMm = Number(value), accent: value => state.layout.accent = value })) $(id).addEventListener('change', event => { apply(event.target.value); edited(); });
+$('preset').addEventListener('change', () => sectionOrder?.refresh());
 for (const key of ['portrait', 'schoolLogo']) {
   $(`${key}-enabled`).addEventListener('change', event => { state.layout.images[key].enabled = event.target.checked; edited(); });
   $(`${key}-upload`).addEventListener('change', async event => {
@@ -321,5 +324,6 @@ entryManager = wireEntries({ request, managed, operationPayload, acceptState, ge
 contentManager = wireContent({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast });
 libraryManager = wireLibrary({ request, managed, settle, operationPayload, acceptState, getState: () => state, toast });
 wireSystem({ request, managed, settle, operationPayload, acceptState });
+sectionOrder = wireSectionOrder({ request, settle, edited, getState: () => state });
 
-gettingStarted = wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, toast });
+gettingStarted = wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, toast, openSettings });
