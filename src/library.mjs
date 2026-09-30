@@ -8,7 +8,7 @@ import { ResumeError } from './errors.mjs';
 import { assetPath } from './assets.mjs';
 import { imageSize } from 'image-size';
 import { listResumeEntries, changeResumeEntry } from './entries.mjs';
-import { listResumeContent, changeResumeContent } from './content.mjs';
+import { listResumeContent, changeResumeContent, renameResumeSectionTitle } from './content.mjs';
 import { parseResume } from './input.mjs';
 import { resolveSectionOrder } from './schema.mjs';
 import { uuid, catalogSchema, readTrash, validateCatalogs, recoverCatalog, commitCatalogPair } from './catalog.mjs';
@@ -192,6 +192,12 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     await (await projectFor()).save({ ...changed, revision: current.revision });
     dirty.add(current.resumeId); await dismissWelcome(); return state();
   });
+  const renameSectionTitle = payload => mutate(async () => {
+    const current = await check(payload), changed = renameResumeSectionTitle(current.source, current.layout, payload);
+    if (changed.source === current.source) return state();
+    await (await projectFor()).save({ ...changed, revision: current.revision });
+    dirty.add(current.resumeId); await dismissWelcome(); return state();
+  });
   const switchResume = payload => mutate(async () => {
     const current = await check(payload); entry(payload.targetId);
     if (dirty.has(current.resumeId)) await checkpoint(current.resumeId, 'auto', false);
@@ -295,5 +301,5 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   }
   if (!(await historyFor(catalog.activeId)).length) await checkpoint(catalog.activeId, 'initial');
   if (historyIntervalMs > 0) { timer = setInterval(() => autoCheckpoint().catch(error => { historyWarning = `自动版本未保存：${error.message}`; }), Math.min(historyIntervalMs, 60000)); timer.unref(); }
-  return { root, read, save, entries, changeEntry, content, changeContent, sectionOrder, useTemplate, startFromTemplate, dismissGettingStarted, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
+  return { root, read, save, entries, changeEntry, content, changeContent, sectionOrder, renameSectionTitle, useTemplate, startFromTemplate, dismissGettingStarted, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
 }

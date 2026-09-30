@@ -324,6 +324,6 @@ entryManager = wireEntries({ request, managed, operationPayload, acceptState, ge
 contentManager = wireContent({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast });
 libraryManager = wireLibrary({ request, managed, settle, operationPayload, acceptState, getState: () => state, toast });
 wireSystem({ request, managed, settle, operationPayload, acceptState });
-sectionOrder = wireSectionOrder({ request, settle, edited, getState: () => state });
+sectionOrder = wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState: () => state });
 
 gettingStarted = wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, toast, openSettings });

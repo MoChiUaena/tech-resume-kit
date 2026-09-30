@@ -33,6 +33,23 @@ export function listResumeContent(source) {
     ...(section.kind === 'skills' ? { items: section.items.map(({ index, label, text }) => ({ index, label, text })) } : { content: section.content }),
   }));
 }
+export function renameResumeSectionTitle(source, layout, { sectionId, title }) {
+  const before = inspect(source), section = before.sections.find(item => item.id === sectionId);
+  if (!section) throw new ResumeError('章节已变化，请重新载入', { code: 'CONFLICT' });
+  const nextTitle = line(title, '章节名称');
+  if (nextTitle === section.title) return { source, layout: structuredClone(layout) };
+  const heading = source.slice(section.start, section.contentStart);
+  const opening = /^ {0,3}##[ \t]+/.exec(heading);
+  const marker = new RegExp(`[ \\t]+\\{#${section.id}[ \\t]+\\.${section.kind}\\}[ \\t]*(?:\\r\\n|\\r|\\n)$`).exec(heading);
+  if (!opening || !marker) throw new ResumeError('章节标题格式已变化，请重新载入', { code: 'CONFLICT' });
+  const updated = source.slice(0, section.start) + opening[0] + nextTitle + marker[0] + source.slice(section.contentStart);
+  const after = parseResume(updated).document;
+  if (after.sections.length !== before.sections.length || after.sections.some((item, index) => item.id !== before.sections[index].id || item.kind !== before.sections[index].kind || item.title !== (item.id === sectionId ? nextTitle : before.sections[index].title))) {
+    throw new ResumeError('章节名称不能改变章节结构，请填写普通文字');
+  }
+  resolveSectionOrder(after, layout);
+  return { source: updated, layout: structuredClone(layout) };
+}
 function line(value, name) {
   if (typeof value !== 'string' || !value.trim() || /[\r\n\x00]/.test(value) || value.length > 120) throw new ResumeError(`请填写同一行的${name}，最多 120 个字符`);
   return value.trim();

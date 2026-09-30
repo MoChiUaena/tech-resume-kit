@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { listResumeContent, changeResumeContent } from '../src/content.mjs';
+import { listResumeContent, changeResumeContent, renameResumeSectionTitle } from '../src/content.mjs';
 import { parseResume } from '../src/input.mjs';
 import { kitRoot } from '../src/render.mjs';
 import { insertResumeEntry } from '../app/entries.mjs';
@@ -26,6 +26,24 @@ test('skills and additional forms list custom sections and preserve unchanged CR
   assert.equal(renamed.source, windows.replace('## 其他 {#other .lines}', '## 开源贡献 {#other .lines}'));
   assert.deepEqual(renamed.layout.sectionOrder, layout.sectionOrder);
   assert.equal(parseResume(renamed.source).document.sections[1].title, '开源贡献');
+});
+
+test('section title editing changes only the heading text across section kinds and line endings', async () => {
+  const campus = await readFile(path.join(kitRoot, 'resume.md'), 'utf8');
+  const campusLayout = { preset: 'campus', sectionOrder: ['education', 'skills', 'internship', 'projects', 'additional'] };
+  const renamedEducation = renameResumeSectionTitle(campus, campusLayout, { sectionId: 'education', title: '求学经历' });
+  assert.equal(renamedEducation.source, campus.replace('## 教育背景 {#education .entries}', '## 求学经历 {#education .entries}'));
+  assert.deepEqual(renamedEducation.layout, campusLayout);
+  assert.equal(parseResume(renamedEducation.source).document.sections.find(section => section.id === 'education').title, '求学经历');
+  const renamedSkills = renameResumeSectionTitle(campus, campusLayout, { sectionId: 'skills', title: '技术能力' });
+  assert.equal(renamedSkills.source, campus.replace('## 专业技能 {#skills .skills}', '## 技术能力 {#skills .skills}'));
+  const windows = '\uFEFF' + source.replace('## 其他 {#other .lines}', '## 其他  {#other .lines}  ').replace(/\n/g, '\r\n');
+  const renamedLines = renameResumeSectionTitle(windows, layout, { sectionId: 'other', title: '开源贡献' });
+  assert.equal(renamedLines.source, windows.replace('## 其他  {#other .lines}  ', '## 开源贡献  {#other .lines}  '));
+  assert.deepEqual(renamedLines.layout, layout);
+  assert.equal(renameResumeSectionTitle(windows, layout, { sectionId: 'other', title: '其他' }).source, windows);
+  assert.throws(() => renameResumeSectionTitle(source, layout, { sectionId: 'other', title: ' ' }), /章节名称/);
+  assert.throws(() => renameResumeSectionTitle(source, layout, { sectionId: 'missing', title: '新标题' }), error => error.code === 'CONFLICT');
 });
 
 test('skill editing, copying, sorting and adding preserve the rest of the original source', () => {
