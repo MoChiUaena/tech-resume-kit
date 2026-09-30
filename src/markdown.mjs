@@ -5,6 +5,7 @@ export const markdown = new MarkdownIt('commonmark', { html: true, linkify: fals
 // Parse all destinations, then reject unsupported schemes ourselves with source locations.
 markdown.validateLink = () => true;
 export function validateLink(href, where = {}) {
+  if (/^(mailto:|tel:)$/i.test(href)) throw new ResumeError('邮箱或电话地址还没填完', where);
   if (!/^(https?:\/\/|mailto:|tel:)/i.test(href) || /[\u0000-\u0020\u007f]/.test(href)) {
     throw new ResumeError('链接只支持 http://、https://、mailto: 或 tel:，且不能含空白', where);
   }
