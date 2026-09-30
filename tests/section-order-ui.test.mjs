@@ -75,7 +75,9 @@ test('each resume can reorder its sections and restore a preset without rewritin
   assert.deepEqual(await rows.evaluateAll(elements => elements.map(element => element.dataset.sectionId)), ['skills', 'internship', 'projects', 'education', 'additional']);
   assert.equal((await app.project.read()).layout.sectionOrder, undefined);
   assert.deepEqual(await readFile(path.join(directory, 'resume.md')), source);
+  await page.locator('#max-pages').selectOption('2');
   await rows.filter({ hasText: '教育背景' }).locator('[data-action=rename]').click();
+  await page.locator('#section-title-dialog[open]').waitFor();
   const titleBounds = await page.locator('#section-title').boundingBox(); assert.ok(titleBounds.x >= 0 && titleBounds.x + titleBounds.width <= 390);
   await page.screenshot({ path: path.join(qa, 'small-section-title.png') });
   await page.locator('#section-title').fill('求学经历'); await page.locator('#section-title-submit').click();
@@ -84,6 +86,7 @@ test('each resume can reorder its sections and restore a preset without rewritin
   const renamedSource = source.toString('utf8').replace('## 教育背景 {#education .entries}', '## 求学经历 {#education .entries}');
   assert.equal(await readFile(path.join(directory, 'resume.md'), 'utf8'), renamedSource);
   assert.equal((await app.project.read()).layout.sectionOrder, undefined);
+  assert.equal((await app.project.read()).layout.page.maxPages, 2);
   for (const [key, asset] of Object.entries((await app.project.read()).front.assets)) assert.deepEqual(await readFile(path.join(directory, asset.src)), images[key]);
   const renamedPreview = await app.project.preview(); assert.equal(renamedPreview.metrics.pageCount, 1);
   assert.deepEqual(renamedPreview.document.sections.map(section => section.id), preview.document.sections.map(section => section.id));

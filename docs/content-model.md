@@ -1,6 +1,6 @@
 # 内容模型与接口
 
-`ResumeDocument` 与 `LayoutConfig` 的 `schemaVersion` 均为 `0.2.0`。GitHub v0.9.0 提供可安装 TGZ、公共 ESM 入口和 TypeScript 类型声明，见[调用接口](api.md)。与阶段 A 的 `0.1.0` 相比，条目和普通章节改用 `blocks`，以保留“段落 → 列表 → 段落”的原始阅读顺序。0.1.0 JSON 仅作为回归基准，不能直接传入新版渲染器。
+`ResumeDocument` 与 `LayoutConfig` 的 `schemaVersion` 均为 `0.2.0`。自 v0.9.0 起，GitHub 发布包含公共 ESM 入口和 TypeScript 类型声明的可安装 TGZ，见[调用接口](api.md)。与阶段 A 的 `0.1.0` 相比，条目和普通章节改用 `blocks`，以保留“段落 → 列表 → 段落”的原始阅读顺序。0.1.0 JSON 仅作为回归基准，不能直接传入新版渲染器。
 
 ## ResumeDocument
 
