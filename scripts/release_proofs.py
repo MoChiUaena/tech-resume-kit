@@ -38,7 +38,8 @@ def verify_upgrade(report, version, candidate_sha256):
     require(report['resumeCount'] >= 3 and report['trashCount'] >= 1, 'Upgrade must cover multiple resumes and existing trash.')
     for field in ['publishedOldPackage', 'sameDataDirectory', 'originalFilesVerified', 'oldVersionCanReopen',
                   'recycleBinSurvivesRollback', 'multipleResumes', 'selectedResumePreserved', 'imagesAndHistoryPreserved',
-                  'existingLibrarySkipsWelcome', 'formChangesPreserved', 'singleBackupRestored', 'wholeLibraryRestored',
+                  'existingLibrarySkipsWelcome', 'formChangesPreserved', 'sectionOrderPersisted', 'sectionTitlePersisted',
+                  'singleBackupRestored', 'wholeLibraryRestored',
                   'offlinePdfViewer', 'restartPersistence']:
         require(report.get(field) is True, 'Upgrade check did not pass: ' + field)
     require(report.get('pdfPages') == [1, 2, 2], 'Upgrade PDF evidence is incomplete.')

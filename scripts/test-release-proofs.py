@@ -22,27 +22,27 @@ class ReleaseProofChecks(unittest.TestCase):
 
     def upgrade(self):
         baseline = json.loads(Path(__file__).with_name('upgrade-baseline.json').read_text())
-        report = {'schemaVersion': 1, 'from': baseline['version'], 'to': '0.9.0', 'baselineArchiveSha256': baseline['sha256'], 'candidateArchiveSha256': 'a' * 64,
+        report = {'schemaVersion': 1, 'from': baseline['version'], 'to': '0.10.0', 'baselineArchiveSha256': baseline['sha256'], 'candidateArchiveSha256': 'a' * 64,
                   'checkedFiles': 55, 'untouchedFilesAfterEditing': 42, 'resumeCount': 3, 'trashCount': 1, 'pdfPages': [1, 2, 2]}
         for field in ['publishedOldPackage', 'sameDataDirectory', 'originalFilesVerified', 'oldVersionCanReopen', 'recycleBinSurvivesRollback',
                       'multipleResumes', 'selectedResumePreserved', 'imagesAndHistoryPreserved', 'existingLibrarySkipsWelcome',
-                      'formChangesPreserved', 'singleBackupRestored', 'wholeLibraryRestored', 'offlinePdfViewer', 'restartPersistence']:
+                      'formChangesPreserved', 'sectionOrderPersisted', 'sectionTitlePersisted', 'singleBackupRestored', 'wholeLibraryRestored', 'offlinePdfViewer', 'restartPersistence']:
             report[field] = True
         return report
 
     def test_upgrade_uses_actual_counts_instead_of_an_old_fixture_size(self):
         report = self.upgrade()
-        self.assertEqual(verify_upgrade(report, '0.9.0', 'a' * 64)['checkedFiles'], 55)
+        self.assertEqual(verify_upgrade(report, '0.10.0', 'a' * 64)['checkedFiles'], 55)
         report['checkedFiles'] = 72
-        self.assertEqual(verify_upgrade(report, '0.9.0', 'a' * 64)['checkedFiles'], 72)
+        self.assertEqual(verify_upgrade(report, '0.10.0', 'a' * 64)['checkedFiles'], 72)
 
     def test_upgrade_rejects_wrong_archives_missing_checks_and_incomplete_pdfs(self):
-        for field, value in [('from', '0.7.0'), ('to', '0.8.0'), ('baselineArchiveSha256', 'b' * 64), ('candidateArchiveSha256', 'b' * 64),
-                             ('checkedFiles', 0), ('checkedFiles', True), ('resumeCount', 1), ('formChangesPreserved', False), ('wholeLibraryRestored', None), ('pdfPages', [1])]:
+        for field, value in [('from', '0.8.0'), ('to', '0.9.0'), ('baselineArchiveSha256', 'b' * 64), ('candidateArchiveSha256', 'b' * 64),
+                             ('checkedFiles', 0), ('checkedFiles', True), ('resumeCount', 1), ('formChangesPreserved', False), ('sectionOrderPersisted', False), ('sectionTitlePersisted', False), ('wholeLibraryRestored', None), ('pdfPages', [1])]:
             with self.subTest(field=field, value=value):
                 report = self.upgrade(); report[field] = value
                 with self.assertRaises(ValueError):
-                    verify_upgrade(report, '0.9.0', 'a' * 64)
+                    verify_upgrade(report, '0.10.0', 'a' * 64)
 
     def bundle(self, folder, arch='x64', change=None, smoke_change=None):
         version = '0.9.0'; name = f'tech-resume-macos-app-{arch}-{version}'

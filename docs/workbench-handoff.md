@@ -1,6 +1,6 @@
 # 本地简历工作台接入
 
-v0.9.0 正式 TGZ 提供以下转换接口，可从下载包或源码调用；`npm run package:release` 也可生成本地 TGZ。套件内容与版式模型仍为 `schemaVersion: "0.2.0"`。
+自 v0.9.0 起的正式 TGZ 提供以下转换接口，可从下载包或源码调用；`npm run package:release` 也可生成本地 TGZ。套件内容与版式模型仍为 `schemaVersion: "0.2.0"`。
 
 工作台使用数值版本 2、3、4；版本 4 新增 `card/rail` 模板。转换器按 `local-resume` 提交 `ff19758` 的 `ResumeDocument`、`ResumeDraft.ImageSlot` 和 `RichText` 规则实现。只读取单份 `document`，不接收外层简历记录、整库备份或预览 HTML。
 

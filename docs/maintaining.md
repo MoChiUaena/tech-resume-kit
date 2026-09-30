@@ -12,4 +12,4 @@
 
 升级基线统一记录在 `scripts/upgrade-baseline.json`，包含正式 Windows 下载包的版本、名称和 SHA-256；本地重新构建的同版本文件不能替代已发布包。下载到 `tmp/upgrade-baselines/v版本/` 后运行 `npm run test:upgrade`，检查原文件、三份简历、回收站、技能与补充信息表单、单份与整库恢复、旧程序重新打开和新版重启。
 
-发布组装核对升级报告对应的候选 ZIP 摘要，采用实际文件数量；macOS Intel 与 Apple Silicon `.app` 同时要求构建、启动和离线 PDF 报告，核对 ZIP 内版本、运行组件摘要与可执行权限，再收录到草稿。候选验收范围见 [v0.9.0 发布准备](release-0.9-readiness.md)。
+发布组装核对升级报告对应的候选 ZIP 摘要，采用实际文件数量；macOS Intel 与 Apple Silicon `.app` 同时要求构建、启动和离线 PDF 报告，核对 ZIP 内版本、运行组件摘要与可执行权限，再收录到草稿。上一版本的实际验收记录见 [v0.9.0 发布准备](release-0.9-readiness.md)。

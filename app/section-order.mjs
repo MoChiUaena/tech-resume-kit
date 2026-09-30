@@ -11,10 +11,13 @@ export function wireSectionOrder({ request, settle, edited, managed, operationPa
       const actions = document.createElement('div'); actions.className = 'order-actions';
       const rename = document.createElement('button'); rename.dataset.action = 'rename'; rename.textContent = '改名';
       rename.setAttribute('aria-label', `修改${title.textContent}章节名称`);
-      rename.addEventListener('click', () => {
-        const state = getState(); renameChoice = { resumeId: state.resumeId, revision: state.revision, sectionId: id };
-        $('section-title').value = title.textContent; $('section-title-error').hidden = true;
-        $('section-title-dialog').showModal(); $('section-title').focus(); $('section-title').select();
+      rename.addEventListener('click', async () => {
+        try {
+          await settle();
+          const state = getState(); renameChoice = { resumeId: state.resumeId, revision: state.revision, sectionId: id };
+          $('section-title').value = title.textContent; $('section-title-error').hidden = true;
+          $('section-title-dialog').showModal(); $('section-title').focus(); $('section-title').select();
+        } catch (error) { $('order-status').textContent = `暂时无法修改章节名称：${error.message}`; }
       });
       actions.append(rename);
       for (const [action, change, label] of [['up', -1, '上移'], ['down', 1, '下移']]) {

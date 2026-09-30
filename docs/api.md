@@ -1,9 +1,9 @@
 # 安装与调用 API
 
-从 [GitHub Release](https://github.com/MoChiUaena/tech-resume-kit/releases/latest) 下载 `tech-resume-kit-0.9.0.tgz`，在自己的 Node.js 项目中安装：
+从 [GitHub Release](https://github.com/MoChiUaena/tech-resume-kit/releases/latest) 下载 `tech-resume-kit-0.10.0.tgz`，在自己的 Node.js 项目中安装：
 
 ```sh
-npm install ./tech-resume-kit-0.9.0.tgz
+npm install ./tech-resume-kit-0.10.0.tgz
 npx playwright install chromium
 npx tech-resume init --dir my-resume --template blank
 ```
@@ -27,7 +27,7 @@ console.log(result.metrics.pageCount, result.warnings);
 
 入口还导出 `parseResume`、`parseResumeJson`、`loadResumeJson`、`initializeProject` 和 `ResumeError`。模型版本仍为 `0.2.0`，结构见[内容模型](content-model.md)。布局可省略可选参数，`schemaVersion` 必须填写。
 
-v0.9.0 提供 `convertWorkbenchResume` 与 `loadWorkbenchResume`，显式转换工作台版本 2、3、4，并返回章节映射和版式差异报告。接口随正式 TGZ 提供；使用方法见[工作台接入](workbench-handoff.md)。
+自 v0.9.0 起提供 `convertWorkbenchResume` 与 `loadWorkbenchResume`，显式转换工作台版本 2、3、4，并返回章节映射和版式差异报告。接口随正式 TGZ 提供；使用方法见[工作台接入](workbench-handoff.md)。
 
 ## JSON 命令接口
 
