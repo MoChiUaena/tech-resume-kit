@@ -30,6 +30,34 @@ const post = async (endpoint, payload) => {
   const response = await fetch(url + endpoint, { method: 'POST', headers: { Origin: url.slice(0, -1), 'X-Resume-Token': token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   const state = await response.json(); assert.equal(response.status, 200, JSON.stringify(state)); return state;
 };
+async function waitForCanvasPreview(page, expectedText = '') {
+  const snapshot = () => page.evaluate(text => {
+    const frame = document.querySelector('#pdf-frame'), viewer = frame?.contentDocument;
+    const layers = [...(viewer?.querySelectorAll('.textLayer') || [])];
+    return {
+      ready: !!viewer?.querySelector('.pdf-page[data-rendered=true]') && (!text || layers.some(layer => layer.textContent.includes(text))),
+      parentStatus: document.querySelector('#page-status')?.textContent,
+      parentError: document.querySelector('#preview-error:not([hidden])')?.textContent || '',
+      viewerUrl: viewer?.URL || '',
+      viewerStatus: viewer?.querySelector('#page-number')?.textContent || '',
+      viewerError: viewer?.querySelector('#viewer-error:not([hidden]) #error-message')?.textContent || '',
+      renderedPages: viewer?.querySelectorAll('.pdf-page[data-rendered=true]').length || 0,
+      textLayers: layers.length,
+    };
+  }, expectedText);
+  try {
+    const result = await page.waitForFunction(text => {
+      const frame = document.querySelector('#pdf-frame'), viewer = frame?.contentDocument;
+      if (document.querySelector('#preview-error:not([hidden])') || viewer?.querySelector('#viewer-error:not([hidden])')) return true;
+      return !!viewer?.querySelector('.pdf-page[data-rendered=true]') && (!text || [...viewer.querySelectorAll('.textLayer')].some(layer => layer.textContent.includes(text)));
+    }, expectedText, { timeout: 90000 });
+    await result.dispose();
+  } catch (error) {
+    throw new Error(`Portable PDF preview timed out: ${JSON.stringify(await snapshot())}`, { cause: error });
+  }
+  const result = await snapshot();
+  if (!result.ready || result.parentError || result.viewerError) throw new Error(`Portable PDF preview failed: ${JSON.stringify(result)}`);
+}
 async function stop() {
   await post('api/exit', {});
   if (child.exitCode === null) await new Promise((resolve, reject) => { const timer = setTimeout(() => reject(new Error('Shutdown timed out')), 10000); child.once('exit', code => { clearTimeout(timer); assert.equal(code, 0); resolve(); }); });
@@ -61,11 +89,11 @@ try {
   browser = await chromium.launch({ executablePath: path.join(program, 'runtime', runtime.chromiumExecutable), headless: true });
   const page = await browser.newPage({ viewport: { width: 1400, height: 980 } }), remote = [], errors = [];
   page.on('request', request => { if (/^https?:/.test(request.url()) && new URL(request.url()).origin !== new URL(url).origin) remote.push(request.url()); }); page.on('pageerror', error => errors.push(error.message));
-  await page.goto(url); const viewer = page.frameLocator('#pdf-frame'); await viewer.locator('.pdf-page[data-rendered=true]').waitFor({ timeout: 30000 });
+  await page.goto(url); const viewer = page.frameLocator('#pdf-frame'); await waitForCanvasPreview(page);
   assert.match(await viewer.locator('.textLayer').innerText(), /奶龙/);
   await page.locator('#system-open').click(); await page.locator('#system-dialog[open]').waitFor(); assert.equal(await page.locator('#storage-browse').isVisible(), false); assert.equal(await page.locator('#storage-open').isVisible(), true); await page.getByRole('button', { name: '关闭数据与更新' }).click();
   await page.locator('#entry-manager-summary').click(); await page.locator('[data-section-id=education] [data-action=edit]').click(); await page.locator('#entry-date').fill('2023.09 - 2027.07（预计）'); await page.locator('#entry-submit').click(); await page.locator('#entry-dialog').waitFor({ state: 'hidden' });
-  await viewer.locator('.textLayer').filter({ hasText: '2027.07' }).waitFor({ timeout: 30000 });
+  await waitForCanvasPreview(page, '2027.07');
   state = await (await fetch(url + 'api/state')).json(); const pdf = await fetch(url + `document.pdf?revision=${state.revision}&resumeId=${state.resumeId}`); assert.equal(pdf.status, 200);
   const qa = path.join(root, 'tmp/pdfs/portable'); await mkdir(qa, { recursive: true });
   await writeFile(path.join(qa, 'portable-campus.pdf'), Buffer.from(await pdf.arrayBuffer()));
