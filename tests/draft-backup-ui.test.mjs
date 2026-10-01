@@ -61,7 +61,7 @@ test('a conflicting page downloads a restorable draft without saving or overwrit
   const other = await startEditor(path.join(outer, '另一个安装目录'), { historyIntervalMs: 0 });
   try {
     const targetPage = await browser.newPage(); await targetPage.goto(other.url); await targetPage.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
-    await targetPage.locator('#history-open').click(); await targetPage.locator('#backup-import').setInputFiles(archive);
+    await targetPage.locator('#history-open').click(); await targetPage.locator('#history-dialog[open]').waitFor(); await targetPage.locator('#backup-import').setInputFiles(archive);
     await targetPage.locator('#restore-dialog[open]').waitFor(); await targetPage.locator('#restore-confirm').click();
     await targetPage.waitForFunction(() => document.querySelector('#name').value === '页面未保存草稿');
     await targetPage.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
