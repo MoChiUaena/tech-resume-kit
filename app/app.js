@@ -20,6 +20,8 @@ async function request(url, data, raw = false) {
   return result;
 }
 function toast(text) { $('toast').textContent = text; $('toast').hidden = false; setTimeout(() => $('toast').hidden = true, 5000); }
+function clearSaveError() { $('save-error').hidden = true; $('save-error-message').textContent = ''; }
+function showUnsavedError(message, status = '保存失败') { $('save-status').textContent = status; $('page-status').textContent = $('pdf-frame').hidden ? '修改尚未保存' : '未保存 · 上次预览'; $('save-error-message').textContent = message; $('save-error').hidden = false; }
 function edited() { if (actionBusy) return; tick++; entryManager?.invalidate(); contentManager?.invalidate(); previewReady = false; $('preview-actions').hidden = true; $('save-status').textContent = '正在保存…'; $('page-status').textContent = '正在更新'; $('pdf-download').disabled = true; clearTimeout(timer); timer = setTimeout(save, 700); }
 function renderContacts() {
   $('contacts').replaceChildren();
@@ -52,6 +54,7 @@ function renderContacts() {
   $('contact-add').disabled = sourceMode || (state.front?.person?.contacts?.length || 0) >= 6;
 }
 function populate() {
+  clearSaveError();
   $('resume-select').replaceChildren();
   for (const resume of state.resumes || []) { const option = document.createElement('option'); option.value = resume.id; option.textContent = resume.name; $('resume-select').append(option); }
   $('resume-select').value = state.resumeId;
@@ -101,26 +104,30 @@ window.addEventListener('message', event => {
   else if (event.data.type === 'resume-pdf-error') $('page-status').textContent = '显示失败，可下载 PDF';
 });
 async function save() {
+  if (actionBusy) return;
   if (busy) { pending = true; return; } if (tick === savedTick) return;
-  busy = true; const captured = tick;
+  busy = true; const captured = tick; $('save-retry').disabled = true; $('save-status').textContent = '正在保存…';
   try {
     const payload = { resumeId: state.resumeId, revision: state.revision, layout: state.layout, ...(sourceMode ? { source: $('body').value } : { front: state.front, body: $('body').value }) };
     const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; state.gettingStarted = result.gettingStarted; gettingStarted?.refresh(); savedTick = captured;
-    $('save-status').textContent = '已自动保存';
-    if (tick === captured) { refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
-  } catch (error) { $('save-status').textContent = '保存失败'; toast(error.message); pending = false; }
-  finally { busy = false; if (pending && tick !== savedTick) { pending = false; save(); } }
+    if (tick === captured) { clearSaveError(); $('save-status').textContent = '已自动保存'; refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
+  } catch (error) { showUnsavedError(error.message); pending = false; }
+  finally { busy = false; $('save-retry').disabled = actionBusy; if (!actionBusy && pending && tick !== savedTick) { pending = false; save(); } }
 }
 async function settle() { await Promise.all([...pendingUploads]); clearTimeout(timer); await save(); while (busy) await new Promise(resolve => setTimeout(resolve, 60)); if (tick !== savedTick) throw new Error('内容尚未保存，请先修正保存错误'); }
-async function managed(action) {
+async function managed(action, { saveFirst = true } = {}) {
   if (actionBusy) return;
-  await settle(); if (actionBusy) return; actionBusy = true;
+  if (saveFirst) await settle(); if (actionBusy) return; actionBusy = true;
   const controls = [...document.querySelectorAll('input,select,textarea,button')].map(element => [element, element.disabled]);
   for (const [element] of controls) element.disabled = true;
-  try { return await action(); }
+  try {
+    if (!saveFirst) { clearTimeout(timer); pending = false; while (busy) await new Promise(resolve => setTimeout(resolve, 60)); pending = false; }
+    return await action();
+  }
   finally {
     actionBusy = false; for (const [element, disabled] of controls) if (element.isConnected) element.disabled = disabled;
     $('pdf-download').disabled = !previewReady;
+    $('save-retry').disabled = busy;
     for (const key of ['portrait','schoolLogo']) $(`${key}-enabled`).disabled = !state.front?.assets?.[key];
     $('contact-add').disabled = sourceMode || (state.front?.person?.contacts?.length || 0) >= 6;
     $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
@@ -134,6 +141,7 @@ function acceptState(result) { state = result; tick = savedTick = 0; previewSequ
 function download(contents, filename, type) { const blob = new Blob([contents], { type }); const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 for (const input of document.querySelectorAll('[data-person]')) input.addEventListener('input', () => { const key = input.dataset.person; if (input.value || ['name', 'target'].includes(key)) state.front.person[key] = input.value; else delete state.front.person[key]; edited(); });
 $('body').addEventListener('input', edited);
+$('save-retry').addEventListener('click', () => { clearTimeout(timer); save(); });
 $('source-mode').addEventListener('click', async () => {
   try {
     await settle(); state = await request('/api/state');
@@ -168,7 +176,7 @@ for (const key of ['portrait', 'schoolLogo']) {
 }
 $('markdown-download').addEventListener('click', async () => { try { await settle(); download(state.source, resumeFilename(state.front?.person?.name, state.resumeName, 'md'), 'text/markdown;charset=utf-8'); } catch (error) { toast(error.message); } });
 $('pdf-download').addEventListener('click', async () => { try { await settle(); await request(`/api/preview?revision=${state.revision}&resumeId=${state.resumeId}`); const a = document.createElement('a'); a.href = `/document.pdf?revision=${state.revision}&resumeId=${state.resumeId}&download=1`; a.download = resumeFilename(state.front?.person?.name, state.resumeName, 'pdf'); a.click(); } catch (error) { toast(error.message); } });
-$('reload').addEventListener('click', async () => { if (tick !== savedTick && !confirm('重新载入会放弃尚未保存的修改，继续吗？')) return; try { state = await request('/api/state'); tick = savedTick = 0; populate(); $('save-status').textContent = '已载入本地文件'; refreshPreview(state.revision); } catch (error) { toast(error.message); } });
+$('reload').addEventListener('click', async () => { if (actionBusy || tick !== savedTick && !confirm('重新载入会放弃尚未保存的修改，继续吗？')) return; try { await managed(async () => acceptState(await request('/api/state')), { saveFirst: false }); } catch (error) { if (tick !== savedTick) showUnsavedError(`重新载入失败：${error.message}`, '修改尚未保存'); else toast(error.message); } });
 $('import').addEventListener('change', async event => { const file = event.target.files[0]; if (!file) return; if (!confirm('导入前会先备份当前内容，继续吗？')) return; try { await managed(async () => acceptState(await request('/api/save', { revision: state.revision, source: await file.text(), layout: state.layout, importing: true }))); } catch (error) { toast(error.message); } event.target.value = ''; });
 $('template').addEventListener('change', () => $('replace-dialog').showModal());
 $('replace-cancel').addEventListener('click', () => { $('replace-dialog').close(); $('template').value = ''; });

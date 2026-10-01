@@ -115,6 +115,11 @@ jobs:
           path: tmp/pdfs/section-order/
       - uses: actions/upload-artifact@v7.0.1
         with:
+          name: save-recovery-validation
+          retention-days: 7
+          path: tmp/ui/save-recovery/
+      - uses: actions/upload-artifact@v7.0.1
+        with:
           name: frontmatter-save-validation
           retention-days: 7
           path: tmp/pdfs/frontmatter-save/
