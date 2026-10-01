@@ -3,7 +3,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { openProject } from './project.mjs';
 import { initializeProject, saveFile } from './files.mjs';
-import { captureBackup, decodeBackup, applyBackup } from './backup.mjs';
+import { captureBackup, captureDraftBackup, decodeBackup, applyBackup } from './backup.mjs';
 import { ResumeError } from './errors.mjs';
 import { assetPath } from './assets.mjs';
 import { imageSize } from 'image-size';
@@ -292,6 +292,13 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   };
   const backups = async id => { await queue; if (id !== catalog.activeId) throw new ResumeError('简历已经切换', { code: 'CONFLICT' }); return historyFor(id); };
   const exportBackup = async (id, backupId) => { await queue; if (id !== catalog.activeId) throw new ResumeError('简历已经切换', { code: 'CONFLICT' }); return readBackup(id, backupId); };
+  const exportDraft = async payload => {
+    await queue;
+    if (!payload || typeof payload.resumeId !== 'string') throw new ResumeError('草稿请求格式不正确');
+    const item = entry(payload.resumeId), draftRoot = item.id === 'legacy' ? root : path.join(root, 'resumes', item.id);
+    const info = await lstat(draftRoot); if (info.isSymbolicLink() || !info.isDirectory()) throw new ResumeError('简历数据目录不正确');
+    return captureDraftBackup({ root: draftRoot }, payload, { id: randomUUID(), resumeId: item.id, resumeName: item.name, createdAt: new Date().toISOString(), kind: 'draft' });
+  };
   const createBackup = payload => mutate(async () => { const current = await check(payload); return checkpoint(current.resumeId, payload.reason === 'photo' ? 'photo' : 'manual'); });
   const flush = () => mutate(async () => { for (const id of dirty) await checkpoint(id, 'auto', false); });
   async function autoCheckpoint() {
@@ -301,5 +308,5 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   }
   if (!(await historyFor(catalog.activeId)).length) await checkpoint(catalog.activeId, 'initial');
   if (historyIntervalMs > 0) { timer = setInterval(() => autoCheckpoint().catch(error => { historyWarning = `自动版本未保存：${error.message}`; }), Math.min(historyIntervalMs, 60000)); timer.unref(); }
-  return { root, read, save, entries, changeEntry, content, changeContent, sectionOrder, renameSectionTitle, useTemplate, startFromTemplate, dismissGettingStarted, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
+  return { root, read, save, entries, changeEntry, content, changeContent, sectionOrder, renameSectionTitle, useTemplate, startFromTemplate, dismissGettingStarted, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, exportDraft, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
 }

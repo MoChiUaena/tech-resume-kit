@@ -117,7 +117,9 @@ jobs:
         with:
           name: save-recovery-validation
           retention-days: 7
-          path: tmp/ui/save-recovery/
+          path: |
+            tmp/ui/save-recovery/
+            tmp/ui/draft-backup/
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: frontmatter-save-validation
