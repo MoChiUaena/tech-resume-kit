@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix='release-', dir=output) as staging:
         destination = stage / source.relative_to(root / 'starter')
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
-    (stage / '.gitignore').write_text('output/\ntoolkit/node_modules/\n', encoding='utf-8')
+    (stage / '.gitignore').write_text('output/\ntoolkit/node_modules/\n*.local.*\n', encoding='utf-8')
     with zipfile.ZipFile(starter_zip, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zip:
         for source in sorted(stage.rglob('*')):
             if source.is_file():

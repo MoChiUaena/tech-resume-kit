@@ -13,6 +13,7 @@ import { parseResume } from './input.mjs';
 import { resolveSectionOrder } from './schema.mjs';
 import { uuid, catalogSchema, readTrash, validateCatalogs, recoverCatalog, commitCatalogPair } from './catalog.mjs';
 import { captureLibraryBackup, decodeLibraryBackup, restoreLibraryBackup, recoverLibraryRestore, readLibraryRestoreRecord, previousLibraryBackup } from './library-backup.mjs';
+import { openDraftStore } from './drafts.mjs';
 
 const sha = data => createHash('sha256').update(data).digest('hex');
 function name(value) {
@@ -46,6 +47,7 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     await saveFile(catalogFile, JSON.stringify(catalog, null, 2));
   }
   validateCatalogs(catalog, trash);
+  const drafts = await openDraftStore(root);
   let queue = Promise.resolve(), timer, historyWarning = '';
   const projects = new Map(), dirty = new Set();
   function mutate(action) { const result = queue.then(() => { if (fatal) throw fatal; return action(); }).catch(error => { if (error.code === 'LIBRARY_RECOVERY') fatal = error; throw error; }); queue = result.catch(() => {}); return result; }
@@ -65,7 +67,7 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     const active = entry(), project = await projectFor(active.id);
     const current = await project.read();
     const welcome = preferences.welcomePending === true && preferences.welcomeRevision === current.revision && active.id === 'legacy' && catalog.resumes.length === 1 && trash.resumes.length === 0;
-    return { ...current, gettingStarted: { welcome }, resumeId: active.id, resumeName: active.name, resumes: catalog.resumes.map(item => ({ ...item })), trash: trash.resumes.map(item => ({ ...item })), libraryRevision: sha(JSON.stringify([catalog, trash])), libraryBackupBeforeRestore: restoreRecord, libraryBackupWarning: restoreWarning, historyWarning };
+    return { ...current, draftScope: drafts.scope, gettingStarted: { welcome }, resumeId: active.id, resumeName: active.name, resumes: catalog.resumes.map(item => ({ ...item })), trash: trash.resumes.map(item => ({ ...item })), libraryRevision: sha(JSON.stringify([catalog, trash])), libraryBackupBeforeRestore: restoreRecord, libraryBackupWarning: restoreWarning, historyWarning };
   }
   async function check(payload) {
     const current = await state();
@@ -300,6 +302,9 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     return captureDraftBackup({ root: draftRoot }, payload, { id: randomUUID(), resumeId: item.id, resumeName: item.name, createdAt: new Date().toISOString(), kind: 'draft' });
   };
   const createBackup = payload => mutate(async () => { const current = await check(payload); return checkpoint(current.resumeId, payload.reason === 'photo' ? 'photo' : 'manual'); });
+  const writeDraft = payload => mutate(async () => { entry(payload?.resumeId); return drafts.write(payload, (await (await projectFor(payload.resumeId)).read()).revision); });
+  const clearDraft = payload => mutate(async () => { entry(payload?.resumeId); return drafts.clear(payload); });
+  const listDrafts = payload => mutate(async () => { entry(payload?.resumeId); return drafts.list(payload, (await (await projectFor(payload.resumeId)).read()).revision); });
   const flush = () => mutate(async () => { for (const id of dirty) await checkpoint(id, 'auto', false); });
   async function autoCheckpoint() {
     await mutate(async () => {
@@ -308,5 +313,5 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   }
   if (!(await historyFor(catalog.activeId)).length) await checkpoint(catalog.activeId, 'initial');
   if (historyIntervalMs > 0) { timer = setInterval(() => autoCheckpoint().catch(error => { historyWarning = `自动版本未保存：${error.message}`; }), Math.min(historyIntervalMs, 60000)); timer.unref(); }
-  return { root, read, save, entries, changeEntry, content, changeContent, sectionOrder, renameSectionTitle, useTemplate, startFromTemplate, dismissGettingStarted, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, exportDraft, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
+  return { root, read, save, entries, changeEntry, content, changeContent, sectionOrder, renameSectionTitle, useTemplate, startFromTemplate, dismissGettingStarted, preview, create: payload => mutate(() => createInternal(payload)), duplicate: payload => mutate(() => createInternal(payload, true)), rename, trashResume, restoreTrash, exportLibrary, inspectLibrary, restoreLibrary, exportBeforeRestore, switchResume, backups, createBackup, exportBackup, exportDraft, writeDraft, clearDraft, listDrafts, restore, storeImage, portrait, flush, autoCheckpoint, historyStatus: () => historyWarning, close: async () => { clearInterval(timer); if (!fatal) await flush(); } };
 }
