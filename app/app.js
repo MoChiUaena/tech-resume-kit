@@ -7,12 +7,14 @@ import { wireContent } from './content-manager.mjs';
 import { wireGettingStarted } from './getting-started.mjs';
 import { wireSectionOrder } from './section-order.mjs';
 import { resumeFilename, safeFilenamePart } from './filename.mjs';
+import { wireDraftRecovery } from './draft-recovery.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
 let cropSession, cropDrag, entryKind;
 let viewerReference;
 let draftBusy = false;
+let draftRecovery;
 let entryManager, libraryManager, contentManager, gettingStarted, sectionOrder;
 async function request(url, data, raw = false) {
   const options = data === undefined ? {} : { method: 'POST', headers: { 'X-Resume-Token': token, ...(raw ? { 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision } : { 'Content-Type': 'application/json' }) }, body: raw ? data : JSON.stringify({ resumeId: state?.resumeId, ...data }) };
@@ -23,7 +25,7 @@ async function request(url, data, raw = false) {
 function toast(text) { $('toast').textContent = text; $('toast').hidden = false; setTimeout(() => $('toast').hidden = true, 5000); }
 function clearSaveError() { $('save-error').hidden = true; $('save-error-message').textContent = ''; }
 function showUnsavedError(message, status = '保存失败') { $('save-status').textContent = status; $('page-status').textContent = $('pdf-frame').hidden ? '修改尚未保存' : '未保存 · 上次预览'; $('save-error-message').textContent = message; $('save-error').hidden = false; }
-function edited() { if (actionBusy) return; tick++; entryManager?.invalidate(); contentManager?.invalidate(); previewReady = false; $('preview-actions').hidden = true; $('save-status').textContent = '正在保存…'; $('page-status').textContent = '正在更新'; $('pdf-download').disabled = true; clearTimeout(timer); timer = setTimeout(save, 700); }
+function edited() { if (actionBusy) return; tick++; draftRecovery?.capture(); entryManager?.invalidate(); contentManager?.invalidate(); previewReady = false; $('preview-actions').hidden = true; $('save-status').textContent = '正在保存…'; $('page-status').textContent = '正在更新'; $('pdf-download').disabled = true; clearTimeout(timer); timer = setTimeout(save, 700); }
 function renderContacts() {
   $('contacts').replaceChildren();
   if (sourceMode) { $('contact-add').disabled = true; return; }
@@ -107,15 +109,16 @@ window.addEventListener('message', event => {
 async function save() {
   if (actionBusy) return;
   if (busy) { pending = true; return; } if (tick === savedTick) return;
-  busy = true; const captured = tick; $('save-retry').disabled = true; $('save-status').textContent = '正在保存…';
+  busy = true; const captured = tick, draftToken = draftRecovery?.token(); $('save-retry').disabled = true; $('save-status').textContent = '正在保存…';
   try {
-    const payload = { resumeId: state.resumeId, revision: state.revision, layout: state.layout, ...(sourceMode ? { source: $('body').value } : { front: state.front, body: $('body').value }) };
-    const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; state.gettingStarted = result.gettingStarted; gettingStarted?.refresh(); savedTick = captured;
+    const payload = structuredClone({ resumeId: state.resumeId, revision: state.revision, layout: state.layout, ...(sourceMode ? { source: $('body').value } : { front: state.front, body: $('body').value }) });
+    await draftRecovery?.flush();
+    const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; state.gettingStarted = result.gettingStarted; gettingStarted?.refresh(); savedTick = captured; draftRecovery?.saved(draftToken);
     if (tick === captured) { clearSaveError(); $('save-status').textContent = '已自动保存'; refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
   } catch (error) { showUnsavedError(error.message); pending = false; }
-  finally { busy = false; $('save-retry').disabled = actionBusy; if (!actionBusy && pending && tick !== savedTick) { pending = false; save(); } }
+  finally { busy = false; $('save-retry').disabled = actionBusy; draftRecovery?.render(); if (!actionBusy && pending && tick !== savedTick) { pending = false; save(); } }
 }
-async function settle() { await Promise.all([...pendingUploads]); clearTimeout(timer); await save(); while (busy) await new Promise(resolve => setTimeout(resolve, 60)); if (tick !== savedTick) throw new Error('内容尚未保存，请先修正保存错误'); }
+async function settle() { await Promise.all([...pendingUploads]); clearTimeout(timer); await save(); while (busy) await new Promise(resolve => setTimeout(resolve, 60)); if (tick !== savedTick) throw new Error('内容尚未保存，请先修正保存错误'); await draftRecovery?.flush(); }
 async function managed(action, { saveFirst = true } = {}) {
   if (actionBusy) return;
   if (saveFirst) await settle(); if (actionBusy) return; actionBusy = true;
@@ -139,7 +142,7 @@ async function managed(action, { saveFirst = true } = {}) {
     libraryManager?.render(); gettingStarted?.refresh();
   }
 }
-function acceptState(result) { state = result; tick = savedTick = 0; previewSequence++; viewerReference = undefined; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); }
+function acceptState(result) { draftRecovery?.abandon(); state = result; tick = savedTick = 0; previewSequence++; viewerReference = undefined; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); draftRecovery?.review(); }
 function download(contents, filename, type) { const blob = new Blob([contents], { type }); const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 for (const input of document.querySelectorAll('[data-person]')) input.addEventListener('input', () => { const key = input.dataset.person; if (input.value || ['name', 'target'].includes(key)) state.front.person[key] = input.value; else delete state.front.person[key]; edited(); });
 $('body').addEventListener('input', edited);
@@ -201,7 +204,7 @@ $('exit').addEventListener('click', async () => { try { await settle(); await re
 document.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); save(); } });
 window.addEventListener('beforeunload', event => { if (tick !== savedTick) { event.preventDefault(); event.returnValue = ''; } });
 setInterval(() => fetch('/api/ping').catch(() => { $('save-status').textContent = '应用已退出，请重新启动'; }), 20_000);
-request('/api/state').then(result => { state = result; populate(); $('save-status').textContent = '已载入本地文件'; refreshPreview(state.revision); }).catch(error => { $('save-status').textContent = '载入失败'; $('preview-error').hidden = false; $('preview-error').textContent = error.message; });
+request('/api/state').then(result => { state = result; populate(); $('save-status').textContent = '已载入本地文件'; refreshPreview(state.revision); draftRecovery?.review(); }).catch(error => { $('save-status').textContent = '载入失败'; $('preview-error').hidden = false; $('preview-error').textContent = error.message; });
 
 function operationPayload() { return { resumeId: state.resumeId, revision: state.revision, libraryRevision: state.libraryRevision }; }
 function suggestedName(base) { let proposal = base, index = 2; while (state.resumes.some(resume => resume.name === proposal)) proposal = `${base} ${index++}`; return proposal; }
@@ -351,3 +354,9 @@ wireSystem({ request, managed, settle, operationPayload, acceptState });
 sectionOrder = wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState: () => state });
 
 gettingStarted = wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, toast, openSettings });
+draftRecovery = wireDraftRecovery({ request, getState: () => state, getPayload: () => ({ layout: state.layout, ...(sourceMode ? { source: $('body').value } : { baseSource: state.source, front: state.front, body: $('body').value }) }), isClean: () => tick === savedTick && !busy && !actionBusy, toast, applyDraft: record => {
+  const snapshot = record.payload, previous = state;
+  state = { ...state, revision: record.baseRevision, layout: snapshot.layout, ...(typeof snapshot.source === 'string' ? { source: snapshot.source, front: null, body: snapshot.source } : { source: snapshot.baseSource, front: snapshot.front, body: snapshot.body }) };
+  try { populate(); } catch (error) { state = previous; populate(); throw error; }
+  edited(); $('body').focus();
+} });

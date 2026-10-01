@@ -42,7 +42,7 @@ function checkRestoredSource(source) {
   if (Buffer.byteLength(source, 'utf8') > limitFor('resume.md')) throw fail('恢复后的 Markdown 超过 500 KB，请精简草稿后重试');
 }
 
-export async function captureDraftBackup(project, payload, details) {
+export function draftState(payload) {
   function text(value) {
     if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > 500_000) throw new ResumeError('草稿内容超过 500 KB 或格式不正确');
     return value;
@@ -61,7 +61,10 @@ export async function captureDraftBackup(project, payload, details) {
     source = text(saveStructuredSource(base, parts(base).front, payload.front, text(payload.body)));
   }
   const layout = validate(layoutSchema, payload.layout, new Map()), config = stringify(layout);
-  const state = { source, config, ...parts(source), layout, revision: hash(source + '\0' + config) };
+  return { source, config, ...parts(source), layout, revision: hash(source + '\0' + config) };
+}
+export async function captureDraftBackup(project, payload, details) {
+  const state = draftState(payload);
   return captureBackup({ root: project.root, read: async () => state }, details);
 }
 

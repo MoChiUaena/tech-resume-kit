@@ -74,6 +74,7 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
     child.once('error', error => { console.error(`新版启动失败：${error.message}；请打开原来的启动简历.exe。`); }); child.unref();
   }
   const staticFiles = { '/section-order.mjs': ['app/section-order.mjs', 'text/javascript; charset=utf-8'], '/filename.mjs': ['src/filename.mjs', 'text/javascript; charset=utf-8'], '/getting-started.mjs': ['app/getting-started.mjs', 'text/javascript; charset=utf-8'], '/': ['app/index.html', 'text/html; charset=utf-8'], '/app.js': ['app/app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app/app.css', 'text/css; charset=utf-8'], '/crop.mjs': ['app/crop.mjs', 'text/javascript; charset=utf-8'], '/entries.mjs': ['app/entries.mjs', 'text/javascript; charset=utf-8'], '/entry-manager.mjs': ['app/entry-manager.mjs', 'text/javascript; charset=utf-8'], '/content-manager.mjs': ['app/content-manager.mjs', 'text/javascript; charset=utf-8'], '/library-manager.mjs': ['app/library-manager.mjs', 'text/javascript; charset=utf-8'], '/system.mjs': ['app/system.mjs', 'text/javascript; charset=utf-8'] };
+  staticFiles['/draft-recovery.mjs'] = ['app/draft-recovery.mjs', 'text/javascript; charset=utf-8'];
   async function bytes(request, maximum) {
     const chunks = []; let size = 0;
     for await (const chunk of request) { size += chunk.length; if (size > maximum) throw new ResumeError(maximum === libraryBackupLimit ? '整库 ZIP 请控制在 128 MB 以内' : '文件太大；正文上限 500 KB，图片上限 5 MB', { code: 'SIZE' }); chunks.push(chunk); }
@@ -152,14 +153,15 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
           return;
         }
         const actions = { '/api/getting-started/start': project.startFromTemplate, '/api/getting-started/dismiss': project.dismissGettingStarted, '/api/save': project.save, '/api/entries/change': project.changeEntry, '/api/content/change': project.changeContent, '/api/sections/rename': project.renameSectionTitle, '/api/template': project.useTemplate, '/api/resumes/create': project.create, '/api/resumes/duplicate': project.duplicate, '/api/resumes/rename': project.rename, '/api/resumes/trash': project.trashResume, '/api/resumes/restore-trash': project.restoreTrash, '/api/resumes/switch': project.switchResume, '/api/backup': project.createBackup, '/api/restore': project.restore };
-        if (actions[pathname] || pathname === '/api/draft-backup') {
+        const draftActions = { '/api/drafts/write': project.writeDraft, '/api/drafts/clear': project.clearDraft, '/api/drafts/list': project.listDrafts };
+        if (actions[pathname] || draftActions[pathname] || pathname === '/api/draft-backup') {
           if (request.headers['content-type']?.split(';')[0] !== 'application/json') throw new ResumeError('请求格式不正确');
           let payload; try { payload = JSON.parse((await bytes(request, 2_000_000)).toString('utf8')); } catch (error) { if (error instanceof ResumeError) throw error; throw new ResumeError('请求格式不正确'); }
           if (pathname === '/api/draft-backup') {
             const draft = await project.exportDraft(payload), filename = safeFilenamePart(draft.manifest.resumeName) + '-未保存草稿.zip';
             response.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`, 'X-Resume-Missing-Images': String(draft.manifest.missingAssets.length) });
             response.end(draft.buffer);
-          } else json(await actions[pathname](payload));
+          } else json(await (draftActions[pathname] || actions[pathname])(payload));
         } else if (pathname === '/api/library/inspect' || pathname === '/api/library/restore-upload') {
           const buffer = await bytes(request, libraryBackupLimit);
           if (pathname === '/api/library/inspect') json(await project.inspectLibrary(buffer));

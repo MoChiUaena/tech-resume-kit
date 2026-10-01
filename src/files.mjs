@@ -34,7 +34,7 @@ export async function initializeProject(directory, template = 'campus') {
   const files = [
     { relative: 'resume.md', bytes: await readFile(loaded.inputFile) },
     { relative: 'layout.yaml', bytes: await readFile(loaded.configFile) },
-    { relative: '.gitignore', bytes: Buffer.from('output/\n*.pdf\n*.html\n') },
+    { relative: '.gitignore', bytes: Buffer.from('output/\n*.pdf\n*.html\n*.local.*\n') },
   ];
   for (const asset of Object.values(loaded.document.assets)) {
     // Bundled starter assets stay within the starter directory tree.

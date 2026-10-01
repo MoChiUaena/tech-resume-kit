@@ -120,6 +120,7 @@ jobs:
           path: |
             tmp/ui/save-recovery/
             tmp/ui/draft-backup/
+            tmp/ui/automatic-drafts/
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: frontmatter-save-validation
