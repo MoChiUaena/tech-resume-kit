@@ -152,11 +152,14 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
           return;
         }
         const actions = { '/api/getting-started/start': project.startFromTemplate, '/api/getting-started/dismiss': project.dismissGettingStarted, '/api/save': project.save, '/api/entries/change': project.changeEntry, '/api/content/change': project.changeContent, '/api/sections/rename': project.renameSectionTitle, '/api/template': project.useTemplate, '/api/resumes/create': project.create, '/api/resumes/duplicate': project.duplicate, '/api/resumes/rename': project.rename, '/api/resumes/trash': project.trashResume, '/api/resumes/restore-trash': project.restoreTrash, '/api/resumes/switch': project.switchResume, '/api/backup': project.createBackup, '/api/restore': project.restore };
-        if (actions[pathname]) {
+        if (actions[pathname] || pathname === '/api/draft-backup') {
           if (request.headers['content-type']?.split(';')[0] !== 'application/json') throw new ResumeError('请求格式不正确');
           let payload; try { payload = JSON.parse((await bytes(request, 2_000_000)).toString('utf8')); } catch (error) { if (error instanceof ResumeError) throw error; throw new ResumeError('请求格式不正确'); }
-          const state = await actions[pathname](payload);
-          json(state);
+          if (pathname === '/api/draft-backup') {
+            const draft = await project.exportDraft(payload), filename = safeFilenamePart(draft.manifest.resumeName) + '-未保存草稿.zip';
+            response.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`, 'X-Resume-Missing-Images': String(draft.manifest.missingAssets.length) });
+            response.end(draft.buffer);
+          } else json(await actions[pathname](payload));
         } else if (pathname === '/api/library/inspect' || pathname === '/api/library/restore-upload') {
           const buffer = await bytes(request, libraryBackupLimit);
           if (pathname === '/api/library/inspect') json(await project.inspectLibrary(buffer));

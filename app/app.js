@@ -6,12 +6,13 @@ import { wireLibrary } from './library-manager.mjs';
 import { wireContent } from './content-manager.mjs';
 import { wireGettingStarted } from './getting-started.mjs';
 import { wireSectionOrder } from './section-order.mjs';
-import { resumeFilename } from './filename.mjs';
+import { resumeFilename, safeFilenamePart } from './filename.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
 let cropSession, cropDrag, entryKind;
 let viewerReference;
+let draftBusy = false;
 let entryManager, libraryManager, contentManager, gettingStarted, sectionOrder;
 async function request(url, data, raw = false) {
   const options = data === undefined ? {} : { method: 'POST', headers: { 'X-Resume-Token': token, ...(raw ? { 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision } : { 'Content-Type': 'application/json' }) }, body: raw ? data : JSON.stringify({ resumeId: state?.resumeId, ...data }) };
@@ -128,6 +129,7 @@ async function managed(action, { saveFirst = true } = {}) {
     actionBusy = false; for (const [element, disabled] of controls) if (element.isConnected) element.disabled = disabled;
     $('pdf-download').disabled = !previewReady;
     $('save-retry').disabled = busy;
+    $('save-draft').disabled = draftBusy;
     for (const key of ['portrait','schoolLogo']) $(`${key}-enabled`).disabled = !state.front?.assets?.[key];
     $('contact-add').disabled = sourceMode || (state.front?.person?.contacts?.length || 0) >= 6;
     $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
@@ -142,6 +144,20 @@ function download(contents, filename, type) { const blob = new Blob([contents], 
 for (const input of document.querySelectorAll('[data-person]')) input.addEventListener('input', () => { const key = input.dataset.person; if (input.value || ['name', 'target'].includes(key)) state.front.person[key] = input.value; else delete state.front.person[key]; edited(); });
 $('body').addEventListener('input', edited);
 $('save-retry').addEventListener('click', () => { clearTimeout(timer); save(); });
+$('save-draft').addEventListener('click', async () => {
+  if (!state || draftBusy || actionBusy) return;
+  draftBusy = true; $('save-draft').disabled = true;
+  const filename = safeFilenamePart(state.resumeName, '简历') + '-未保存草稿.zip';
+  const payload = { resumeId: state.resumeId, layout: state.layout, ...(sourceMode ? { source: $('body').value } : { baseSource: state.source, front: state.front, body: $('body').value }) };
+  try {
+    const response = await fetch('/api/draft-backup', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Resume-Token': token }, body: JSON.stringify(payload) });
+    if (!response.ok) { const result = await response.json(); throw new Error(result.error?.message || '草稿无法导出'); }
+    download(await response.blob(), filename, 'application/zip');
+    const missing = Number(response.headers.get('X-Resume-Missing-Images'));
+    toast(missing > 0 ? `草稿已下载，${missing} 项图片未找到；可从“备份与恢复”导入。` : '草稿已下载，可从“备份与恢复”导入。');
+  } catch (error) { toast(`草稿下载失败：${error.message}`); }
+  finally { draftBusy = false; $('save-draft').disabled = actionBusy; }
+});
 $('source-mode').addEventListener('click', async () => {
   try {
     await settle(); state = await request('/api/state');

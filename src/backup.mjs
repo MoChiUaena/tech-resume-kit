@@ -9,6 +9,7 @@ import { validate, layoutSchema } from './schema.mjs';
 import { assetPath } from './assets.mjs';
 import { saveFile } from './files.mjs';
 import { ResumeError } from './errors.mjs';
+import { saveStructuredSource } from './frontmatter.mjs';
 
 export const backupLimit = 32_000_000;
 const hash = data => createHash('sha256').update(data).digest('hex');
@@ -18,6 +19,51 @@ function allowed(filename) {
   return /^assets\/(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.(?:png|jpe?g)$/i.test(filename) && !filename.split('/').some(part => part === '.' || part === '..');
 }
 function limitFor(filename) { return filename === 'resume.md' ? 500_000 : filename.startsWith('assets/') ? 5_000_000 : 100_000; }
+
+function restoration(source, files) {
+  const plain = source.replace(/^\uFEFF/, ''), match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(plain);
+  let front;
+  try { if (match) front = readYaml(match[1]); } catch {}
+  const remapped = new Map();
+  for (const [filename, content] of Object.entries(files)) if (filename.startsWith('assets/')) {
+    remapped.set(filename, front && typeof front.assets === 'object' ? `assets/restored-${hash(content)}${path.extname(filename).toLowerCase()}` : filename);
+  }
+  if (front && typeof front.assets === 'object' && front.assets) {
+    const previousFront = structuredClone(front); let changed = false;
+    for (const asset of Object.values(front.assets)) if (asset && typeof asset.src === 'string') {
+      const replacement = remapped.get(path.posix.normalize(asset.src.replaceAll('\\', '/')));
+      if (replacement && replacement !== asset.src) { asset.src = replacement; changed = true; }
+    }
+    if (changed) source = saveStructuredSource(source, previousFront, front, plain.slice(match[0].length));
+  }
+  return { source, remapped };
+}
+function checkRestoredSource(source) {
+  if (Buffer.byteLength(source, 'utf8') > limitFor('resume.md')) throw fail('恢复后的 Markdown 超过 500 KB，请精简草稿后重试');
+}
+
+export async function captureDraftBackup(project, payload, details) {
+  function text(value) {
+    if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > 500_000) throw new ResumeError('草稿内容超过 500 KB 或格式不正确');
+    return value;
+  }
+  function parts(source) {
+    const plain = source.replace(/^\uFEFF/, ''), match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(plain);
+    let front = null;
+    if (match) { try { front = readYaml(match[1]); } catch {} }
+    return { front, body: match ? plain.slice(match[0].length) : source };
+  }
+  let source;
+  if (typeof payload.source === 'string') source = text(payload.source);
+  else {
+    const base = text(payload.baseSource);
+    if (!payload.front || typeof payload.front !== 'object' || Array.isArray(payload.front)) throw new ResumeError('草稿填写内容格式不正确');
+    source = text(saveStructuredSource(base, parts(base).front, payload.front, text(payload.body)));
+  }
+  const layout = validate(layoutSchema, payload.layout, new Map()), config = stringify(layout);
+  const state = { source, config, ...parts(source), layout, revision: hash(source + '\0' + config) };
+  return captureBackup({ root: project.root, read: async () => state }, details);
+}
 
 export async function captureBackup(project, details) {
   const state = await project.read(), files = { 'resume.md': Buffer.from(state.source), 'layout.yaml': Buffer.from(state.config) };
@@ -34,11 +80,12 @@ export async function captureBackup(project, details) {
         if (!['png', 'jpg'].includes(dimensions.type) || content.length > 5_000_000) throw new Error('图片格式或大小不支持');
         const relative = path.relative(project.root, filename).split(path.sep).join('/');
         let destination = relative;
-        if (!allowed(relative) || relative.startsWith('../') || path.isAbsolute(relative)) { const label = /^[a-z0-9_-]{1,32}$/i.test(key) ? key : 'image'; destination = `assets/${label}-${hash(content).slice(0, 20)}.${dimensions.type === 'jpg' ? 'jpg' : 'png'}`; asset.src = destination; rebased = true; }
+        if (!allowed(relative) || relative.startsWith('../') || path.isAbsolute(relative)) { const label = /^[a-z0-9_-]{1,32}$/i.test(key) ? key : 'image'; destination = `assets/${label}-${hash(content).slice(0, 20)}.${dimensions.type === 'jpg' ? 'jpg' : 'png'}`; }
+        if (destination !== asset.src) { asset.src = destination; rebased = true; }
         files[destination] = content;
       } catch { missingAssets.push(asset.src); }
     }
-    if (rebased) source = `---\n${stringify(front)}---\n\n${state.body.replace(/^\s*\n/, '')}`;
+    if (rebased) source = saveStructuredSource(state.source, state.front, front, state.body);
   } else {
     // Invalid front matter still needs a recoverable draft and local images.
     async function collect(directory, prefix = 'assets') {
@@ -56,11 +103,16 @@ export async function captureBackup(project, details) {
   }
   files['resume.md'] = Buffer.from(source);
   const entries = Object.entries(files).map(([name, content]) => ({ name, size: content.length, sha256: hash(content) })).sort((a,b) => a.name.localeCompare(b.name));
-  if (entries.length > 64 || entries.reduce((sum, entry) => sum + entry.size, 0) > backupLimit) throw fail('完整资料超过 32 MB');
+  checkRestoredSource(restoration(source, files).source);
+  if (entries.length > 64) throw fail('完整资料超过 64 项文件');
   const fingerprint = hash(JSON.stringify(entries));
   const manifest = { schemaVersion: 1, ...details, fingerprint, sourceRevision: state.revision, files: entries, missingAssets };
   files['backup.json'] = Buffer.from(JSON.stringify(manifest, null, 2));
-  return { buffer: Buffer.from(zipSync(files, { level: 6 })), manifest };
+  for (const [name, content] of Object.entries(files)) if (content.length > limitFor(name)) throw fail(`${name} 超过备份文件大小上限`);
+  if (Object.values(files).reduce((sum, content) => sum + content.length, 0) > backupLimit) throw fail('完整资料超过 32 MB');
+  const buffer = Buffer.from(zipSync(files, { level: 6 }));
+  if (buffer.length > backupLimit) throw fail('完整备份 ZIP 超过 32 MB');
+  return { buffer, manifest };
 }
 
 export function decodeBackup(buffer) {
@@ -106,14 +158,10 @@ export function decodeBackup(buffer) {
 }
 
 export async function applyBackup(project, decoded) {
-  const remapped = new Map();
-  let source = decoded.source;
-  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(source.replace(/^\uFEFF/, ''));
-  let front;
-  try { if (match) front = readYaml(match[1]); } catch {}
+  const { source, remapped } = restoration(decoded.source, decoded.files);
+  checkRestoredSource(source);
   for (const [filename, content] of Object.entries(decoded.files)) if (filename.startsWith('assets/')) {
-    const relative = front && typeof front.assets === 'object' ? `assets/restored-${hash(content)}${path.extname(filename).toLowerCase()}` : filename;
-    remapped.set(filename, relative);
+    const relative = remapped.get(filename);
     const destination = path.resolve(project.root, relative);
     if (!destination.startsWith(project.root + path.sep)) throw fail('图片路径不正确');
     let parent = project.root;
@@ -123,14 +171,6 @@ export async function applyBackup(project, decoded) {
       catch (error) { if (error.code !== 'ENOENT') throw error; await mkdir(parent); }
     }
     await saveFile(destination, content, true);
-  }
-  if (front && typeof front.assets === 'object' && front.assets) {
-    let changed = false;
-    for (const asset of Object.values(front.assets)) if (asset && typeof asset.src === 'string') {
-      const replacement = remapped.get(asset.src.replaceAll('\\', '/'));
-      if (replacement && replacement !== asset.src) { asset.src = replacement; changed = true; }
-    }
-    if (changed) source = `---\n${stringify(front)}---\n\n${decoded.source.replace(/^\uFEFF/, '').slice(match[0].length).replace(/^\s*\n/, '')}`;
   }
   const state = await project.read();
   return project.save({ revision: state.revision, source, layout: decoded.layout });

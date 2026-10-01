@@ -58,7 +58,13 @@ try {
   const html = await (await fetch(editor.url)).text();
   const token = /name="resume-token" content="([a-f0-9]+)"/.exec(html)[1];
   const response = await fetch(editor.url + 'api/getting-started/start', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: editor.url.slice(0,-1), 'X-Resume-Token': token }, body: JSON.stringify({ ...state, mode: 'initial', template: 'blank' }) });
-  assert.equal(response.status, 200); assert.equal((await response.json()).gettingStarted.welcome, false);
+  assert.equal(response.status, 200); const chosen = await response.json(); assert.equal(chosen.gettingStarted.welcome, false);
+  const draftFront = structuredClone(chosen.front); draftFront.person.name = '独立安装草稿';
+  const draft = await fetch(editor.url + 'api/draft-backup', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: editor.url.slice(0,-1), 'X-Resume-Token': token }, body: JSON.stringify({ resumeId: chosen.resumeId, baseSource: chosen.source, front: draftFront, body: chosen.body, layout: chosen.layout }) });
+  assert.equal(draft.status, 200); assert.ok(draft.headers.get('content-type').includes('application/zip'));
+  const { decodeBackup } = await import('./node_modules/tech-resume-kit/src/backup.mjs');
+  assert.match(decodeBackup(Buffer.from(await draft.arrayBuffer())).source, /独立安装草稿/);
+  assert.equal((await editor.project.read()).source, chosen.source);
 } finally { await editor.close(); }
 `);
   await run(process.execPath, [path.join(outside, 'probe.mjs')]);
