@@ -8,20 +8,20 @@
 
 [校招样张 PDF](output/pdf/campus-ink-blue.pdf) · [AI 实习样张 PDF](output/pdf/ai-intern-ink-blue.pdf) · [两页经验样张 PDF](output/pdf/experienced-ink-blue.pdf) · [可直接填写的 resume.md](resume.md) · [版式配置](layout.yaml)
 
-**公开版本 v0.11.0。** 一个墨蓝主风格，提供校招与工作经验编排；支持照片裁剪、经历管理、章节排序与改名、草稿保护与恢复、多份简历、回收站、整库 ZIP、数据目录迁移，以及可翻页和缩放的离线 PDF 预览。
+**版本 v0.11.1。** 一个墨蓝主风格，提供校招与工作经验编排；支持照片裁剪、经历管理、章节排序与改名、草稿保护与恢复、多份简历、回收站、整库 ZIP、数据目录迁移，以及可翻页和缩放的离线 PDF 预览。
 
 校招样张使用“奶龙”姓名和白底竖版头像。图片来源与许可信息集中记录在[素材说明](assets/README.md)。
 
 ## 下载使用
 
-[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.0/tech-resume-windows-x64-0.11.0.zip) · Windows 10 / 11 x64
+[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-windows-x64-0.11.1.zip) · Windows 10 / 11 x64
 
 | 其他系统 | 下载 | 启动入口 |
 | --- | --- | --- |
-| macOS Apple Silicon | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.0/tech-resume-macos-app-arm64-0.11.0.zip) | 双击 TechResumeKit.app |
-| macOS Intel | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.0/tech-resume-macos-app-x64-0.11.0.zip) | 双击 TechResumeKit.app |
-| Linux x64 | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.0/tech-resume-linux-x64-0.11.0.tar.gz) | ./启动简历.sh |
-| Linux ARM64 | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.0/tech-resume-linux-arm64-0.11.0.tar.gz) | ./启动简历.sh |
+| macOS Apple Silicon | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-macos-app-arm64-0.11.1.zip) | 双击 TechResumeKit.app |
+| macOS Intel | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-macos-app-x64-0.11.1.zip) | 双击 TechResumeKit.app |
+| Linux x64 | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-linux-x64-0.11.1.tar.gz) | ./启动简历.sh |
+| Linux ARM64 | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-linux-arm64-0.11.1.tar.gz) | ./启动简历.sh |
 
 macOS 打开方式与 Linux 系统依赖见[跨平台使用说明](docs/portable.md)。
 
@@ -41,7 +41,7 @@ macOS 打开方式与 Linux 系统依赖见[跨平台使用说明](docs/portable
 
 “检查正式版本”可以下载并核验新版安装包，支持暂停、断线续传和重启后继续。点击“保存并打开新版”才切换程序，切换前会保存整库副本，启动失败时尝试返回原程序。
 
-运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.0/tech-resume-kit-0.11.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
+运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-kit-0.11.1.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
 
 ## 从源码开始
 
@@ -192,7 +192,9 @@ python -X utf8 scripts/verify-pdf.py --directory tmp/pdfs/boundary
 python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
 ```
 
-三份正式样张共 4 页，分别核对 49 / 46 / 71 个文本字段；9 份边界 PDF 共 13 页，另有超出两页和超长页眉两类拒绝用例。全部有效页面已渲染并逐页检查。验证覆盖嵌入字体、正文阅读顺序、链接、图像、纸张边界和标题跟随，记录见 [阶段 C 核验](docs/phase-c-review.md)。26 项自动测试覆盖解析、复制到外部目录、预览刷新及覆盖保护，不宣称所有 ATS 都能正确解析。
+阶段 C 的历史验收包含三份正式样张（共 4 页）、9 份边界 PDF（共 13 页）和当时的 26 项自动测试，详见 [阶段 C 核验](docs/phase-c-review.md)。
+
+当前 CI 验证解析、编辑与草稿恢复、PDF 导出、独立安装，以及 Windows / macOS / Linux 包的启动与离线使用；测试数量与具体安装包摘要读取每次发布的 `release-validation.json`。维护版验收见 [v0.11.1 发布验收记录](docs/release-0.11.1-readiness.md)。PDF 检查覆盖嵌入字体、正文阅读顺序、链接、独立图片、页面边界和标题跟随，不宣称所有 ATS 都能正确解析。
 
 数据链路为 `Markdown/YAML → ResumeDocument + LayoutConfig → HTML/CSS → Chromium PDF`。模型版本为 `0.2.0`；解析器与渲染器独立，工作台可直接生成相同结构，见 [模型与接口](docs/content-model.md)。阶段 A 的 JSON 留作回归基准，不再是默认编辑入口。
 
@@ -200,4 +202,4 @@ python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
 
 代码、样例文字和虚构校徽采用 [MIT](LICENSE)，中文字体按 [SIL OFL 1.1](assets/fonts/OFL.txt) 分发。图片的来源和使用说明见[素材说明](assets/README.md)。
 
-仓库 CI 使用公开样例、空白起步文件及合成边界内容，验证独立安装、导出、PDF 文字与逐页渲染。运行时依赖由 `package-lock.json` 固定，可选 PDF 复核工具由 `requirements-qa.txt` 固定。当前通过 GitHub 源码和 Release 提供 Windows 免安装包、源码 ZIP / TGZ 下载，未发布到 npm 注册表。工作台接入见[交接说明](docs/workbench-handoff.md)。
+仓库 CI 使用公开样例、空白起步文件及合成边界内容，验证独立安装、导出、PDF 文字与逐页渲染。运行时依赖由 `package-lock.json` 固定，可选 PDF 复核工具由 `requirements-qa.txt` 固定。当前通过 GitHub 源码和 Release 提供 Windows 免安装包、macOS 应用与命令行包、Linux 命令行包，以及源码 ZIP / TGZ 下载，未发布到 npm 注册表。工作台接入见[交接说明](docs/workbench-handoff.md)。

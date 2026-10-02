@@ -14,4 +14,4 @@
 
 发布组装核对升级报告对应的候选 ZIP 摘要，采用实际文件数量；macOS Intel 与 Apple Silicon `.app` 同时要求构建、启动和离线 PDF 报告，核对 ZIP 内版本、运行组件摘要与可执行权限，再收录到草稿。早期版本的实际验收记录见 [v0.9.0 发布准备](release-0.9-readiness.md)。
 
-Windows 候选还运行 `npm run test:journey`，串联首次启动、填写与图片、PDF 下载、保存冲突、重启草稿恢复、单份及整库备份恢复。报告在 `tmp/packages/user-journey-smoke.json`，PDF 和步骤截图在 `tmp/pdfs/user-journey/`；发布前需逐页渲染复核。发布组装还核对报告版本、候选 ZIP 摘要和全部流程结果，将用户流程记录写入 `release-validation.json`。v0.11.0 的正式发布文件与验收依据见 [v0.11.0 发布验收记录](release-0.11-readiness.md)。
+Windows 候选还运行 `npm run test:journey`，串联首次启动、填写与图片、PDF 下载、保存冲突、重启草稿恢复、单份及整库备份恢复。报告在 `tmp/packages/user-journey-smoke.json`，PDF 和步骤截图在 `tmp/pdfs/user-journey/`；发布前需逐页渲染复核。发布组装还核对报告版本、候选 ZIP 摘要和全部流程结果，将用户流程记录写入 `release-validation.json`。正式发布文件与验收依据见 [v0.11.0 发布验收记录](release-0.11-readiness.md)和 [v0.11.1 发布验收记录](release-0.11.1-readiness.md)。
