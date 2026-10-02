@@ -36,7 +36,7 @@ export function listResumeContent(source) {
 export function renameResumeSectionTitle(source, layout, { sectionId, title }) {
   const before = inspect(source), section = before.sections.find(item => item.id === sectionId);
   if (!section) throw new ResumeError('章节已变化，请重新载入', { code: 'CONFLICT' });
-  const nextTitle = line(title, '章节名称');
+  const nextTitle = line(title, '章节名称', 'title');
   if (nextTitle === section.title) return { source, layout: structuredClone(layout) };
   const heading = source.slice(section.start, section.contentStart);
   const opening = /^ {0,3}##[ \t]+/.exec(heading);
@@ -50,12 +50,12 @@ export function renameResumeSectionTitle(source, layout, { sectionId, title }) {
   resolveSectionOrder(after, layout);
   return { source: updated, layout: structuredClone(layout) };
 }
-function line(value, name) {
-  if (typeof value !== 'string' || !value.trim() || /[\r\n\x00]/.test(value) || value.length > 120) throw new ResumeError(`请填写同一行的${name}，最多 120 个字符`);
+function line(value, name, field) {
+  if (typeof value !== 'string' || !value.trim() || /[\r\n\x00]/.test(value) || value.length > 120) throw new ResumeError(`请填写同一行的${name}，最多 120 个字符`, { field });
   return value.trim();
 }
-function content(value) {
-  if (typeof value !== 'string' || !value.trim() || value.length > 200000 || value.includes('\x00')) throw new ResumeError('请填写内容，最多 200000 个字符');
+function content(value, field) {
+  if (typeof value !== 'string' || !value.trim() || value.length > 200000 || value.includes('\x00')) throw new ResumeError('请填写内容，最多 200000 个字符', { field });
   return normalized(value).trim();
 }
 function separated(raw, eol) {
@@ -63,8 +63,8 @@ function separated(raw, eol) {
   return raw + eol.repeat(Math.max(0, 2 - normalized(endings).length));
 }
 function skill(input, eol) {
-  const label = line(input?.label, '技能分组名称'), text = content(input?.text);
-  if (label.includes('*')) throw new ResumeError('技能分组名称不包含星号，加粗由工具自动处理');
+  const label = line(input?.label, '技能分组名称', 'label'), text = content(input?.text, 'text');
+  if (label.includes('*')) throw new ResumeError('技能分组名称不包含星号，加粗由工具自动处理', { field: 'label' });
   validateInline(text, { field: 'text' });
   return { label, text, raw: `- **${label}**：${text.replace(/\n/g, eol + '  ')}${eol}` };
 }
@@ -81,8 +81,8 @@ export function changeResumeContent(source, layout, { kind, action, sectionId, i
     if (sectionId) throw new ResumeError('目标章节已变化，请重新载入', { code: 'CONFLICT' });
     let id = kind === 'skills' ? 'skills' : 'additional', count = 2;
     while (sections.some(section => section.id === id)) id = `${kind === 'skills' ? 'skills' : 'additional'}-${count++}`;
-    const title = kind === 'skills' ? '专业技能' : line(input?.title, '章节名称');
-    const body = kind === 'skills' ? skill(input, eol).raw : content(input?.content).replace(/\n/g, eol) + eol;
+    const title = kind === 'skills' ? '专业技能' : line(input?.title, '章节名称', 'title');
+    const body = kind === 'skills' ? skill(input, eol).raw : content(input?.content, 'content').replace(/\n/g, eol) + eol;
     const preset = layout.preset === 'experience' ? ['skills','experience','internship','projects','education','additional'] : ['education','skills','internship','experience','projects','additional'];
     const rank = kind === 'skills' ? preset.indexOf('skills') : 100;
     const anchor = sections.find(section => (preset.indexOf(section.id) < 0 ? 100 : preset.indexOf(section.id)) > rank);
@@ -98,9 +98,9 @@ export function changeResumeContent(source, layout, { kind, action, sectionId, i
     if (!section) throw new ResumeError('章节已变化，请重新载入', { code: 'CONFLICT' });
     if (kind === 'lines') {
       if (action === 'edit') {
-        const title = input?.title === undefined ? section.title : line(input.title, '章节名称');
+        const title = input?.title === undefined ? section.title : line(input.title, '章节名称', 'title');
         const sameContent = typeof input?.content === 'string' && normalized(input.content) === normalized(section.content);
-        const next = sameContent ? normalized(section.content) : content(input?.content);
+        const next = sameContent ? normalized(section.content) : content(input?.content, 'content');
         const titleChanged = title !== section.title, contentChanged = next !== normalized(section.content);
         if (!titleChanged && !contentChanged) return { source, layout: nextLayout };
         const heading = titleChanged ? `## ${title} {#${section.id} .lines}${eol}` : source.slice(section.start, section.contentStart);

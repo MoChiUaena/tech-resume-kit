@@ -121,6 +121,7 @@ jobs:
             tmp/ui/save-recovery/
             tmp/ui/draft-backup/
             tmp/ui/automatic-drafts/
+            tmp/ui/error-guidance/
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: frontmatter-save-validation

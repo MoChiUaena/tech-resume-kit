@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 
-export function wireEntries({ request, managed, operationPayload, acceptState, getState, isSourceMode, isClean, toast }) {
+export function wireEntries({ request, managed, operationPayload, acceptState, getState, isSourceMode, isClean, toast, errorUI }) {
   let sequence = 0, editChoice, deleteChoice;
   function invalidate() {
     sequence++;
@@ -82,7 +82,7 @@ export function wireEntries({ request, managed, operationPayload, acceptState, g
     try {
       await change(editChoice, 'edit', { title: $('entry-title').value, subtitle: $('entry-subtitle').value, date: $('entry-date').value, stack: $('entry-stack').value, content: $('entry-details').value });
       $('entry-dialog').close();
-    } catch (error) { $('entry-error').textContent = error.message; $('entry-error').hidden = false; }
+    } catch (error) { errorUI.dialog('entry', error); }
   });
   $('entry-dialog').addEventListener('close', () => editChoice = undefined);
   $('entry-delete-cancel').addEventListener('click', () => $('entry-delete-dialog').close());

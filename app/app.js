@@ -8,6 +8,7 @@ import { wireGettingStarted } from './getting-started.mjs';
 import { wireSectionOrder } from './section-order.mjs';
 import { resumeFilename, safeFilenamePart } from './filename.mjs';
 import { wireDraftRecovery } from './draft-recovery.mjs';
+import { wireErrorGuidance } from './error-guidance.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
@@ -15,6 +16,8 @@ let cropSession, cropDrag, entryKind;
 let viewerReference;
 let draftBusy = false;
 let draftRecovery;
+let errorUI;
+const imageEpoch = { portrait: 0, schoolLogo: 0 };
 let entryManager, libraryManager, contentManager, gettingStarted, sectionOrder;
 async function request(url, data, raw = false) {
   const options = data === undefined ? {} : { method: 'POST', headers: { 'X-Resume-Token': token, ...(raw ? { 'X-Resume-Id': state.resumeId, 'X-Resume-Revision': state.revision } : { 'Content-Type': 'application/json' }) }, body: raw ? data : JSON.stringify({ resumeId: state?.resumeId, ...data }) };
@@ -23,9 +26,9 @@ async function request(url, data, raw = false) {
   return result;
 }
 function toast(text) { $('toast').textContent = text; $('toast').hidden = false; setTimeout(() => $('toast').hidden = true, 5000); }
-function clearSaveError() { $('save-error').hidden = true; $('save-error-message').textContent = ''; }
-function showUnsavedError(message, status = '保存失败') { $('save-status').textContent = status; $('page-status').textContent = $('pdf-frame').hidden ? '修改尚未保存' : '未保存 · 上次预览'; $('save-error-message').textContent = message; $('save-error').hidden = false; }
-function edited() { if (actionBusy) return; tick++; draftRecovery?.capture(); entryManager?.invalidate(); contentManager?.invalidate(); previewReady = false; $('preview-actions').hidden = true; $('save-status').textContent = '正在保存…'; $('page-status').textContent = '正在更新'; $('pdf-download').disabled = true; clearTimeout(timer); timer = setTimeout(save, 700); }
+function clearSaveError() { $('save-error').hidden = true; $('save-error-message').textContent = ''; errorUI?.clear('save'); }
+function showUnsavedError(error, status = '保存失败') { $('save-status').textContent = status; $('page-status').textContent = $('pdf-frame').hidden ? '修改尚未保存' : '未保存 · 上次预览'; if (errorUI) errorUI.show('save', error); else $('save-error-message').textContent = error.message || error; $('save-error').hidden = false; }
+function edited() { if (actionBusy) return; tick++; errorUI?.clear('preview'); errorUI?.invalidate('save'); $('preview-error').hidden = true; draftRecovery?.capture(); entryManager?.invalidate(); contentManager?.invalidate(); previewReady = false; $('preview-actions').hidden = true; $('save-status').textContent = '正在保存…'; $('page-status').textContent = '正在更新'; $('pdf-download').disabled = true; clearTimeout(timer); timer = setTimeout(save, 700); }
 function renderContacts() {
   $('contacts').replaceChildren();
   if (sourceMode) { $('contact-add').disabled = true; return; }
@@ -87,7 +90,7 @@ async function refreshPreview(revision, expectedTick = tick) {
     const source = `/document.pdf?revision=${result.revision}&resumeId=${resumeId}`;
     viewerReference = { source, sequence, tick: expectedTick };
     $('pdf-frame').src = `/pdf-viewer.html?file=${encodeURIComponent(source)}`;
-    $('pdf-frame').hidden = false; $('preview-placeholder').hidden = true; $('preview-error').hidden = true;
+    $('pdf-frame').hidden = false; $('preview-placeholder').hidden = true; $('preview-error').hidden = true; errorUI?.clear('preview');
     $('page-status').textContent = `${result.pageCount} 页 · 正在显示`; previewReady = true; $('pdf-download').disabled = false;
     $('preview-note').hidden = !result.warnings.length; $('preview-note').textContent = result.warnings.join(' ');
   } catch (error) {
@@ -95,9 +98,9 @@ async function refreshPreview(revision, expectedTick = tick) {
     $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); $('preview-placeholder').hidden = true; $('preview-note').hidden = true;
     $('preview-error').hidden = false;
     if (error.code === 'OVERFLOW') {
-      $('preview-error').textContent = `内容超过当前${state.layout.page.maxPages === 1 ? '一' : '两'}页上限。可以精简正文或调整版式，字号保持原设置。`;
+      errorUI?.show('preview', Object.assign(new Error(`内容超过当前${state.layout.page.maxPages === 1 ? '一' : '两'}页上限。可以精简正文或调整版式，字号保持原设置。`), { details: error.details }));
       $('preview-actions').hidden = false; $('preview-two-pages').hidden = state.layout.page.maxPages !== 1;
-    } else $('preview-error').textContent = [error.details?.line ? `第 ${error.details.line} 行` : '', error.details?.field ? `字段 ${error.details.field}` : '', error.message].filter(Boolean).join('\n');
+    } else errorUI?.show('preview', error);
     $('page-status').textContent = '需要调整内容';
   }
 }
@@ -115,7 +118,7 @@ async function save() {
     await draftRecovery?.flush();
     const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; state.gettingStarted = result.gettingStarted; gettingStarted?.refresh(); savedTick = captured; draftRecovery?.saved(draftToken);
     if (tick === captured) { clearSaveError(); $('save-status').textContent = '已自动保存'; refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
-  } catch (error) { showUnsavedError(error.message); pending = false; }
+  } catch (error) { showUnsavedError(error); pending = false; }
   finally { busy = false; $('save-retry').disabled = actionBusy; draftRecovery?.render(); if (!actionBusy && pending && tick !== savedTick) { pending = false; save(); } }
 }
 async function settle() { await Promise.all([...pendingUploads]); clearTimeout(timer); await save(); while (busy) await new Promise(resolve => setTimeout(resolve, 60)); if (tick !== savedTick) throw new Error('内容尚未保存，请先修正保存错误'); await draftRecovery?.flush(); }
@@ -142,7 +145,7 @@ async function managed(action, { saveFirst = true } = {}) {
     libraryManager?.render(); gettingStarted?.refresh();
   }
 }
-function acceptState(result) { draftRecovery?.abandon(); state = result; tick = savedTick = 0; previewSequence++; viewerReference = undefined; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); draftRecovery?.review(); }
+function acceptState(result) { errorUI?.clearAll(); for (const key of Object.keys(imageEpoch)) imageEpoch[key]++; draftRecovery?.abandon(); state = result; tick = savedTick = 0; previewSequence++; viewerReference = undefined; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); draftRecovery?.review(); }
 function download(contents, filename, type) { const blob = new Blob([contents], { type }); const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 for (const input of document.querySelectorAll('[data-person]')) input.addEventListener('input', () => { const key = input.dataset.person; if (input.value || ['name', 'target'].includes(key)) state.front.person[key] = input.value; else delete state.front.person[key]; edited(); });
 $('body').addEventListener('input', edited);
@@ -161,18 +164,24 @@ $('save-draft').addEventListener('click', async () => {
   } catch (error) { toast(`草稿下载失败：${error.message}`); }
   finally { draftBusy = false; $('save-draft').disabled = actionBusy; }
 });
+function showKnownSource() {
+  sourceMode = true; $('body').value = state.source; $('person-fields').hidden = true; $('contacts').hidden = true; $('contact-add').disabled = true; $('source-mode').textContent = '返回正文编辑';
+  for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = true;
+  for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = true;
+  entryManager?.invalidate(); contentManager?.invalidate(); gettingStarted?.refresh();
+}
 $('source-mode').addEventListener('click', async () => {
   try {
-    await settle(); state = await request('/api/state');
+    await settle(); state = await request('/api/state'); errorUI?.clearAll();
     if (sourceMode) populate();
-    else { sourceMode = true; $('body').value = state.source; $('person-fields').hidden = true; $('contacts').hidden = true; $('contact-add').disabled = true; $('source-mode').textContent = '返回正文编辑'; }
+    else showKnownSource();
     for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
     for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
-    entryManager?.refresh(); contentManager?.refresh(); gettingStarted?.refresh();
+    entryManager?.refresh(); contentManager?.refresh(); gettingStarted?.refresh(); refreshPreview(state.revision);
   } catch (error) { toast(error.message); }
 });
 $('contact-add').addEventListener('click', () => { state.front.person.contacts.push({ text: '', href: 'mailto:' }); renderContacts(); edited(); });
-function openSettings() { $('settings').showModal(); sectionOrder?.refresh(); }
+function openSettings() { if (!$('settings').open) $('settings').showModal(); sectionOrder?.refresh(); }
 $('settings-open').addEventListener('click', openSettings);
 $('preview-layout').addEventListener('click', openSettings);
 $('preview-two-pages').addEventListener('click', async () => {
@@ -187,10 +196,10 @@ for (const key of ['portrait', 'schoolLogo']) {
   $(`${key}-enabled`).addEventListener('change', event => { state.layout.images[key].enabled = event.target.checked; edited(); });
   $(`${key}-upload`).addEventListener('change', async event => {
     const file = event.target.files[0]; if (!file) return;
-    if (key === 'portrait') { try { await openCrop(file); } catch (error) { toast(error.message); } event.target.value = ''; return; }
-    const resumeId = state.resumeId;
-    const upload = (async () => { if (file.size > 5_000_000) throw new Error('图片请控制在 5 MB 以内'); if (sourceMode) throw new Error('请先返回正文编辑，再选择图片'); const asset = await request(`/api/image/${key}`, file, true); if (state.resumeId !== resumeId) return; state.front.assets ||= {}; state.front.assets[key] = asset; state.layout.images[key].enabled = true; $(`${key}-enabled`).checked = true; $(`${key}-enabled`).disabled = false; $(`${key}-file`).textContent = file.name; edited(); })();
-    pendingUploads.add(upload); try { await upload; } catch (error) { toast(error.message); } finally { pendingUploads.delete(upload); event.target.value = ''; }
+    const resumeId = state.resumeId, attempt = ++imageEpoch[key]; errorUI?.clear(key);
+    if (key === 'portrait') { try { await openCrop(file, attempt); } catch (error) { if (state.resumeId === resumeId && imageEpoch[key] === attempt) errorUI?.image(key, error); } event.target.value = ''; return; }
+    const upload = (async () => { if (file.size > 5_000_000) throw new Error('图片请控制在 5 MB 以内'); if (sourceMode) throw new Error('请先返回正文编辑，再选择图片'); const asset = await request(`/api/image/${key}`, file, true); if (state.resumeId !== resumeId || imageEpoch[key] !== attempt) return; state.front.assets ||= {}; state.front.assets[key] = asset; state.layout.images[key].enabled = true; $(`${key}-enabled`).checked = true; $(`${key}-enabled`).disabled = false; $(`${key}-file`).textContent = file.name; edited(); })();
+    pendingUploads.add(upload); try { await upload; } catch (error) { if (state.resumeId === resumeId && imageEpoch[key] === attempt) errorUI?.image(key, error); } finally { pendingUploads.delete(upload); event.target.value = ''; }
   });
 }
 $('markdown-download').addEventListener('click', async () => { try { await settle(); download(state.source, resumeFilename(state.front?.person?.name, state.resumeName, 'md'), 'text/markdown;charset=utf-8'); } catch (error) { toast(error.message); } });
@@ -261,26 +270,28 @@ function drawPhoto() {
   $('crop-zoom').value = cropSession.model.zoom;
   $('crop-zoom-value').textContent = `${Math.round(cropSession.model.zoom * 100)}%`;
 }
-async function openCrop(file) {
+async function openCrop(file, attempt = imageEpoch.portrait) {
   if (sourceMode) throw new Error('请先返回正文编辑，再选择照片');
   if (file.size > 5_000_000) throw new Error('照片请控制在 5 MB 以内');
   const resumeId = state.resumeId, image = new Image(), imageUrl = URL.createObjectURL(file);
   try {
     image.src = imageUrl; await image.decode();
+    if (imageEpoch.portrait !== attempt) { URL.revokeObjectURL(imageUrl); return; }
     if (!image.naturalWidth || !image.naturalHeight || image.naturalWidth > 20000 || image.naturalHeight > 20000) throw new Error('照片尺寸不正确');
     if (state.resumeId !== resumeId) throw new Error('简历已经切换，请重新选择照片');
     if (cropSession) URL.revokeObjectURL(cropSession.url);
     cropSession = { image, url: imageUrl, model: createCropModel(image.naturalWidth, image.naturalHeight), resumeId };
-    drawPhoto(); $('crop-dialog').showModal();
-  } catch (error) { URL.revokeObjectURL(imageUrl); throw new Error(error.message || '照片无法读取，请选择 PNG 或 JPEG'); }
+    errorUI?.clear('crop'); drawPhoto(); $('crop-dialog').showModal();
+  } catch (error) { URL.revokeObjectURL(imageUrl); throw new Error(error.name === 'EncodingError' ? '照片无法读取，请选择有效的 PNG 或 JPEG' : error.message || '照片无法读取，请选择 PNG 或 JPEG'); }
 }
 $('crop-existing').addEventListener('click', async () => {
+  const resumeId = state.resumeId, attempt = ++imageEpoch.portrait; errorUI?.clear('portrait');
   try {
     await settle();
     const response = await fetch(`/api/portrait?resumeId=${state.resumeId}&revision=${state.revision}`);
     if (!response.ok) { const result = await response.json(); throw new Error(result.error?.message || '照片无法读取'); }
-    await openCrop(await response.blob());
-  } catch (error) { toast(error.message); }
+    await openCrop(await response.blob(), attempt);
+  } catch (error) { if (state.resumeId === resumeId && imageEpoch.portrait === attempt) errorUI?.image('portrait', error); }
 });
 $('crop-zoom').addEventListener('input', event => { if (cropSession) { cropSession.model.zoom = Number(event.target.value); drawPhoto(); } });
 for (const [id, quarterTurns] of [['crop-rotate-left',-1],['crop-rotate-right',1]]) $(id).addEventListener('click', () => { if (cropSession) { rotateCrop(cropSession.model, quarterTurns); drawPhoto(); } });
@@ -307,7 +318,7 @@ $('crop-cancel').addEventListener('click', () => $('crop-dialog').close());
 $('crop-dialog').addEventListener('close', () => { if (cropSession) URL.revokeObjectURL(cropSession.url); cropSession = undefined; cropDrag = undefined; });
 $('crop-apply').addEventListener('click', async () => {
   if (!cropSession) return;
-  const photo = cropSession;
+  const photo = cropSession; errorUI?.clear('crop');
   try {
     await managed(async () => {
       if (photo.resumeId !== state.resumeId) throw new Error('简历已经切换，请重新裁剪');
@@ -318,7 +329,7 @@ $('crop-apply').addEventListener('click', async () => {
       $('crop-dialog').close();
     });
     edited(); await settle();
-  } catch (error) { toast(error.message); }
+  } catch (error) { if (state.resumeId === photo.resumeId && ($('crop-dialog').open || tick === savedTick)) errorUI?.image('portrait', error, $('crop-dialog').open); }
 });
 const entryLabels = {
   education: ['添加教育经历','学校名称','专业 / 学历','课程、成绩或奖项，每行一条'],
@@ -345,18 +356,19 @@ $('entry-submit').addEventListener('click', async () => {
     $('body').value = result.body; if (result.sectionOrder) state.layout.sectionOrder = result.sectionOrder;
     $('entry-dialog').close(); edited();
     $('body').focus(); $('body').setSelectionRange(result.selectionStart, result.selectionStart); await settle();
-  } catch (error) { $('entry-error').textContent = error.message; $('entry-error').hidden = false; }
+  } catch (error) { errorUI?.dialog('entry', error); }
 });
-entryManager = wireEntries({ request, managed, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast });
-contentManager = wireContent({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast });
+entryManager = wireEntries({ request, managed, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast, errorUI: { dialog: (...args) => errorUI.dialog(...args) } });
+contentManager = wireContent({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast, errorUI: { dialog: (...args) => errorUI.dialog(...args) } });
 libraryManager = wireLibrary({ request, managed, settle, operationPayload, acceptState, getState: () => state, toast });
 wireSystem({ request, managed, settle, operationPayload, acceptState });
-sectionOrder = wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState: () => state });
+sectionOrder = wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState: () => state, errorUI: { dialog: (...args) => errorUI.dialog(...args) } });
 
 gettingStarted = wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, toast, openSettings });
 draftRecovery = wireDraftRecovery({ request, getState: () => state, getPayload: () => ({ layout: state.layout, ...(sourceMode ? { source: $('body').value } : { baseSource: state.source, front: state.front, body: $('body').value }) }), isClean: () => tick === savedTick && !busy && !actionBusy, toast, applyDraft: record => {
-  const snapshot = record.payload, previous = state;
+  const snapshot = record.payload, previous = state; errorUI?.clearAll();
   state = { ...state, revision: record.baseRevision, layout: snapshot.layout, ...(typeof snapshot.source === 'string' ? { source: snapshot.source, front: null, body: snapshot.source } : { source: snapshot.baseSource, front: snapshot.front, body: snapshot.body }) };
   try { populate(); } catch (error) { state = previous; populate(); throw error; }
   edited(); $('body').focus();
 } });
+errorUI = wireErrorGuidance({ getContext: () => ({ resumeId: state?.resumeId, revision: state?.revision, tick, source: state?.source, body: $('body').value, sourceMode, clean: tick === savedTick && !busy && !actionBusy, actionBusy }), openSettings, showSource: showKnownSource });

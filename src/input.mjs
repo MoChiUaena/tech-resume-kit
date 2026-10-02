@@ -112,6 +112,7 @@ export function parseResume(source, file = 'resume.md') {
     }
     index = next;
   }
+  if (!document.sections.length) throw new ResumeError('请至少填写一个简历章节', { file, line: end + 2, field: 'sections', reason: 'EMPTY_BODY' });
   const result = validate(documentSchema, document, locations);
   for (const [index, contact] of result.person.contacts.entries()) validateLink(contact.href, { ...locations.get(`person.contacts.${index}.href`), field: `person.contacts.${index}.href` });
   return { document: result, locations };

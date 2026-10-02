@@ -40,10 +40,10 @@ export function listResumeEntries(source) {
   }));
 }
 
-function line(value, label, required = false) {
-  if (typeof value !== 'string' || /[\r\n\x00]/.test(value)) throw new ResumeError(`${label}需要写在同一行`);
+function line(value, label, required = false, field) {
+  if (typeof value !== 'string' || /[\r\n\x00]/.test(value)) throw new ResumeError(`${label}需要写在同一行`, { field });
   const text = value.trim();
-  if (required && !text) throw new ResumeError(`请填写${label}`);
+  if (required && !text) throw new ResumeError(`请填写${label}`, { field });
   return text;
 }
 const normalized = value => value.replace(/\r\n?/g, '\n');
@@ -59,9 +59,9 @@ export function changeResumeEntry(source, layout, { action, sectionId, index, in
   const entry = section.entries[index], raw = source.slice(entry.start, entry.end), eol = source.includes('\r\n') ? '\r\n' : '\n';
   let updated, nextLayout = structuredClone(layout);
   if (action === 'edit') {
-    const title = line(input?.title, '名称', true), date = line(input?.date, '时间', true);
-    const subtitle = line(input?.subtitle ?? '', '专业或职责'), stack = line(input?.stack ?? '', '技术栈');
-    if (typeof input?.content !== 'string' || !input.content.trim()) throw new ResumeError('请填写经历正文');
+    const title = line(input?.title, '名称', true, 'title'), date = line(input?.date, '时间', true, 'date');
+    const subtitle = line(input?.subtitle ?? '', '专业或职责', false, 'subtitle'), stack = line(input?.stack ?? '', '技术栈', false, 'stack');
+    if (typeof input?.content !== 'string' || !input.content.trim()) throw new ResumeError('请填写经历正文', { field: 'content' });
     const patches = [];
     if (title !== entry.title) patches.push({ start: entry.start, end: entry.headingEnd, value: `### ${title}${eol}` });
     const values = { date, subtitle, stack };
