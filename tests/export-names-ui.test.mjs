@@ -131,7 +131,7 @@ test('a PDF export rejected after an external edit shows the conflict and restor
 
 test('editing a name in full Markdown gives PDF and Markdown downloads the saved source name', async t => {
   const { page, errors } = await exportFixture(t);
-  await page.locator('#source-mode').click();
+  await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'hidden' }); await page.locator('#source-mode:not([disabled])').waitFor();
   const source = await page.locator('#body').inputValue(), changed = source.replace('奶龙', '源文件样张');
   assert.notEqual(changed, source); await page.locator('#body').fill(changed);
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
