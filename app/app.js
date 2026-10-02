@@ -117,7 +117,7 @@ async function save() {
     const payload = structuredClone({ resumeId: state.resumeId, revision: state.revision, layout: state.layout, ...(sourceMode ? { source: $('body').value } : { front: state.front, body: $('body').value }) });
     await draftRecovery?.flush();
     const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; state.gettingStarted = result.gettingStarted; gettingStarted?.refresh(); savedTick = captured; draftRecovery?.saved(draftToken);
-    if (tick === captured) { clearSaveError(); $('save-status').textContent = '已自动保存'; refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
+    if (tick === captured) { if (sourceMode) state.front = result.front; clearSaveError(); $('save-status').textContent = '已自动保存'; refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
   } catch (error) { showUnsavedError(error); pending = false; }
   finally { busy = false; $('save-retry').disabled = actionBusy; draftRecovery?.render(); if (!actionBusy && pending && tick !== savedTick) { pending = false; save(); } }
 }

@@ -127,3 +127,19 @@ test('a PDF export rejected after an external edit shows the conflict and restor
     assert.deepEqual(errors, []);
   } finally { paused.release(); }
 });
+
+
+test('editing a name in full Markdown gives PDF and Markdown downloads the saved source name', async t => {
+  const { page, errors } = await exportFixture(t);
+  await page.locator('#source-mode').click();
+  const source = await page.locator('#body').inputValue(), changed = source.replace('奶龙', '源文件样张');
+  assert.notEqual(changed, source); await page.locator('#body').fill(changed);
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  const [pdf] = await Promise.all([page.waitForEvent('download'), page.locator('#pdf-download').click()]);
+  assert.equal(pdf.suggestedFilename(), '源文件样张-我的简历.pdf');
+  assert.equal((await PDFDocument.load(await readFile(await pdf.path()))).getPageCount(), 1);
+  const [markdown] = await Promise.all([page.waitForEvent('download'), page.locator('#markdown-download').click()]);
+  assert.equal(markdown.suggestedFilename(), '源文件样张-我的简历.md');
+  assert.equal(await readFile(await markdown.path(), 'utf8'), changed);
+  assert.deepEqual(errors, []);
+});
