@@ -146,6 +146,7 @@ jobs:
           npm run package:release
           npm run package:windows
           npm run test:windows
+          npm run test:journey
       - name: Download the published upgrade baseline
         env:
           GH_TOKEN: ${{ github.token }}
@@ -160,6 +161,7 @@ jobs:
           python scripts/check-release-proofs.py --version $version
           python -m pip install -r requirements-qa.txt
           python scripts/verify-pdf.py --directory tmp/pdfs/upgrade
+          python scripts/verify-pdf.py --directory tmp/pdfs/user-journey
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: windows-portable-validation
@@ -169,6 +171,8 @@ jobs:
             tmp/packages/tech-resume-windows-x64-*.zip
             tmp/packages/windows-smoke.json
             tmp/packages/upgrade-smoke.json
+            tmp/packages/user-journey-smoke.json
+            tmp/pdfs/user-journey/
             tmp/pdfs/upgrade/
   posix-download:
     name: Portable ${{ matrix.label }}
