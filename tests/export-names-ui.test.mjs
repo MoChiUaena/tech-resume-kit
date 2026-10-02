@@ -143,3 +143,35 @@ test('editing a name in full Markdown gives PDF and Markdown downloads the saved
   assert.equal(await readFile(await markdown.path(), 'utf8'), changed);
   assert.deepEqual(errors, []);
 });
+
+
+test('source-mode switching protects input while loading and restores controls after success or failure', async t => {
+  const { page, errors, app } = await exportFixture(t);
+  await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'hidden' });
+  const source = await page.locator('#body').inputValue(), changed = source.replace('奶龙', '模式切换样张');
+  await page.locator('#body').fill(changed);
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  let releaseState, enteredState;
+  const entered = new Promise(resolve => enteredState = resolve), gate = new Promise(resolve => releaseState = resolve);
+  await page.route('**/api/state', async route => { const response = await route.fetch(); enteredState(); await gate; await route.fulfill({ response }); });
+  await page.locator('#source-mode').click(); await entered;
+  try {
+    for (const id of ['body', 'source-mode', 'pdf-download', 'markdown-download', 'resume-select']) assert.equal(await page.locator('#' + id).isDisabled(), true, id + ' must stay disabled during mode loading');
+    await page.keyboard.press('Control+s');
+    assert.equal((await app.project.read()).source, changed);
+  } finally { releaseState(); }
+  await page.locator('#person-fields').waitFor({ state: 'visible' });
+  await page.locator('#source-mode:not([disabled])').waitFor();
+  assert.equal(await page.locator('#name').inputValue(), '模式切换样张');
+  assert.equal(await page.locator('#body').isDisabled(), false);
+  await page.unroute('**/api/state');
+  await page.route('**/api/state', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { message: '模式载入暂时失败' } }) }));
+  await page.locator('#source-mode').click();
+  await page.locator('#toast').filter({ hasText: '模式载入暂时失败' }).waitFor({ state: 'visible' });
+  await page.locator('#source-mode:not([disabled])').waitFor();
+  assert.equal(await page.locator('#person-fields').isVisible(), true);
+  assert.equal(await page.locator('#name').inputValue(), '模式切换样张');
+  assert.equal(await page.locator('#body').isDisabled(), false);
+  assert.equal((await app.project.read()).source, changed);
+  assert.deepEqual(errors, []);
+});

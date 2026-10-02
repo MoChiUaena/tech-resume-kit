@@ -114,10 +114,10 @@ async function save() {
   if (busy) { pending = true; return; } if (tick === savedTick) return;
   busy = true; const captured = tick, draftToken = draftRecovery?.token(); $('save-retry').disabled = true; $('save-status').textContent = '正在保存…';
   try {
-    const payload = structuredClone({ resumeId: state.resumeId, revision: state.revision, layout: state.layout, ...(sourceMode ? { source: $('body').value } : { front: state.front, body: $('body').value }) });
+    const savingSourceMode = sourceMode, payload = structuredClone({ resumeId: state.resumeId, revision: state.revision, layout: state.layout, ...(savingSourceMode ? { source: $('body').value } : { front: state.front, body: $('body').value }) });
     await draftRecovery?.flush();
     const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; state.gettingStarted = result.gettingStarted; gettingStarted?.refresh(); savedTick = captured; draftRecovery?.saved(draftToken);
-    if (tick === captured) { if (sourceMode) state.front = result.front; clearSaveError(); $('save-status').textContent = '已自动保存'; refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
+    if (tick === captured) { if (savingSourceMode) state.front = result.front; clearSaveError(); $('save-status').textContent = '已自动保存'; refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
   } catch (error) { showUnsavedError(error); pending = false; }
   finally { busy = false; $('save-retry').disabled = actionBusy; draftRecovery?.render(); if (!actionBusy && pending && tick !== savedTick) { pending = false; save(); } }
 }
@@ -172,12 +172,14 @@ function showKnownSource() {
 }
 $('source-mode').addEventListener('click', async () => {
   try {
-    await settle(); state = await request('/api/state'); errorUI?.clearAll();
-    if (sourceMode) populate();
-    else showKnownSource();
-    for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
-    for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
-    entryManager?.refresh(); contentManager?.refresh(); gettingStarted?.refresh(); refreshPreview(state.revision);
+    await managed(async () => {
+      state = await request('/api/state'); errorUI?.clearAll();
+      if (sourceMode) populate();
+      else showKnownSource();
+      for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
+      for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
+      entryManager?.refresh(); contentManager?.refresh(); gettingStarted?.refresh(); refreshPreview(state.revision);
+    });
   } catch (error) { toast(error.message); }
 });
 $('contact-add').addEventListener('click', () => { state.front.person.contacts.push({ text: '', href: 'mailto:' }); renderContacts(); edited(); });
