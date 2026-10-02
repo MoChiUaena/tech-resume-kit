@@ -1,6 +1,6 @@
 # 跨平台启动包
 
-[v0.10.0 正式发布页](https://github.com/MoChiUaena/tech-resume-kit/releases/tag/v0.10.0)提供 Windows、macOS 和 Linux 启动包。按系统与芯片选择文件，完整解压；包内包含 Node、Chromium、字体和依赖，不需要安装 Node 或 npm。
+[v0.11.0 正式发布页](https://github.com/MoChiUaena/tech-resume-kit/releases/tag/v0.11.0)提供 Windows、macOS 和 Linux 启动包。按系统与芯片选择文件，完整解压；包内包含 Node、Chromium、字体和依赖，不需要安装 Node 或 npm。
 
 | 平台 | 包名中的标记 | 启动入口 | CI 验证环境 |
 | --- | --- | --- | --- |
