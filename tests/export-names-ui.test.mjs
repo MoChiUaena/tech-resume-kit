@@ -175,3 +175,29 @@ test('source-mode switching protects input while loading and restores controls a
   assert.equal((await app.project.read()).source, changed);
   assert.deepEqual(errors, []);
 });
+
+
+test('editing during a delayed draft checkpoint prevents mode switching from replacing newer input', async t => {
+  const { page, app, errors } = await exportFixture(t);
+  await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'hidden' });
+  let releaseClear, enteredClear, first = true;
+  const entered = new Promise(resolve => enteredClear = resolve), gate = new Promise(resolve => releaseClear = resolve);
+  await page.route('**/api/drafts/clear', async route => { if (first) { first = false; enteredClear(); await gate; } await route.continue(); });
+  const source = await page.locator('#body').inputValue(), saved = source.replace('奶龙', '已保存样张');
+  await page.locator('#body').fill(saved); await entered;
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  assert.equal((await app.project.read()).source, saved);
+  const newer = saved.replace('已保存样张', '等待期间的新姓名');
+  try {
+    await page.locator('#source-mode').click();
+    await page.locator('#body').fill(newer);
+  } finally { releaseClear(); }
+  await page.waitForFunction(() => !document.getElementById('person-fields').hidden || document.getElementById('toast').textContent.includes('内容尚未保存'));
+  assert.equal(await page.locator('#body').inputValue(), newer, 'a delayed draft checkpoint must not let mode switching overwrite newer source');
+  assert.equal(await page.locator('#person-fields').isVisible(), false);
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  assert.equal((await app.project.read()).source, newer);
+  await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#name').inputValue(), '等待期间的新姓名');
+  assert.deepEqual(errors, []);
+});
