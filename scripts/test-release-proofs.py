@@ -4,8 +4,11 @@ from pathlib import Path
 import plistlib
 import stat
 import tempfile
+import subprocess
+import sys
 import unittest
 import zipfile
+import release_proofs
 from release_proofs import sha, verify_upgrade, verify_macos_app, verified_draft_assets
 
 class ReleaseProofChecks(unittest.TestCase):
@@ -43,6 +46,57 @@ class ReleaseProofChecks(unittest.TestCase):
                 report = self.upgrade(); report[field] = value
                 with self.assertRaises(ValueError):
                     verify_upgrade(report, '0.10.0', 'a' * 64)
+
+    def journey(self):
+        report = {'schemaVersion': 1, 'version': '0.11.0', 'archiveSha256': 'a' * 64,
+                  'portraitRatio': '23:31', 'pdfDownloads': 3,
+                  'steps': [{'screenshot': f'{index:02d}-step.png', 'description': 'Completed user action', 'passed': True} for index in range(1, 11)]}
+        for field in ['firstLaunch', 'starterChosen', 'formValidationLocated', 'independentLogo', 'singleBackupRestored',
+                      'conflictPreserved', 'draftZipRestored', 'draftSurvivedRestart', 'wholeLibraryRestored',
+                      'restartPersistence', 'smallScreen', 'noNodeInPath', 'offlineProxy', 'noRemoteRequests']:
+            report[field] = True
+        return report
+
+    def test_user_journey_evidence_is_bound_to_the_candidate_archive(self):
+        report = self.journey()
+        self.assertIs(release_proofs.verify_user_journey(report, '0.11.0', 'a' * 64), report)
+        for field, value in [('version', '0.11.0-dev.3'), ('archiveSha256', 'b' * 64)]:
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                release_proofs.verify_user_journey({**report, field: value}, '0.11.0', 'a' * 64)
+
+    def test_user_journey_rejects_incomplete_recovery_and_offline_evidence(self):
+        for field, value in [('conflictPreserved', False), ('draftSurvivedRestart', None), ('noRemoteRequests', 'true'),
+                             ('portraitRatio', '1:1'), ('pdfDownloads', 2), ('steps', self.journey()['steps'][:-1])]:
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                release_proofs.verify_user_journey({**self.journey(), field: value}, '0.11.0', 'a' * 64)
+        report = self.journey(); report['steps'][-1]['passed'] = False
+        with self.assertRaises(ValueError):
+            release_proofs.verify_user_journey(report, '0.11.0', 'a' * 64)
+
+    def test_windows_cli_reads_chinese_reports_with_a_non_utf8_default(self):
+        with tempfile.TemporaryDirectory(prefix='release-chinese-proof-') as directory:
+            folder = Path(directory); archive = folder / 'tech-resume-windows-x64-0.11.0.zip'
+            archive.write_bytes(b'candidate archive fixture')
+            digest = sha(archive)
+            upgrade = self.upgrade(); upgrade.update(to='0.11.0', candidateArchiveSha256=digest)
+            journey = self.journey(); journey['archiveSha256'] = digest; journey['steps'][0]['description'] = '第'
+            for name, report in [('upgrade-smoke.json', upgrade), ('user-journey-smoke.json', journey)]:
+                (folder / name).write_text(json.dumps(report, ensure_ascii=False), encoding='utf-8')
+            script = Path(__file__).with_name('check-release-proofs.py').resolve()
+            probe = """import io,runpy,sys
+from pathlib import Path
+sys.stdout.reconfigure(encoding='utf-8');sys.stderr.reconfigure(encoding='utf-8')
+original=io.open
+def default_gbk(file,mode='r',buffering=-1,encoding=None,*args,**kwargs):
+    if 'b' not in mode and encoding in (None,'locale'): encoding='gbk'
+    return original(file,mode,buffering,encoding,*args,**kwargs)
+io.open=default_gbk
+script=sys.argv.pop(1);sys.argv[0]=script;sys.path.insert(0,str(Path(script).parent))
+runpy.run_path(script,run_name='__main__')
+"""
+            result = subprocess.run([sys.executable, '-X', 'utf8=0', '-c', probe, str(script), '--version', '0.11.0', '--directory', str(folder)], capture_output=True, text=True, encoding='utf-8')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('user journey', result.stdout)
 
     def bundle(self, folder, arch='x64', change=None, smoke_change=None):
         version = '0.9.0'; name = f'tech-resume-macos-app-{arch}-{version}'
