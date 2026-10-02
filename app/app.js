@@ -121,7 +121,15 @@ async function save() {
   } catch (error) { showUnsavedError(error); pending = false; }
   finally { busy = false; $('save-retry').disabled = actionBusy; draftRecovery?.render(); if (!actionBusy && pending && tick !== savedTick) { pending = false; save(); } }
 }
-async function settle() { await Promise.all([...pendingUploads]); clearTimeout(timer); await save(); while (busy) await new Promise(resolve => setTimeout(resolve, 60)); if (tick !== savedTick) throw new Error('内容尚未保存，请先修正保存错误'); await draftRecovery?.flush(); if (tick !== savedTick) throw new Error('内容尚未保存，请先修正保存错误'); }
+async function settle() {
+  do {
+    await Promise.all([...pendingUploads]); clearTimeout(timer); await save();
+    while (busy) await new Promise(resolve => setTimeout(resolve, 60));
+    if (tick !== savedTick) throw new Error('内容尚未保存，请先修正保存错误');
+    await draftRecovery?.flush();
+  } while (pendingUploads.size);
+  if (tick !== savedTick) throw new Error('内容尚未保存，请先修正保存错误');
+}
 async function managed(action, { saveFirst = true } = {}) {
   if (actionBusy) return;
   if (saveFirst) await settle(); if (actionBusy) return; actionBusy = true;

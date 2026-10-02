@@ -201,3 +201,39 @@ test('editing during a delayed draft checkpoint prevents mode switching from rep
   assert.equal(await page.locator('#name').inputValue(), '等待期间的新姓名');
   assert.deepEqual(errors, []);
 });
+
+
+test('mode switching includes a school logo selected while waiting for an earlier draft checkpoint', async t => {
+  const { page, app, errors, directory } = await exportFixture(t);
+  const originalLogo = (await app.project.read()).front.assets.schoolLogo.src;
+  const logo = await readFile(new URL('../assets/images/chengchuan-logo.png', import.meta.url));
+  let releaseClear, enteredClear, releaseUpload, enteredUpload, releaseState, enteredState, first = true;
+  const clearEntered = new Promise(resolve => enteredClear = resolve), clearGate = new Promise(resolve => releaseClear = resolve);
+  const uploadEntered = new Promise(resolve => enteredUpload = resolve), uploadGate = new Promise(resolve => releaseUpload = resolve);
+  const stateEntered = new Promise(resolve => enteredState = resolve), stateGate = new Promise(resolve => releaseState = resolve);
+  await page.route('**/api/drafts/clear', async route => { if (first) { first = false; enteredClear(); await clearGate; } await route.continue(); });
+  await page.route('**/api/image/schoolLogo', async route => { enteredUpload(); await uploadGate; await route.continue(); });
+  await page.route('**/api/state', async route => { const response = await route.fetch(); enteredState(); await stateGate; await route.fulfill({ response }); });
+  await page.locator('#name').fill('图片等待样张'); await clearEntered;
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  try {
+    await page.locator('#source-mode').click();
+    await page.locator('#schoolLogo-upload').setInputFiles({ name: '等待期间的新校徽.png', mimeType: 'image/png', buffer: logo });
+    await uploadEntered;
+    const cleared = page.waitForResponse(response => response.url().endsWith('/api/drafts/clear'));
+    releaseClear(); await (await cleared).finished();
+    await Promise.race([stateEntered, new Promise(resolve => setTimeout(resolve, 250))]);
+    releaseUpload();
+    await page.locator('#schoolLogo-file').filter({ hasText: '等待期间的新校徽.png' }).waitFor({ state: 'attached' });
+    releaseState();
+    await page.locator('#person-fields').waitFor({ state: 'hidden' });
+    await page.locator('#source-mode:not([disabled])').waitFor();
+    await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+    const saved = await app.project.read();
+    assert.notEqual(saved.front.assets.schoolLogo.src, originalLogo, 'the newly selected logo must remain referenced in the saved resume');
+    assert.deepEqual(await readFile(path.join(directory, saved.front.assets.schoolLogo.src)), logo);
+    assert.ok((await page.locator('#body').inputValue()).includes(saved.front.assets.schoolLogo.src));
+    assert.equal(saved.front.person.name, '图片等待样张');
+    assert.deepEqual(errors, []);
+  } finally { releaseClear(); releaseUpload(); releaseState(); }
+});
