@@ -17,4 +17,4 @@ macOS 要求 14 或更新版本，首次打开按系统提示确认来源；Wind
 
 构建与验证命令为 `npm run package:release`、`npm run package:posix`、`npm run test:posix`，在对应系统和芯片的机器上运行。CI 使用真实脚本启动，验证中文与空格路径、忽略全局 Node/npm 和浏览器缓存、离线 PDF、旧库迁入、整库恢复与重启。正式发布附 SHA-256 和验证结果；CI 中的开发包与检查证据保留 7 天。
 
-Windows 的正式升级验收使用已发布且核验 SHA-256 的 v0.9.0 包：生成多份简历与历史，打开新版后核对所有原文件，再验证章节设置、旧程序重新打开与新版回收站保留。命令为 `npm run test:upgrade`。
+v0.11.0 的 Windows 升级验收使用已发布且核验 SHA-256 的 v0.10.0 包：生成多份简历、图片、历史与回收站资料，打开新版后核对所有原文件，再验证章节设置、单份和整库恢复、旧程序重新打开与新版重启保留。基线记录在 `scripts/upgrade-baseline.json`，命令为 `npm run test:upgrade`；具体结果见 [v0.11.0 发布验收记录](release-0.11-readiness.md)。
