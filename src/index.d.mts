@@ -45,10 +45,10 @@ export interface ExportMetrics {
 }
 export interface ExportResult { buffer: undefined; warnings: string[]; metrics: ExportMetrics }
 export interface PdfExportResult { buffer: Uint8Array; warnings: string[]; metrics: ExportMetrics }
-export interface ErrorDetails { file?: string; line?: number; field?: string; code?: string }
+export interface ErrorDetails { file?: string; line?: number; field?: string; code?: string; reason?: string }
 export class ResumeError extends Error {
   constructor(message: string, details?: ErrorDetails);
-  file?: string; line?: number; field?: string; code: string;
+  file?: string; line?: number; field?: string; code: string; reason?: string;
   toString(): string; toJSON(): ErrorDetails & { code: string; message: string };
 }
 export function parseResume(source: string, file?: string): { document: NormalizedDocument; locations: Locations };

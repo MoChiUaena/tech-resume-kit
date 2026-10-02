@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 
-export function wireContent({ request, managed, settle, operationPayload, acceptState, getState, isSourceMode, isClean, toast }) {
+export function wireContent({ request, managed, settle, operationPayload, acceptState, getState, isSourceMode, isClean, toast, errorUI }) {
   let sequence = 0, editChoice, deleteChoice, listed;
   function invalidate() {
     sequence++; listed = undefined;
@@ -104,7 +104,7 @@ export function wireContent({ request, managed, settle, operationPayload, accept
       const choice = { ...editChoice, ...(skills && editChoice.action === 'add' ? { sectionId: $('content-section').value || undefined } : {}) };
       await change(choice, choice.action || 'edit', skills ? { label: $('content-label').value, text: $('content-text').value } : { title: $('content-title').value, content: $('content-text').value });
       $('content-dialog').close();
-    } catch (error) { $('content-error').textContent = error.message; $('content-error').hidden = false; }
+    } catch (error) { errorUI.dialog('content', error); }
   });
   $('content-dialog').addEventListener('close', () => editChoice = undefined);
   $('content-delete-cancel').addEventListener('click', () => $('content-delete-dialog').close());

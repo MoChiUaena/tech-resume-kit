@@ -9,10 +9,10 @@ const presets = {
   experience: ['skills', 'experience', 'internship', 'projects', 'education', 'additional'],
 };
 
-function oneLine(value, label, required = false) {
+function oneLine(value, label, required = false, field) {
   const text = String(value || '').trim();
-  if (required && !text) throw new Error(`请填写${label}`);
-  if (/[\r\n\x00]/.test(text)) throw new Error(`${label}需要写在同一行`);
+  if (required && !text) throw Object.assign(new Error(`请填写${label}`), { field });
+  if (/[\r\n\x00]/.test(text)) throw Object.assign(new Error(`${label}需要写在同一行`), { field });
   return text;
 }
 
@@ -37,10 +37,10 @@ export function insertResumeEntry(body, input, layout = {}) {
   const target = sections[input.kind];
   if (!target) throw new Error('请选择教育、实习、工作或项目经历');
   body = body.replace(/\r\n?/g, '\n');
-  const title = oneLine(input.title, '名称', true), date = oneLine(input.date, '时间', true);
-  const subtitle = oneLine(input.subtitle, '专业或职责'), stack = oneLine(input.stack, '技术栈');
+  const title = oneLine(input.title, '名称', true, 'title'), date = oneLine(input.date, '时间', true, 'date');
+  const subtitle = oneLine(input.subtitle, '专业或职责', false, 'subtitle'), stack = oneLine(input.stack, '技术栈', false, 'stack');
   const details = String(input.details || '').split(/\r?\n/).map(line => line.trim().replace(/^[-•]\s*/, '')).filter(Boolean);
-  if (!details.length) throw new Error('请至少填写一条经历要点');
+  if (!details.length) throw Object.assign(new Error('请至少填写一条经历要点'), { field: 'details' });
   const found = scanSections(body), matching = found.filter(section => section.id === target.id);
   if (matching.length > 1) throw new Error(`正文中有重复的 ${target.title}，请先合并章节`);
   if (matching[0] && matching[0].kind !== 'entries') throw new Error(`${target.title}不是经历章节，请先修正章节标记`);

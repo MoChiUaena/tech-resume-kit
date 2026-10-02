@@ -66,6 +66,9 @@ try {
   assert.match(decodeBackup(Buffer.from(await draft.arrayBuffer())).source, /独立安装草稿/);
   assert.equal((await editor.project.read()).source, chosen.source);
   const recovery = await fetch(editor.url + 'draft-recovery.mjs'); assert.equal(recovery.status, 200);
+  const guidance = await fetch(editor.url + 'error-guidance.mjs'); assert.equal(guidance.status, 200);
+  const { describeEditorError } = await import('./node_modules/tech-resume-kit/app/error-guidance.mjs');
+  assert.equal(describeEditorError({ message: '请填写姓名', field: 'person.name' }, { source: chosen.source }).target.id, 'name');
   const record = { scope: chosen.draftScope, resumeId: chosen.resumeId, id: crypto.randomUUID(), sequence: 1, baseRevision: chosen.revision, payload: { baseSource: chosen.source, front: draftFront, body: chosen.body, layout: chosen.layout } };
   const postDraft = async (action, body) => fetch(editor.url + 'api/drafts/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: editor.url.slice(0,-1), 'X-Resume-Token': token }, body: JSON.stringify(body) });
   assert.equal((await postDraft('write', record)).status, 200);

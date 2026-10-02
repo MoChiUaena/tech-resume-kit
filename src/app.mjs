@@ -10,7 +10,7 @@ import { openLibrary } from './library.mjs';
 import { backupLimit } from './backup.mjs';
 import { libraryBackupLimit } from './library-backup.mjs';
 import { kitRoot } from './render.mjs';
-import { ResumeError } from './errors.mjs';
+import { ResumeError, serializeEditorError } from './errors.mjs';
 import { openStorage, lockDirectory, snapshotLibrary, canonicalDirectory, assertInactive } from './storage.mjs';
 import { createUpdater } from './updates.mjs';
 import { createPdfViewerAssets } from './pdf-viewer.mjs';
@@ -75,6 +75,7 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
   }
   const staticFiles = { '/section-order.mjs': ['app/section-order.mjs', 'text/javascript; charset=utf-8'], '/filename.mjs': ['src/filename.mjs', 'text/javascript; charset=utf-8'], '/getting-started.mjs': ['app/getting-started.mjs', 'text/javascript; charset=utf-8'], '/': ['app/index.html', 'text/html; charset=utf-8'], '/app.js': ['app/app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app/app.css', 'text/css; charset=utf-8'], '/crop.mjs': ['app/crop.mjs', 'text/javascript; charset=utf-8'], '/entries.mjs': ['app/entries.mjs', 'text/javascript; charset=utf-8'], '/entry-manager.mjs': ['app/entry-manager.mjs', 'text/javascript; charset=utf-8'], '/content-manager.mjs': ['app/content-manager.mjs', 'text/javascript; charset=utf-8'], '/library-manager.mjs': ['app/library-manager.mjs', 'text/javascript; charset=utf-8'], '/system.mjs': ['app/system.mjs', 'text/javascript; charset=utf-8'] };
   staticFiles['/draft-recovery.mjs'] = ['app/draft-recovery.mjs', 'text/javascript; charset=utf-8'];
+  staticFiles['/error-guidance.mjs'] = ['app/error-guidance.mjs', 'text/javascript; charset=utf-8'];
   async function bytes(request, maximum) {
     const chunks = []; let size = 0;
     for await (const chunk of request) { size += chunk.length; if (size > maximum) throw new ResumeError(maximum === libraryBackupLimit ? '整库 ZIP 请控制在 128 MB 以内' : '文件太大；正文上限 500 KB，图片上限 5 MB', { code: 'SIZE' }); chunks.push(chunk); }
@@ -182,7 +183,7 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
         });
       } else json({ error: { message: '请求方式不支持' } }, 405);
     } catch (error) {
-      const details = error instanceof ResumeError ? error.toJSON() : { code: 'EXECUTION', message: error.message };
+      const details = serializeEditorError(error);
       json({ error: details }, error.code === 'CONFLICT' ? 409 : 422);
     }
   });

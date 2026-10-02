@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 
-export function wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState }) {
+export function wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState, errorUI }) {
   let sequence = 0, sections = [], order = [], renameChoice;
   function render() {
     $('order-list').replaceChildren();
@@ -70,7 +70,7 @@ export function wireSectionOrder({ request, settle, edited, managed, operationPa
         acceptState(await request('/api/sections/rename', { ...operationPayload(), sectionId: choice.sectionId, title: $('section-title').value }));
       });
       $('section-title-dialog').close();
-    } catch (error) { $('section-title-error').textContent = error.message; $('section-title-error').hidden = false; }
+    } catch (error) { errorUI.dialog('section', error); }
   });
   return { refresh };
 }
