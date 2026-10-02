@@ -9,7 +9,7 @@ import tarfile
 import zipfile
 from pypdf import PdfReader
 from PIL import Image
-from release_proofs import verify_upgrade, verify_macos_app
+from release_proofs import verify_upgrade, verify_user_journey, verify_macos_app
 
 root = Path(__file__).resolve().parents[1]
 version = os.environ['RELEASE_VERSION']
@@ -63,6 +63,8 @@ with zipfile.ZipFile(file) as archive:
         assert hashlib.file_digest(stream, 'sha256').hexdigest() == manifest['nodeExeSha256']
 upgrade = json.loads((windows / 'upgrade-smoke.json').read_text())
 verify_upgrade(upgrade, version, sha(file))
+journey = json.loads((windows / 'user-journey-smoke.json').read_text(encoding='utf-8'))
+verify_user_journey(journey, version, sha(file))
 platforms = {}
 for label in ['linux-x64', 'linux-arm64', 'macos-x64', 'macos-arm64']:
     folder = inputs / label / 'packages'
@@ -100,7 +102,7 @@ for arch in ['x64', 'arm64']:
 
 assets = [{'name': file.name, 'size': file.stat().st_size, 'sha256': sha(file)} for file in sorted(output.iterdir()) if file.name not in {'release-validation.json', 'SHA256SUMS.txt'}]
 assert len(assets) == 13
-report = {'version': version, 'commit': head, 'ciRun': run_id, 'ciUrl': f'https://github.com/MoChiUaena/tech-resume-kit/actions/runs/{run_id}', 'tests': test_report['tests'], 'testResults': test_report, 'jobs': [{'name': job['name'], 'conclusion': job['conclusion']} for job in run['jobs']], 'windowsUpgrade': upgrade, 'platforms': platforms, 'macosApps': macos_apps, 'publicPdfPages': [1, 1, 2], 'signing': {'windows': False, 'macosNotarized': False}, 'assets': assets}
+report = {'version': version, 'commit': head, 'ciRun': run_id, 'ciUrl': f'https://github.com/MoChiUaena/tech-resume-kit/actions/runs/{run_id}', 'tests': test_report['tests'], 'testResults': test_report, 'jobs': [{'name': job['name'], 'conclusion': job['conclusion']} for job in run['jobs']], 'windowsUpgrade': upgrade, 'windowsUserJourney': journey, 'platforms': platforms, 'macosApps': macos_apps, 'publicPdfPages': [1, 1, 2], 'signing': {'windows': False, 'macosNotarized': False}, 'assets': assets}
 (output / 'release-validation.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 files = sorted(file for file in output.iterdir() if file.name != 'SHA256SUMS.txt')
 (output / 'SHA256SUMS.txt').write_text(''.join(f'{sha(file)}  {file.name}\n' for file in files), encoding='utf-8')

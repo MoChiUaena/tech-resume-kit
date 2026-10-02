@@ -45,6 +45,18 @@ def verify_upgrade(report, version, candidate_sha256):
     require(report.get('pdfPages') == [1, 2, 2], 'Upgrade PDF evidence is incomplete.')
     return report
 
+def verify_user_journey(report, version, candidate_sha256):
+    require(report.get('schemaVersion') == 1, 'User journey report schema does not match.')
+    require(report.get('version') == version and report.get('archiveSha256') == candidate_sha256, 'User journey used a different candidate archive.')
+    for field in ['firstLaunch', 'starterChosen', 'formValidationLocated', 'independentLogo', 'singleBackupRestored',
+                  'conflictPreserved', 'draftZipRestored', 'draftSurvivedRestart', 'wholeLibraryRestored',
+                  'restartPersistence', 'smallScreen', 'noNodeInPath', 'offlineProxy', 'noRemoteRequests']:
+        require(report.get(field) is True, 'User journey check did not pass: ' + field)
+    require(report.get('portraitRatio') == '23:31' and report.get('pdfDownloads') == 3, 'User journey image or PDF evidence is incomplete.')
+    steps = report.get('steps')
+    require(isinstance(steps, list) and len(steps) == 10 and all(isinstance(step, dict) and step.get('passed') is True for step in steps), 'User journey steps are incomplete.')
+    return report
+
 def verify_macos_app(folder, version, arch):
     require(arch in ['x64', 'arm64'], 'Unsupported macOS architecture.')
     folder = Path(folder)

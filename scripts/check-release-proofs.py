@@ -1,7 +1,7 @@
 import argparse
 import json
 from pathlib import Path
-from release_proofs import sha, verify_upgrade, verify_macos_app
+from release_proofs import verify_user_journey, sha, verify_upgrade, verify_macos_app
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--version', required=True)
@@ -13,5 +13,7 @@ if args.arch:
     print(f'MacOS {args.arch}: native app archive and launch evidence verified.')
 else:
     report = json.loads((args.directory / 'upgrade-smoke.json').read_text(encoding='utf-8'))
-    verify_upgrade(report, args.version, sha(args.directory / f'tech-resume-windows-x64-{args.version}.zip'))
-    print(f'Upgrade {report["from"]} -> {args.version}: {report["checkedFiles"]} original files and candidate archive verified.')
+    archive = args.directory / f'tech-resume-windows-x64-{args.version}.zip'
+    verify_upgrade(report, args.version, sha(archive))
+    verify_user_journey(json.loads((args.directory / 'user-journey-smoke.json').read_text(encoding='utf-8')), args.version, sha(archive))
+    print(f'Upgrade {report["from"]} -> {args.version}: {report["checkedFiles"]} original files, user journey and candidate archive verified.')
