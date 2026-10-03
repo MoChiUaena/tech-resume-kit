@@ -11,6 +11,7 @@ import { ResumeError } from './errors.mjs';
 import { assetPath } from './assets.mjs';
 import { saveStructuredSource } from './frontmatter.mjs';
 import { findStarterTemplate } from './starter-templates.mjs';
+import { findResumeTheme, applyResumeTheme } from './resume-themes.mjs';
 
 export async function openProject(directory) {
   const root = path.resolve(directory);
@@ -66,6 +67,7 @@ export async function openProject(directory) {
     const state = await read(); conflict(state, payload.revision);
     const starter = findStarterTemplate(payload.template);
     if (!starter) throw new ResumeError('请选择有效的起步模板');
+    if (payload.theme !== undefined && !findResumeTheme(payload.theme)) throw new ResumeError('请选择有效的视觉风格', { field: 'theme' });
     const sourceRoot = path.join(kitRoot, starter.directory);
     const [source, config] = await Promise.all([readFile(path.join(sourceRoot, 'resume.md'), 'utf8'), readFile(path.join(sourceRoot, 'layout.yaml'), 'utf8')]);
     const parsed = parseResume(source);
@@ -78,7 +80,7 @@ export async function openProject(directory) {
     const backup = path.join(root, 'backups', new Date().toISOString().replace(/[:.]/g, '-') + '-' + randomUUID().slice(0, 8));
     await mkdir(backup, { recursive: true });
     await Promise.all([saveFile(path.join(backup, 'resume.md'), state.source), saveFile(path.join(backup, 'layout.yaml'), state.config)]);
-    return write(source, readYaml(config));
+    return write(source, payload.theme === undefined ? readYaml(config) : applyResumeTheme(readYaml(config), payload.theme));
   });
   async function preview(revision) {
     await queue;

@@ -70,6 +70,62 @@ code { font-family: inherit; font-size: inherit; }
 .skill-label { font-weight: 600; color: #283c4c; overflow-wrap: anywhere; }
 .sample-note { margin-top: 4.2mm; padding-top: 2mm; border-top: .5pt solid #d8e0e5; color: #78858e; font-size: 7.3pt; break-inside: avoid; break-before: avoid; }
 p, li, .target, .availability, .stack { overflow-wrap: anywhere; }
+
+/* Each visual template changes composition as well as emphasis. Ink-blue stays unchanged. */
+.theme-minimal-mono { color: #25282b; }
+.theme-minimal-mono .resume-header { align-items: center; border-bottom: 0; padding-bottom: 3mm; }
+.theme-minimal-mono .identity { text-align: center; }
+.theme-minimal-mono .name-row, .theme-minimal-mono .contacts { justify-content: center; }
+.theme-minimal-mono h1 { color: #16191c; letter-spacing: .5pt; font-weight: 600; }
+.theme-minimal-mono .graduate-label, .theme-minimal-mono .availability { color: #5c6064; }
+.theme-minimal-mono h2 { border-bottom: .6pt solid #45494d; padding-bottom: 1.1mm; font-size: 11pt; letter-spacing: 1pt; }
+.theme-minimal-mono h2::after { content: none; }
+.theme-minimal-mono h3, .theme-minimal-mono strong, .theme-minimal-mono .skill-label { color: #25282b; }
+.theme-minimal-mono .sample-note { border-top-color: #d8dadd; }
+
+.theme-slate-banner .resume-header { padding: 4mm; background: var(--accent); border-bottom: 0; }
+.theme-slate-banner h1, .theme-slate-banner .target, .theme-slate-banner .contacts { color: #fff; }
+.theme-slate-banner .graduate-label, .theme-slate-banner .availability { color: #e2eaf0; }
+.theme-slate-banner .portrait { border-color: #fff; }
+.theme-slate-banner .school-logo { background: white; border: 1mm solid white; }
+.theme-slate-banner h2 { display: block; padding: .7mm 2.4mm; font-size: 11pt; letter-spacing: .4pt; background: color-mix(in srgb, var(--accent) 8%, white); border-left: 2pt solid var(--accent); }
+.theme-slate-banner h2::after { content: none; }
+.theme-slate-banner .entry-subtitle { color: #647b8e; }
+.theme-slate-banner .skill-label { color: var(--accent); }
+
+.theme-forest-rail .resume-header { border-bottom: 0; border-left: 2pt solid var(--accent); padding-left: 4mm; padding-bottom: 3mm; }
+.theme-forest-rail h1 { color: var(--accent); letter-spacing: .8pt; }
+.theme-forest-rail section { display: grid; grid-template-columns: 22mm minmax(0,1fr); column-gap: 5mm; }
+.theme-forest-rail h2 { display: block; align-self: start; border-right: .7pt solid #cadbd3; padding: .4mm 2mm .8mm 0; margin: 0; font-size: 10.5pt; letter-spacing: .4pt; }
+.theme-forest-rail h2::after { content: none; }
+.theme-forest-rail .section-content { min-width: 0; }
+.theme-forest-rail .skill { display: block; }
+.theme-forest-rail .skill-label, .theme-forest-rail .skill p { display: inline; }
+.theme-forest-rail .skill-label::after { content: " · "; color: #6a8075; }
+.theme-forest-rail .entry-title { column-gap: 2mm; }
+.theme-forest-rail .stack { color: #647e70; }
+.theme-forest-rail .sample-note { border-top-color: #d5e0da; }
+
+.theme-warm-labels .resume-header { border-bottom: 0; border-top: 2pt solid var(--accent); padding-top: 3mm; padding-bottom: 2mm; }
+.theme-warm-labels h1 { color: #372b25; letter-spacing: .7pt; }
+.theme-warm-labels h2 { display: table; padding: .7mm 2.2mm; background: var(--accent); color: white; font-size: 10.8pt; letter-spacing: .3pt; border-radius: 1pt; }
+.theme-warm-labels h2::after { content: none; }
+.theme-warm-labels .stack { display: block; width: fit-content; max-width: 100%; padding: .45mm 1.6mm; background: color-mix(in srgb, var(--accent) 7%, white); color: #765745; border-radius: 1pt; }
+.theme-warm-labels strong, .theme-warm-labels .skill-label { color: #654432; }
+.theme-warm-labels li::marker { color: var(--accent); }
+.theme-warm-labels .sample-note { border-top-color: #e1d8d0; }
+
+.theme-graphite-grid .resume-header { background: #f0f2f3; padding: 3.5mm; border-bottom: 0; }
+.theme-graphite-grid h1 { color: #242b30; letter-spacing: .6pt; }
+.theme-graphite-grid .name-row { padding-bottom: 1mm; border-bottom: .5pt solid #cbd1d5; }
+.theme-graphite-grid h2 { display: block; background: #edf0f2; padding: .7mm 2mm; font-size: 10.8pt; letter-spacing: .5pt; border-top: .5pt solid #d0d6da; }
+.theme-graphite-grid h2::after { content: none; }
+.theme-graphite-grid .entry-title { display: block; }
+.theme-graphite-grid .entry-subtitle { display: block; font-size: 8.7pt; color: #647079; margin-top: .2mm; }
+.theme-graphite-grid .date { padding: .3mm 1.2mm; background: #f3f5f6; }
+.theme-graphite-grid .stack { margin-top: .6mm; }
+.theme-graphite-grid strong, .theme-graphite-grid .skill-label { color: #37424a; }
+
 @page {
   size: A4;
   margin: 15mm;

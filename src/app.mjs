@@ -15,6 +15,7 @@ import { openStorage, lockDirectory, snapshotLibrary, canonicalDirectory, assert
 import { createUpdater } from './updates.mjs';
 import { createPdfViewerAssets } from './pdf-viewer.mjs';
 import { resumeFilename, safeFilenamePart } from './filename.mjs';
+import { resumeThemes } from './resume-themes.mjs';
 
 export async function startEditor(directory, { port = 0, idleSeconds = 0, historyIntervalMs, storage, desktopDirectory, updater: suppliedUpdater } = {}) {
   await assertInactive(directory);
@@ -78,6 +79,9 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
   staticFiles['/error-guidance.mjs'] = ['app/error-guidance.mjs', 'text/javascript; charset=utf-8'];
   staticFiles['/starter-templates.mjs'] = ['src/starter-templates.mjs', 'text/javascript; charset=utf-8'];
   staticFiles['/template-picker.mjs'] = ['app/template-picker.mjs', 'text/javascript; charset=utf-8'];
+  staticFiles['/resume-themes.mjs'] = ['src/resume-themes.mjs', 'text/javascript; charset=utf-8'];
+  staticFiles['/theme-picker.mjs'] = ['app/theme-picker.mjs', 'text/javascript; charset=utf-8'];
+  for (const theme of resumeThemes) staticFiles[theme.preview] = ['app/theme-previews/' + theme.id + '.png', 'image/png'];
   async function bytes(request, maximum) {
     const chunks = []; let size = 0;
     for await (const chunk of request) { size += chunk.length; if (size > maximum) throw new ResumeError(maximum === libraryBackupLimit ? '整库 ZIP 请控制在 128 MB 以内' : '文件太大；正文上限 500 KB，图片上限 5 MB', { code: 'SIZE' }); chunks.push(chunk); }

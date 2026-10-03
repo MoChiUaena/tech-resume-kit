@@ -12,10 +12,11 @@ import { ensureNewOutput, savePdf, saveFile, initializeProject } from './files.m
 import { assetPath } from './assets.mjs';
 import { startPreview } from './preview.mjs';
 import { starterTemplates } from './starter-templates.mjs';
+import { resumeThemes } from './resume-themes.mjs';
 
 const help = `tech-resume-kit - 本地中文简历
 
-  tech-resume init --dir personal/my-resume [--template <模板 ID>]
+  tech-resume init --dir personal/my-resume [--template <内容 ID>] [--theme <风格 ID>]
   tech-resume check [resume.md] [--config layout.yaml] [--json]
   tech-resume preview [resume.md] [--config layout.yaml] [--port 4173]
   tech-resume build [resume.md] [--config layout.yaml] [--out resume.pdf] [--force] [--json]
@@ -26,6 +27,9 @@ const help = `tech-resume-kit - 本地中文简历
 
 起步模板：
 ${starterTemplates.map(template => '  ' + template.id.padEnd(16) + template.label).join('\n')}
+
+视觉风格：
+${resumeThemes.map(theme => '  ' + theme.id.padEnd(16) + theme.label).join('\n')}
 
 源码目录也可使用 node src/cli.mjs <命令>，或 npm run check / preview / build -- <参数>。
 Markdown 默认读取 resume.md 和同目录 layout.yaml。
@@ -43,7 +47,7 @@ function success(result, human) {
 try {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: {
     help: { type: 'boolean', short: 'h' }, config: { type: 'string', short: 'c' }, out: { type: 'string', short: 'o' }, force: { type: 'boolean' },
-    port: { type: 'string' }, dir: { type: 'string' }, template: { type: 'string' }, assets: { type: 'string' }, options: { type: 'string' }, json: { type: 'boolean' },
+    port: { type: 'string' }, dir: { type: 'string' }, template: { type: 'string' }, theme: { type: 'string' }, assets: { type: 'string' }, options: { type: 'string' }, json: { type: 'boolean' },
   } });
   if (values.help || !positionals.length) { command = 'help'; success({ help }, help); }
   else {
@@ -51,7 +55,7 @@ try {
     command = action;
     if (extra.length) throw new ResumeError('位置参数过多；带空格的文件路径请用引号包围', { code: 'CLI' });
     const allowed = {
-      init: ['dir', 'template', 'json'], check: ['config', 'json'], preview: ['config', 'port'], build: ['config', 'out', 'force', 'json'],
+      init: ['dir', 'template', 'theme', 'json'], check: ['config', 'json'], preview: ['config', 'port'], build: ['config', 'out', 'force', 'json'],
       'export-json': ['config', 'out', 'force', 'json'], 'check-json': ['assets', 'json'], 'build-json': ['assets', 'out', 'force', 'json'],
       'convert-workbench': ['options', 'assets', 'out', 'force', 'json'],
     }[command];
@@ -59,7 +63,7 @@ try {
     for (const key of Object.keys(values)) if (!allowed.includes(key)) throw new ResumeError(`${command} 不支持 --${key}`, { code: 'CLI' });
     if (command === 'init') {
       if (positionals.length > 1) throw new ResumeError('init 使用 --dir 指定目录', { code: 'CLI' });
-      const target = await initializeProject(values.dir || 'personal/my-resume', values.template || 'campus');
+      const target = await initializeProject(values.dir || 'personal/my-resume', values.template || 'campus', { theme: values.theme });
       success({ directory: target }, `已创建起步文件：${target}\n编辑 resume.md 和 layout.yaml 后运行 check / preview / build。`);
     } else if (command === 'convert-workbench') {
       if (positionals.length !== 2 || !values.options || !values.out) throw new ResumeError('convert-workbench 需要输入文件、--options 转换选项和 --out JSON 输出文件', { code: 'CLI' });

@@ -1,5 +1,5 @@
 const fields = { 'person.name': ['name', '姓名'], 'person.target': ['target', '目标岗位'], 'person.label': ['label', '毕业届别 / 学历'], 'person.availability': ['availability', '城市 / 到岗时间'] };
-const layoutFields = { preset: 'preset', 'page.maxPages': 'max-pages', bodyPt: 'body-size', 'page.marginMm': 'margin', accent: 'accent' };
+const layoutFields = { theme: 'visual-theme', preset: 'preset', 'page.maxPages': 'max-pages', bodyPt: 'body-size', 'page.marginMm': 'margin', accent: 'accent' };
 const causes = { ENOSPC: '先尝试下载未保存草稿，释放磁盘空间后再重试。', EACCES: '先保留当前输入，检查数据目录的访问权限后再重试。', EPERM: '先保留当前输入，检查数据目录的访问权限或文件占用后再重试。', EROFS: '数据目录是只读的，请检查目录权限后再重试。', EBUSY: '关闭占用资料文件的程序后再重试；当前输入可先尝试下载为草稿。', ENOENT: '请确认资料文件和数据目录仍在原位置，当前输入先保留为草稿。' };
 const own = (object, key) => typeof key === 'string' && Object.hasOwn(object, key) ? object[key] : undefined;
 export function lineSelection(text, line) {

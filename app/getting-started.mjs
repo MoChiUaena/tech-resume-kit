@@ -1,9 +1,11 @@
-import { fillStarterChoices } from './template-picker.mjs';
+import { fillTemplateSelect } from './template-picker.mjs';
+import { fillThemeGallery } from './theme-picker.mjs';
 
 const $ = id => document.getElementById(id);
 
 export function wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState, isSourceMode, toast, openSettings }) {
-  fillStarterChoices(document.querySelector('#start-dialog .starter-options'));
+  fillThemeGallery(document.querySelector('#start-dialog .theme-options'));
+  fillTemplateSelect($('start-content'));
   let choice;
   function refresh() {
     $('start-banner').hidden = !getState()?.gettingStarted?.welcome;
@@ -18,15 +20,16 @@ export function wireGettingStarted({ request, managed, settle, operationPayload,
       await settle();
       const state = getState(), initial = state.gettingStarted?.welcome === true;
       choice = { ...operationPayload(), mode: initial ? 'initial' : 'create' };
-      $('start-title').textContent = initial ? '选一个起点' : '从模板新建简历';
+      $('start-title').textContent = initial ? '选一个喜欢的外观' : '从模板新建简历';
       $('start-name-field').hidden = initial;
       let name = '新简历', index = 2;
       while (state.resumes.some(resume => resume.name === name)) name = `新简历 ${index++}`;
       $('start-name').value = name;
-      $('start-help').textContent = initial ? '选好起步内容，再填写基本信息、经历和技能。修改会自动保存。' : '新简历独立保存，填好后可在上方列表切换。';
+      $('start-help').textContent = '先选外观，再选空白或样张内容。预览使用相同内容，方便比较版式。';
       $('start-submit').textContent = initial ? '开始填写' : '新建并填写';
-      $('start-blank').checked = true; $('start-error').hidden = true;
-      $('start-dialog').showModal(); $('start-blank').focus();
+      const theme = document.getElementById('start-theme-' + state.layout.theme) || $('start-theme-ink-blue');
+      theme.checked = true; $('start-content').value = 'blank'; $('start-error').hidden = true;
+      $('start-dialog').showModal(); theme.focus();
     } catch (error) { toast(error.message); }
   }
   $('start-open').addEventListener('click', open);
@@ -39,7 +42,7 @@ export function wireGettingStarted({ request, managed, settle, operationPayload,
   });
   $('start-submit').addEventListener('click', async () => {
     $('start-error').hidden = true;
-    const input = { ...choice, template: document.querySelector('input[name=start-template]:checked').value, name: $('start-name').value };
+    const input = { ...choice, template: $('start-content').value, theme: document.querySelector('input[name=start-theme]:checked').value, name: $('start-name').value };
     try {
       await managed(async () => {
         acceptState(await request('/api/getting-started/start', input)); $('start-dialog').close();

@@ -1,3 +1,5 @@
+import { findResumeTheme } from './resume-themes.mjs';
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function validPayload(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
@@ -6,7 +8,7 @@ function validPayload(payload) {
   const layout = payload.layout;
   const exact = (value, fields) => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(field => fields.includes(field));
   if (!exact(layout, ['schemaVersion', 'theme', 'preset', 'page', 'bodyPt', 'lineHeight', 'namePt', 'accent', 'sectionOrder', 'header', 'spacing', 'images']) || !exact(layout.page, ['size', 'marginMm', 'maxPages']) || !exact(layout.header, ['gapMm']) || !exact(layout.spacing, ['sectionMm', 'entryMm']) || !exact(layout.images, ['portrait', 'schoolLogo'])) return false;
-  if (!layout || layout.schemaVersion !== '0.2.0' || !['campus', 'experience'].includes(layout.preset) || layout.theme !== 'ink-blue' || layout.page?.size !== 'A4' || ![1, 2].includes(layout.page.maxPages) || !finite(layout.page.marginMm, 14, 17) || !finite(layout.bodyPt, 10.5, 11) || !finite(layout.namePt, 20, 24) || !finite(layout.lineHeight, 1.25, 1.5) || !/^#[0-9a-f]{6}$/i.test(layout.accent) || !finite(layout.header?.gapMm, 2, 8) || !finite(layout.spacing?.sectionMm, 3, 5) || !finite(layout.spacing?.entryMm, 2, 5)) return false;
+  if (!layout || layout.schemaVersion !== '0.2.0' || !['campus', 'experience'].includes(layout.preset) || !findResumeTheme(layout.theme) || layout.page?.size !== 'A4' || ![1, 2].includes(layout.page.maxPages) || !finite(layout.page.marginMm, 14, 17) || !finite(layout.bodyPt, 10.5, 11) || !finite(layout.namePt, 20, 24) || !finite(layout.lineHeight, 1.25, 1.5) || !/^#[0-9a-f]{6}$/i.test(layout.accent) || !finite(layout.header?.gapMm, 2, 8) || !finite(layout.spacing?.sectionMm, 3, 5) || !finite(layout.spacing?.entryMm, 2, 5)) return false;
   for (const key of ['portrait', 'schoolLogo']) { const image = layout.images?.[key]; if (!exact(image, ['enabled', 'widthMm', 'heightMm', 'slot', 'align']) || typeof image.enabled !== 'boolean' || !finite(image.widthMm, 10, 40) || !finite(image.heightMm, 10, 40) || !['start', 'end'].includes(image.slot) || !['top', 'center', 'bottom'].includes(image.align)) return false; }
   if (layout.sectionOrder !== undefined && (!Array.isArray(layout.sectionOrder) || !layout.sectionOrder.length || !layout.sectionOrder.every(value => typeof value === 'string' && /^[a-z][a-z0-9-]*$/.test(value)))) return false;
   if (typeof payload.source === 'string') return text(payload.source);

@@ -35,7 +35,7 @@ test('a new user chooses a starter, navigates form sections and downloads the ac
   assert.equal(await page.locator('#start-banner').isVisible(), true);
   await page.locator('#start-choose').click(); await page.locator('#start-dialog[open]').waitFor();
   assert.equal(await page.locator('#start-name-field').isVisible(), false);
-  await page.locator('#start-campus').check();
+  await page.locator('#start-content').selectOption('campus');
   await page.screenshot({ path: path.join(qa, 'starter-desktop.png') });
   await page.setViewportSize({ width: 390, height: 760 });
   await page.screenshot({ path: path.join(qa, 'starter-small.png') });
@@ -98,7 +98,7 @@ test('existing users can create a separate starter; invalid names and external e
   await page.locator('#start-name').fill('我的简历'); await page.locator('#start-submit').click();
   await page.locator('#start-error:not([hidden])').waitFor(); assert.match(await page.locator('#start-error').innerText(), /名称已经存在/);
   assert.equal(await page.locator('#start-name').inputValue(), '我的简历');
-  await page.locator('#start-name').fill('经验版'); await page.locator('#start-experience').check(); await page.locator('#start-submit').click();
+  await page.locator('#start-name').fill('经验版'); await page.locator('#start-content').selectOption('experience'); await page.locator('#start-submit').click();
   await page.locator('#start-dialog').waitFor({ state: 'hidden' });
   await page.waitForFunction(() => document.querySelector('#resume-select').selectedOptions[0]?.textContent === '经验版');
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });

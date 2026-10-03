@@ -8,8 +8,8 @@ import { initializeProject } from '../src/files.mjs';
 import { startEditor } from '../src/app.mjs';
 import { kitRoot } from '../src/render.mjs';
 
-async function fixture(t, cacheUnavailable = false) {
-  const outer = await mkdtemp(path.join(tmpdir(), 'tech-resume-auto-ui-')), root = path.join(outer, '资料'); await initializeProject(root, 'campus');
+async function fixture(t, cacheUnavailable = false, theme) {
+  const outer = await mkdtemp(path.join(tmpdir(), 'tech-resume-auto-ui-')), root = path.join(outer, '资料'); await initializeProject(root, theme ? 'java-backend' : 'campus', { theme });
   let app = await startEditor(root, { historyIntervalMs: 0 }); const browser = await chromium.launch({ channel: 'chromium' }), context = await browser.newContext({ viewport: { width: 1500, height: 1050 } });
   if (cacheUnavailable) await context.addInitScript(() => { Storage.prototype.setItem = () => { throw new DOMException('Storage disabled', 'QuotaExceededError'); }; });
   const errors = [], external = [];
@@ -125,4 +125,29 @@ test('an old save acknowledgement does not delete newer input and rebases its ow
   const drafts = await candidates(f); assert.equal(drafts.length, 1); assert.equal(drafts[0].payload.front.person.name, '保存途中更新的输入'); assert.equal(drafts[0].conflict, false);
   await page.reload(); await page.locator('#draft-recovery:not([hidden])').waitFor(); await page.locator('#draft-resume').click();
   assert.equal(await page.getByLabel('姓名', { exact: true }).inputValue(), '保存途中更新的输入');
+});
+
+for (const theme of ['minimal-mono','slate-banner','forest-rail','warm-labels','graphite-grid']) test('themed browser draft survives refresh: ' + theme, async t => {
+  const f = await fixture(t, false, theme), page = await f.page(), original = await f.app.project.read();
+  await failSave(page); await writeFile(path.join(f.root, 'editor-drafts.local.d'), 'Prevent draft-file writes to require the browser cache');
+  const name = '恢复草稿-' + theme;
+  await page.getByLabel('姓名', { exact: true }).fill(name);
+  await page.locator('#save-status').filter({ hasText: '保存失败' }).waitFor();
+  await page.reload(); await page.locator('#draft-recovery:not([hidden])').waitFor({ timeout: 10000 });
+  assert.equal((await f.app.project.read()).source, original.source);
+  await page.locator('#draft-resume').click(); assert.equal(await page.getByLabel('姓名', { exact: true }).inputValue(), name);
+  assert.equal(await page.locator('#visual-theme').inputValue(), theme);
+  assert.equal((await f.app.project.read()).source, original.source);
+});
+
+test('themed file draft survives a program restart without browser cache', async t => {
+  const f = await fixture(t, true, 'slate-banner'), page = await f.page(), original = await f.app.project.read();
+  await failSave(page); await edit(page, '重启恢复深蓝草稿');
+  await page.close(); await f.restart(); const reopened = await f.page();
+  await reopened.locator('#draft-recovery:not([hidden])').waitFor({ timeout: 10000 });
+  assert.equal((await f.app.project.read()).source, original.source);
+  await failSave(reopened); await reopened.locator('#draft-resume').click();
+  assert.equal(await reopened.getByLabel('姓名', { exact: true }).inputValue(), '重启恢复深蓝草稿');
+  assert.equal(await reopened.locator('#visual-theme').inputValue(), 'slate-banner');
+  assert.equal((await f.app.project.read()).source, original.source);
 });
