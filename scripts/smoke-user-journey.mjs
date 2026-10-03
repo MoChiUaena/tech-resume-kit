@@ -73,7 +73,7 @@ try {
   await exec(process.env.TECH_RESUME_PYTHON || 'python', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert all(".." not in n.split("/") and not n.startswith("/") for n in z.namelist()); z.extractall(sys.argv[2])', archive, outer], { windowsHide: true, timeout: 120000 });
   await start(); browser = await chromium.launch({ executablePath: path.join(program, 'runtime/browsers/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe'), headless: true });
   await openPage(); assert.equal(await page.locator('#start-banner').isVisible(), true);
-  await page.locator('#start-choose').click(); await page.locator('#start-campus').check(); await capture('01-template', '首次启动选择奶龙校招起步内容');
+  await page.locator('#start-choose').click(); await page.locator('#start-content').selectOption('campus'); await capture('01-template', '首次启动选择奶龙校招起步内容');
   await page.locator('#start-submit').click(); await page.locator('#start-dialog').waitFor({ state: 'hidden' }); await rendered();
   assert.equal(await page.locator('#name').inputValue(), '奶龙');
   await page.locator('#name').fill(''); await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 }); await page.locator('#preview-locate').click();

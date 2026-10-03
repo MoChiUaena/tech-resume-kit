@@ -43,6 +43,16 @@ for (const { id: template } of starterTemplates) {
   assert.equal(result.metrics.networkRequests.length, 0);
   if (template === 'campus') await writeFile('api-result.json', JSON.stringify({ document: rendered.document, layout: rendered.layout, images: Object.fromEntries(Object.keys(rendered.images).map(key => [key, true])) }));
 }
+const { resumeThemes } = await import('./node_modules/tech-resume-kit/src/resume-themes.mjs');
+assert.equal(resumeThemes.length, 6);
+for (const theme of resumeThemes) {
+  const directory = 'visual-' + theme.id;
+  await initializeProject(directory, 'java-backend', { theme: theme.id });
+  const loaded = await loadResume(directory + '/resume.md');
+  assert.equal(loaded.layout.theme, theme.id);
+  const result = await inspectAndExport(await renderResume(loaded.document, loaded.layout, loaded), { pdf: true });
+  assert.equal(result.metrics.pageCount, 1); assert.equal(result.metrics.networkRequests.length, 0);
+}
 const converted = await loadWorkbenchResume('node_modules/tech-resume-kit/examples/workbench/resume.json', undefined, {optionsFile:'node_modules/tech-resume-kit/examples/workbench/conversion.json'});
 const convertedPdf = await inspectAndExport(await renderResume(converted.document, converted.layout, converted), {pdf:true});
 assert.equal(convertedPdf.metrics.pageCount,1); assert.equal(convertedPdf.metrics.images.length,2);
@@ -54,7 +64,8 @@ try {
   assert.equal(state.gettingStarted.welcome, true);
   const module = await fetch(editor.url + 'getting-started.mjs');
   assert.equal(module.status, 200); assert.match(await module.text(), /wireGettingStarted/);
-  for (const resource of ['starter-templates.mjs', 'template-picker.mjs']) assert.equal((await fetch(editor.url + resource)).status, 200);
+  for (const resource of ['starter-templates.mjs', 'template-picker.mjs', 'resume-themes.mjs', 'theme-picker.mjs']) assert.equal((await fetch(editor.url + resource)).status, 200);
+  for (const theme of resumeThemes) { const response = await fetch(new URL(theme.preview, editor.url)); assert.equal(response.status, 200); assert.equal(Buffer.from(await response.arrayBuffer()).subarray(0,8).toString('hex'), '89504e470d0a1a0a'); }
   const naming = await fetch(editor.url + 'filename.mjs');
   assert.equal(naming.status, 200); assert.match(await naming.text(), /resumeFilename/);
   const ordering = await fetch(editor.url + 'section-order.mjs');
@@ -85,9 +96,10 @@ try {
 `);
   await run(process.execPath, [path.join(outside, 'probe.mjs')]);
   await writeFile(path.join(outside, 'types.mts'), `
-import { initializeProject, type StarterTemplateId, renderResume, inspectAndExport, parseResumeJson, convertWorkbenchResume, loadWorkbenchResume, ResumeError, type ResumeDocument, type LayoutConfig, type WorkbenchDocument, type WorkbenchConversionReport } from 'tech-resume-kit';
+import { initializeProject, type StarterTemplateId, type ResumeThemeId, renderResume, inspectAndExport, parseResumeJson, convertWorkbenchResume, loadWorkbenchResume, ResumeError, type ResumeDocument, type LayoutConfig, type WorkbenchDocument, type WorkbenchConversionReport } from 'tech-resume-kit';
 const starter: StarterTemplateId = 'frontend';
-const initialization: Promise<string> = initializeProject('typecheck-only', starter);
+const theme: ResumeThemeId = 'forest-rail';
+const initialization: Promise<string> = initializeProject('typecheck-only', starter, { theme });
 const document: ResumeDocument = { schemaVersion: '0.2.0', person: { name: '填写姓名', target: '开发', contacts: [{text:'a@example.com', href:'mailto:a@example.com'}] }, sections: [{id:'skills',title:'技能',kind:'skills',items:[{label:'Java',text:'测试'}]}] };
 const layout: LayoutConfig = {schemaVersion:'0.2.0'};
 const rendered = await renderResume(document, layout);
@@ -113,7 +125,7 @@ const bad: ResumeDocument = {schemaVersion:2};
   await copyFile(jsonPdf, path.join(qa, 'installed-json.pdf'));
   const apiModel = JSON.parse(await readFile(path.join(outside, 'api-result.json'), 'utf8'));
   await writeFile(path.join(qa, 'installed-json.expected.json'), JSON.stringify(pdfExpectations(apiModel, 1)));
-  console.log('Installed TGZ: CLI bin, ESM API, TypeScript, all ten starters, getting-started editor and JSON PDF passed.');
+  console.log('Installed TGZ: CLI bin, ESM API, TypeScript, all ten starters, six visual themes, getting-started editor and JSON PDF passed.');
   const zipPath = path.join(packages, `tech-resume-starter-${pkg.version}.zip`);
   await run(process.env.TECH_RESUME_PYTHON || 'python', ['-X', 'utf8', '-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert all(".." not in n.split("/") and not n.startswith("/") for n in z.namelist()); z.extractall(sys.argv[2])', zipPath, outside]);
   const starter = path.join(outside, `tech-resume-starter-${pkg.version}`), runner = path.join(starter, 'toolkit/starter/runner.mjs');

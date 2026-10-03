@@ -64,6 +64,8 @@ jobs:
           python scripts/render-pdfs.py --directory tmp/pdfs/getting-started
           python scripts/verify-pdf.py --directory tmp/pdfs/starter-templates
           python scripts/render-pdfs.py --directory tmp/pdfs/starter-templates
+          python scripts/verify-pdf.py --directory tmp/pdfs/themes
+          python scripts/render-pdfs.py --directory tmp/pdfs/themes --dpi 110
           python scripts/verify-pdf.py --directory tmp/pdfs/contact-links
           python scripts/render-pdfs.py --directory tmp/pdfs/contact-links
           python scripts/verify-pdf.py --directory tmp/pdfs/section-order
@@ -110,6 +112,11 @@ jobs:
           name: starter-templates-validation
           if-no-files-found: error
           path: tmp/pdfs/starter-templates/
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: resume-themes-validation
+          if-no-files-found: error
+          path: tmp/pdfs/themes/
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: contact-link-validation

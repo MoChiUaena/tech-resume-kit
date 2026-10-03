@@ -6,6 +6,8 @@ import { ResumeError } from './errors.mjs';
 import { loadResume } from './input.mjs';
 import { assetPath } from './assets.mjs';
 import { starterTemplates, findStarterTemplate } from './starter-templates.mjs';
+import { stringify } from 'yaml';
+import { findResumeTheme, applyResumeTheme } from './resume-themes.mjs';
 
 export async function ensureNewOutput(filename, force = false) {
   try { await access(filename); }
@@ -26,16 +28,17 @@ export async function saveFile(filename, buffer, force = false) {
   } finally { await unlink(temporary).catch(() => {}); }
 }
 export const savePdf = saveFile;
-export async function initializeProject(directory, template = 'campus') {
+export async function initializeProject(directory, template = 'campus', { theme } = {}) {
   const starter = findStarterTemplate(template);
   if (!starter) throw new ResumeError('未知起步模板；template 支持 ' + starterTemplates.map(item => item.id).join('、'));
+  if (theme !== undefined && !findResumeTheme(theme)) throw new ResumeError('请选择有效的视觉风格', { field: 'theme' });
   const target = path.resolve(directory);
   await ensureNewOutput(target);
   const source = path.join(kitRoot, starter.directory);
   const loaded = await loadResume(path.join(source, 'resume.md'));
   const files = [
     { relative: 'resume.md', bytes: await readFile(loaded.inputFile) },
-    { relative: 'layout.yaml', bytes: await readFile(loaded.configFile) },
+    { relative: 'layout.yaml', bytes: theme === undefined ? await readFile(loaded.configFile) : Buffer.from(stringify(applyResumeTheme(loaded.layout, theme))) },
     { relative: '.gitignore', bytes: Buffer.from('output/\n*.pdf\n*.html\n*.local.*\n') },
   ];
   for (const asset of Object.values(loaded.document.assets)) {

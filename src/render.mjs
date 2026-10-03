@@ -41,11 +41,12 @@ function entry(item) {
     ${blocks(item.blocks, 'entry-lines')}
   </article>`;
 }
-function section(item) {
+function section(item, theme) {
   const content = item.kind === 'entries' ? item.entries.map(entry).join('')
     : item.kind === 'skills' ? item.items.map(skill => `<div class="skill"><span class="skill-label">${escape(skill.label)}</span><p>${inline(skill.text)}</p></div>`).join('')
     : blocks(item.blocks, 'additional-lines');
-  return `<section aria-labelledby="${escape(item.id)}"><h2 id="${escape(item.id)}">${escape(item.title)}</h2>${content}</section>`;
+  const body = theme === 'forest-rail' ? `<div class="section-content">${content}</div>` : content;
+  return `<section aria-labelledby="${escape(item.id)}"><h2 id="${escape(item.id)}">${escape(item.title)}</h2>${body}</section>`;
 }
 function image(key, asset) {
   const align = { top: 'flex-start', center: 'center', bottom: 'flex-end' }[asset.align];
@@ -65,11 +66,11 @@ export async function renderResume(inputDocument, inputLayout, options = {}) {
   for (const key of ['portrait', 'schoolLogo']) if (prepared.images[key]?.slot === 'start') slots.start += image(key, prepared.images[key]);
   for (const key of ['schoolLogo', 'portrait']) if (prepared.images[key]?.slot === 'end') slots.end += image(key, prepared.images[key]);
   const css = await templateCss();
-  const body = layout.sectionOrder.map(id => section(document.sections.find(item => item.id === id))).join('');
+  const body = layout.sectionOrder.map(id => section(document.sections.find(item => item.id === id), layout.theme)).join('');
   const html = `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>${escape(person.name)} - 简历</title>
 <style>${css}\n:root{--accent:${layout.accent};--body-pt:${layout.bodyPt}pt;--leading:${layout.lineHeight};--page-margin:${layout.page.marginMm}mm;--name-pt:${layout.namePt}pt;--header-gap:${layout.header.gapMm}mm;--section-gap:${layout.spacing.sectionMm}mm;--entry-gap:${layout.spacing.entryMm}mm;}@page{margin:${layout.page.marginMm}mm;}</style></head>
-<body><main class="sheet"><header class="resume-header">
+<body class="theme-${layout.theme}"><main class="sheet"><header class="resume-header">
   ${slots.start}<div class="identity"><div class="name-row"><h1>${escape(person.name)}</h1>${person.label ? `<span class="graduate-label">${escape(person.label)}</span>` : ''}</div>
   <p class="target">${escape(person.target)}</p>${person.availability ? `<p class="availability">${escape(person.availability)}</p>` : ''}<div class="contacts">${contacts}</div></div>${slots.end}
 </header>${body}${document.notice ? `<footer class="sample-note">${escape(document.notice)}</footer>` : ''}</main></body></html>`;

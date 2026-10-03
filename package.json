@@ -64,7 +64,8 @@
     "test:posix": "node scripts/smoke-posix.mjs",
     "package:macos-app": "python scripts/package-macos-app.py",
     "test:macos-app": "node scripts/smoke-macos-app.mjs",
-    "test:upgrade": "node scripts/smoke-upgrade.mjs"
+    "test:upgrade": "node scripts/smoke-upgrade.mjs",
+    "sample:themes": "node scripts/build-theme-previews.mjs"
   },
   "engines": {
     "node": ">=22.13.0"

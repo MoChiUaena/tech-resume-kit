@@ -6,7 +6,11 @@ import { wireLibrary } from './library-manager.mjs';
 import { wireContent } from './content-manager.mjs';
 import { wireGettingStarted } from './getting-started.mjs';
 import { fillTemplateSelect } from './template-picker.mjs';
+import { fillThemeSelect } from './theme-picker.mjs';
+import { applyResumeTheme } from './resume-themes.mjs';
 fillTemplateSelect(document.getElementById('resume-template'));
+fillTemplateSelect(document.getElementById('template'), '选择起步内容…');
+for (const id of ['visual-theme', 'resume-theme']) fillThemeSelect(document.getElementById(id));
 import { wireSectionOrder } from './section-order.mjs';
 import { resumeFilename, safeFilenamePart } from './filename.mjs';
 import { wireDraftRecovery } from './draft-recovery.mjs';
@@ -74,7 +78,7 @@ function populate() {
   $('body').value = sourceMode ? state.source : state.body; renderContacts();
   $('body').setSelectionRange(0, 0); $('body').scrollTop = 0;
   $('source-mode').textContent = sourceMode ? '返回正文编辑' : '完整 Markdown';
-  $('preset').value = state.layout.preset; $('max-pages').value = state.layout.page.maxPages; $('body-size').value = state.layout.bodyPt; $('margin').value = state.layout.page.marginMm; $('accent').value = state.layout.accent;
+  $('visual-theme').value = state.layout.theme; $('preset').value = state.layout.preset; $('max-pages').value = state.layout.page.maxPages; $('body-size').value = state.layout.bodyPt; $('margin').value = state.layout.page.marginMm; $('accent').value = state.layout.accent;
   for (const key of ['portrait', 'schoolLogo']) { const asset = state.front?.assets?.[key]; $(`${key}-enabled`).checked = state.layout.images[key].enabled; $(`${key}-enabled`).disabled = !asset; $(`${key}-file`).textContent = asset ? asset.src.split('/').at(-1) : '尚未选择'; }
   $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
   for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
@@ -204,6 +208,7 @@ $('preview-two-pages').addEventListener('click', async () => {
 });
 for (const [id, apply] of Object.entries({ preset: value => { state.layout.preset = value; delete state.layout.sectionOrder; }, 'max-pages': value => state.layout.page.maxPages = Number(value), 'body-size': value => state.layout.bodyPt = Number(value), margin: value => state.layout.page.marginMm = Number(value), accent: value => state.layout.accent = value })) $(id).addEventListener('change', event => { apply(event.target.value); edited(); });
 $('preset').addEventListener('change', () => sectionOrder?.refresh());
+$('visual-theme').addEventListener('change', event => { state.layout = applyResumeTheme(state.layout, event.target.value); $('accent').value = state.layout.accent; edited(); });
 for (const key of ['portrait', 'schoolLogo']) {
   $(`${key}-enabled`).addEventListener('change', event => { state.layout.images[key].enabled = event.target.checked; edited(); });
   $(`${key}-upload`).addEventListener('change', async event => {
@@ -231,7 +236,7 @@ $('reload').addEventListener('click', async () => { if (actionBusy || tick !== s
 $('import').addEventListener('change', async event => { const file = event.target.files[0]; if (!file) return; if (!confirm('导入前会先备份当前内容，继续吗？')) return; try { await managed(async () => acceptState(await request('/api/save', { revision: state.revision, source: await file.text(), layout: state.layout, importing: true }))); } catch (error) { toast(error.message); } event.target.value = ''; });
 $('template').addEventListener('change', () => $('replace-dialog').showModal());
 $('replace-cancel').addEventListener('click', () => { $('replace-dialog').close(); $('template').value = ''; });
-$('replace-confirm').addEventListener('click', async () => { try { await managed(async () => { acceptState(await request('/api/template', { revision: state.revision, template: $('template').value })); $('replace-dialog').close(); }); toast('已切换，原内容与图片已备份'); } catch (error) { toast(error.message); } });
+$('replace-confirm').addEventListener('click', async () => { const template = $('template').value; try { await managed(async () => { acceptState(await request('/api/template', { ...operationPayload(), template, theme: state.layout.theme })); $('replace-dialog').close(); }); toast('已切换，原内容与图片已备份'); } catch (error) { toast(error.message); } });
 $('exit').addEventListener('click', async () => { try { await settle(); await request('/api/exit', {}); document.body.replaceChildren(); const note = document.createElement('p'); note.textContent = '已保存并退出，可以关闭此页面。'; document.body.append(note); } catch (error) { toast(error.message); } });
 document.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); save(); } });
 window.addEventListener('beforeunload', event => { if (tick !== savedTick) { event.preventDefault(); event.returnValue = ''; } });
@@ -245,12 +250,13 @@ for (const [id, action] of [['resume-create','create'],['resume-copy','duplicate
   $('resume-dialog-title').textContent = { create:'新建简历', duplicate:'复制简历', rename:'重命名简历' }[action];
   $('resume-submit').textContent = { create:'新建', duplicate:'复制', rename:'保存名称' }[action];
   $('resume-template-field').hidden = action !== 'create';
+  $('resume-theme-field').hidden = action !== 'create'; $('resume-theme').value = state.layout.theme;
   $('resume-name').value = action === 'rename' ? state.resumeName : suggestedName(action === 'create' ? '新简历' : state.resumeName + ' 副本');
   $('resume-dialog-help').textContent = action === 'duplicate' ? '正文、版式和图片会复制到独立目录，原简历保持不变。' : action === 'rename' ? '只修改列表中的名称，简历内容保持不变。' : '新简历独立保存，当前内容保持不变。';
   $('resume-dialog').showModal(); $('resume-name').select();
 });
 $('resume-submit').addEventListener('click', async () => {
-  try { await managed(async () => { const result = await request(`/api/resumes/${resumeAction}`, { ...operationPayload(), name: $('resume-name').value, template: $('resume-template').value }); acceptState(result); $('resume-dialog').close(); }); }
+  try { await managed(async () => { const result = await request(`/api/resumes/${resumeAction}`, { ...operationPayload(), name: $('resume-name').value, template: $('resume-template').value, theme: $('resume-theme').value }); acceptState(result); $('resume-dialog').close(); }); }
   catch (error) { toast(error.message); }
 });
 $('resume-select').addEventListener('change', async event => {

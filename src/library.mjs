@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { openProject } from './project.mjs';
 import { initializeProject, saveFile } from './files.mjs';
 import { findStarterTemplate } from './starter-templates.mjs';
+import { findResumeTheme } from './resume-themes.mjs';
 import { captureBackup, captureDraftBackup, decodeBackup, applyBackup } from './backup.mjs';
 import { ResumeError } from './errors.mjs';
 import { assetPath } from './assets.mjs';
@@ -119,9 +120,10 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   async function createInternal(payload, duplicate = false) {
     const current = await check(payload);
     if (catalog.resumes.length >= 100) throw new ResumeError('简历数量已达到 100 份');
+    if (!duplicate && payload.theme !== undefined && !findResumeTheme(payload.theme)) throw new ResumeError('请选择有效的视觉风格', { field: 'theme' });
     const proposed = uniqueName(payload.name), id = randomUUID(), target = path.join(root, 'resumes', id);
     if (dirty.has(current.resumeId)) await checkpoint(current.resumeId, 'auto', false);
-    await initializeProject(target, duplicate ? 'blank' : payload.template || 'blank');
+    await initializeProject(target, duplicate ? 'blank' : payload.template || 'blank', duplicate ? {} : { theme: payload.theme });
     const project = await openProject(target);
     if (duplicate) {
       const snapshot = await captureBackup(await projectFor(current.resumeId), { schemaVersion: 1 });
@@ -144,9 +146,10 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   const startFromTemplate = payload => mutate(async () => {
     const current = await checkLibrary(payload);
     if (!findStarterTemplate(payload.template)) throw new ResumeError('请选择有效的起步模板');
+    if (payload.theme !== undefined && !findResumeTheme(payload.theme)) throw new ResumeError('请选择有效的视觉风格', { field: 'theme' });
     if (payload.mode === 'initial') {
       if (!current.gettingStarted.welcome) throw new ResumeError('已经开始填写或简历库发生变化，请重新载入；可从模板新建一份简历', { code: 'CONFLICT' });
-      if (payload.template !== 'blank') {
+      if (payload.template !== 'blank' || payload.theme !== undefined && payload.theme !== current.layout.theme) {
         await checkpoint(current.resumeId, 'template');
         await (await projectFor()).useTemplate(payload); dirty.add(current.resumeId);
       }
@@ -174,7 +177,10 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
     dirty.add(current.resumeId); await dismissWelcome(); return state();
   });
   const useTemplate = payload => mutate(async () => {
-    const current = await check(payload); await checkpoint(current.resumeId, 'template');
+    const current = await check(payload);
+    if (!findStarterTemplate(payload.template)) throw new ResumeError('请选择有效的起步模板');
+    if (payload.theme !== undefined && !findResumeTheme(payload.theme)) throw new ResumeError('请选择有效的视觉风格', { field: 'theme' });
+    await checkpoint(current.resumeId, 'template');
     await (await projectFor()).useTemplate(payload); dirty.add(current.resumeId); await dismissWelcome(); return state();
   });
   const content = async (resumeId, revision) => {

@@ -11,8 +11,9 @@ export interface ResumeDocument {
   assets?: { schoolLogo?: Asset; portrait?: Asset }; sections: Section[]; notice?: string;
 }
 export interface ImageConfig { enabled?: boolean; widthMm?: number; heightMm?: number; slot?: 'start' | 'end'; align?: 'top' | 'center' | 'bottom' }
+export type ResumeThemeId = 'ink-blue' | 'minimal-mono' | 'slate-banner' | 'forest-rail' | 'warm-labels' | 'graphite-grid';
 export interface LayoutConfig {
-  schemaVersion: '0.2.0'; theme?: 'ink-blue'; preset?: 'campus' | 'experience';
+  schemaVersion: '0.2.0'; theme?: ResumeThemeId; preset?: 'campus' | 'experience';
   page?: { size?: 'A4'; marginMm?: number; maxPages?: 1 | 2 };
   bodyPt?: number; lineHeight?: number; namePt?: number; accent?: string; sectionOrder?: string[];
   header?: { gapMm?: number }; spacing?: { sectionMm?: number; entryMm?: number };
@@ -93,4 +94,4 @@ export function inspectAndExport(rendered: RenderedResume, options: { pdf: true 
 export function inspectAndExport(rendered: RenderedResume, options?: { pdf?: false }): Promise<ExportResult>;
 export function inspectAndExport(rendered: RenderedResume, options: { pdf: boolean }): Promise<ExportResult | PdfExportResult>;
 export type StarterTemplateId = 'blank' | 'campus' | 'experience' | 'frontend' | 'java-backend' | 'python-backend' | 'ai-intern' | 'data-analyst' | 'qa-engineer' | 'android';
-export function initializeProject(directory: string, template?: StarterTemplateId): Promise<string>;
+export function initializeProject(directory: string, template?: StarterTemplateId, options?: { theme?: ResumeThemeId }): Promise<string>;
