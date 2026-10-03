@@ -73,6 +73,8 @@ jobs:
           python scripts/render-pdfs.py --directory tmp/pdfs/section-order
           python scripts/verify-pdf.py --directory tmp/pdfs/frontmatter-save
           python scripts/render-pdfs.py --directory tmp/pdfs/frontmatter-save
+          python scripts/verify-pdf.py --directory tmp/pdfs/layout-options
+          python scripts/render-pdfs.py --directory tmp/pdfs/layout-options --dpi 110
       - name: Build and check only anonymous samples
         run: |
           npm run sample
@@ -123,6 +125,14 @@ jobs:
           name: full-theme-preview-validation
           if-no-files-found: error
           path: tmp/ui/full-theme-preview/
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: advanced-layout-validation
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            tmp/pdfs/layout-options/
+            tmp/ui/layout-options/
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: contact-link-validation
