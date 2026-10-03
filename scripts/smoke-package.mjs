@@ -64,8 +64,10 @@ try {
   assert.equal(state.gettingStarted.welcome, true);
   const module = await fetch(editor.url + 'getting-started.mjs');
   assert.equal(module.status, 200); assert.match(await module.text(), /wireGettingStarted/);
-  for (const resource of ['starter-templates.mjs', 'template-picker.mjs', 'resume-themes.mjs', 'theme-picker.mjs']) assert.equal((await fetch(editor.url + resource)).status, 200);
+  for (const resource of ['starter-templates.mjs', 'template-picker.mjs', 'resume-themes.mjs', 'theme-picker.mjs', 'theme-preview.mjs']) assert.equal((await fetch(editor.url + resource)).status, 200);
   for (const theme of resumeThemes) { const response = await fetch(new URL(theme.preview, editor.url)); assert.equal(response.status, 200); assert.equal(Buffer.from(await response.arrayBuffer()).subarray(0,8).toString('hex'), '89504e470d0a1a0a'); }
+  for (const theme of resumeThemes) { const response = await fetch(new URL(theme.previewPdf, editor.url)); assert.equal(response.status, 200); assert.equal(Buffer.from(await response.arrayBuffer()).subarray(0,5).toString(), '%PDF-'); }
+  assert.deepEqual(await (await fetch(editor.url + 'api/state')).json(), state);
   const naming = await fetch(editor.url + 'filename.mjs');
   assert.equal(naming.status, 200); assert.match(await naming.text(), /resumeFilename/);
   const ordering = await fetch(editor.url + 'section-order.mjs');

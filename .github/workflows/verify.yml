@@ -119,6 +119,11 @@ jobs:
           path: tmp/pdfs/themes/
       - uses: actions/upload-artifact@v7.0.1
         with:
+          name: full-theme-preview-validation
+          if-no-files-found: error
+          path: tmp/ui/full-theme-preview/
+      - uses: actions/upload-artifact@v7.0.1
+        with:
           name: contact-link-validation
           retention-days: 7
           path: tmp/pdfs/contact-links/

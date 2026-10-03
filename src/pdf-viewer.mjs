@@ -11,6 +11,7 @@ export async function createPdfViewerAssets() {
     ['/pdf-viewer.html', [path.join(kitRoot, 'app/pdf-viewer.html'), 'text/html; charset=utf-8']],
     ['/pdf-viewer.mjs', [path.join(kitRoot, 'app/pdf-viewer.mjs'), 'text/javascript; charset=utf-8']],
     ['/pdf-viewer.css', [path.join(kitRoot, 'app/pdf-viewer.css'), 'text/css; charset=utf-8']],
+    ['/resume-themes.mjs', [path.join(kitRoot, 'src/resume-themes.mjs'), 'text/javascript; charset=utf-8']],
     ['/pdfjs/pdf.mjs', [path.join(pdfjsRoot, 'build/pdf.mjs'), 'text/javascript; charset=utf-8']],
     ['/pdfjs/pdf.worker.mjs', [path.join(pdfjsRoot, 'build/pdf.worker.mjs'), 'text/javascript; charset=utf-8']],
     ['/pdfjs/pdf_viewer.css', [path.join(pdfjsRoot, 'web/pdf_viewer.css'), 'text/css; charset=utf-8']],

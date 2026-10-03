@@ -6,7 +6,7 @@ export const resumeThemes = Object.freeze([
   { id: 'forest-rail', label: '森林目录', accent: '#28624e', description: '章节标题独立在左，经历集中在右，阅读路径鲜明。' },
   { id: 'warm-labels', label: '暖橙标签', accent: '#984b2f', description: '暖色章节标签、技术栈底色与宽松留白，亲和明快。' },
   { id: 'graphite-grid', label: '灰阶商务', accent: '#3d474f', description: '灰底标题、整齐元信息与克制强调，适合正式材料。' },
-].map(theme => Object.freeze({ ...theme, preview: '/theme-previews/' + theme.id + '.png' })));
+].map(theme => Object.freeze({ ...theme, preview: '/theme-previews/' + theme.id + '.png', previewPdf: '/theme-previews/' + theme.id + '.pdf' })));
 
 export const findResumeTheme = id => resumeThemes.find(theme => theme.id === id);
 

@@ -1,16 +1,16 @@
 # 安装与调用 API
 
-从 [GitHub Release](https://github.com/MoChiUaena/tech-resume-kit/releases/latest) 下载 `tech-resume-kit-0.11.1.tgz`，在自己的 Node.js 项目中安装：
+从 [GitHub Release](https://github.com/MoChiUaena/tech-resume-kit/releases/latest) 下载 `tech-resume-kit-0.12.0.tgz`，在自己的 Node.js 项目中安装：
 
 ```sh
-npm install ./tech-resume-kit-0.11.1.tgz
+npm install ./tech-resume-kit-0.12.0.tgz
 npx playwright install chromium
 npx tech-resume init --dir my-resume --template blank
 ```
 
 需要 Node.js 22.13+，公共入口为 ESM，附带 TypeScript 类型声明。代码与字体随包提供，首次下载依赖和浏览器后可以离线导出。当前通过 GitHub 分发，没有发布到 npm 注册表。
 
-源码版本的 `initializeProject(directory, template, { theme })` 支持十种起步内容，模板 ID 见 [README 模板目录](../README.md#示例与命令)。例如 `await initializeProject('./my-resume', 'frontend', { theme: 'minimal-mono' })`；TypeScript 可使用 `StarterTemplateId` 和 `ResumeThemeId` 类型。外观 ID 见 [README 外观目录](../README.md#外观模板)，省略主题时保留起步内容自身的配置。现有 v0.11.1 下载包支持 `blank`、`campus`、`experience`，新增岗位模板随后续版本分发。
+`initializeProject(directory, template, { theme })` 支持十种起步内容，模板 ID 见 [README 模板目录](../README.md#示例与命令)。例如 `await initializeProject('./my-resume', 'frontend', { theme: 'minimal-mono' })`；TypeScript 可使用 `StarterTemplateId` 和 `ResumeThemeId` 类型。外观 ID 见 [README 外观目录](../README.md#外观模板)，省略主题时保留起步内容自身的配置。v0.12.0 下载包包含全部十种内容与六套外观。
 
 ## JavaScript / TypeScript
 

@@ -1,10 +1,12 @@
 import { getDocument, GlobalWorkerOptions, TextLayer } from '/pdfjs/pdf.mjs';
+import { resumeThemes } from './resume-themes.mjs';
 
 const $ = id => document.getElementById(id);
 GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.mjs';
 let documentTask, documentPdf, source, serial = 0, pageNumber = 1, resizeTimer, rendering = false;
 const activeTasks = new Set();
 function notify(type, extra = {}) { if (window.parent !== window) window.parent.postMessage({ type, source, ...extra }, location.origin); }
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && window.parent !== window) { event.preventDefault(); notify('resume-pdf-escape'); } });
 function controls(ready) { $('zoom').disabled = !ready; $('page-prev').disabled = !ready || pageNumber <= 1; $('page-next').disabled = !ready || pageNumber >= (documentPdf?.numPages || 1); }
 function fail(error) {
   rendering = false;
@@ -16,7 +18,9 @@ function parseSource() {
   const value = new URLSearchParams(location.search).get('file');
   if (!value || value.length > 2000) throw new Error('预览地址不正确');
   const url = new URL(value, location.origin);
-  if (url.origin !== location.origin || url.username || url.password || url.hash || !['/document.pdf', '/__document.pdf'].includes(url.pathname)) throw new Error('预览仅支持本机生成的简历 PDF');
+  const generated = ['/document.pdf', '/__document.pdf'].includes(url.pathname);
+  const bundled = !url.search && resumeThemes.some(theme => theme.previewPdf === url.pathname);
+  if (url.origin !== location.origin || url.username || url.password || url.hash || !generated && !bundled) throw new Error('预览仅支持本机生成的简历 PDF 和随包外观样张');
   return url.pathname + url.search;
 }
 function updatePageNumber() {
