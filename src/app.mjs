@@ -76,6 +76,7 @@ export async function startEditor(directory, { port = 0, idleSeconds = 0, histor
   }
   const staticFiles = { '/section-order.mjs': ['app/section-order.mjs', 'text/javascript; charset=utf-8'], '/filename.mjs': ['src/filename.mjs', 'text/javascript; charset=utf-8'], '/getting-started.mjs': ['app/getting-started.mjs', 'text/javascript; charset=utf-8'], '/': ['app/index.html', 'text/html; charset=utf-8'], '/app.js': ['app/app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app/app.css', 'text/css; charset=utf-8'], '/crop.mjs': ['app/crop.mjs', 'text/javascript; charset=utf-8'], '/entries.mjs': ['app/entries.mjs', 'text/javascript; charset=utf-8'], '/entry-manager.mjs': ['app/entry-manager.mjs', 'text/javascript; charset=utf-8'], '/content-manager.mjs': ['app/content-manager.mjs', 'text/javascript; charset=utf-8'], '/library-manager.mjs': ['app/library-manager.mjs', 'text/javascript; charset=utf-8'], '/system.mjs': ['app/system.mjs', 'text/javascript; charset=utf-8'] };
   staticFiles['/draft-recovery.mjs'] = ['app/draft-recovery.mjs', 'text/javascript; charset=utf-8'];
+  staticFiles['/entry-form.mjs'] = ['app/entry-form.mjs', 'text/javascript; charset=utf-8'];
   staticFiles['/error-guidance.mjs'] = ['app/error-guidance.mjs', 'text/javascript; charset=utf-8'];
   staticFiles['/starter-templates.mjs'] = ['src/starter-templates.mjs', 'text/javascript; charset=utf-8'];
   staticFiles['/template-picker.mjs'] = ['app/template-picker.mjs', 'text/javascript; charset=utf-8'];

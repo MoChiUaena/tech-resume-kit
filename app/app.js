@@ -2,6 +2,7 @@ import { createCropModel, normalizeCrop, rotateCrop, paintCrop, exportCrop } fro
 import { insertResumeEntry } from './entries.mjs';
 import { wireSystem } from './system.mjs';
 import { wireEntries } from './entry-manager.mjs';
+import { configureEntryForm } from './entry-form.mjs';
 import { wireLibrary } from './library-manager.mjs';
 import { wireContent } from './content-manager.mjs';
 import { wireGettingStarted } from './getting-started.mjs';
@@ -23,6 +24,7 @@ let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previe
 const pendingUploads = new Set();
 let cropSession, cropDrag, entryKind;
 let viewerReference;
+let editorResumeId;
 let draftBusy = false;
 let draftRecovery;
 let errorUI;
@@ -86,6 +88,8 @@ function populate() {
   $('template').value = '';
   const person = state.front?.person;
   sourceMode = !person || typeof person.name !== 'string' || typeof person.target !== 'string' || !Array.isArray(person.contacts) || !person.contacts.length || !person.contacts.every(contact => typeof contact?.text === 'string' && typeof contact?.href === 'string');
+  if (editorResumeId !== state.resumeId) { $('advanced-editor').open = false; editorResumeId = state.resumeId; }
+  if (sourceMode) $('advanced-editor').open = true;
   $('person-fields').hidden = sourceMode; $('contacts').hidden = sourceMode;
   for (const field of ['name', 'target', 'label', 'availability']) $(field).value = state.front?.person?.[field] || '';
   $('body').value = sourceMode ? state.source : state.body; renderContacts();
@@ -196,6 +200,7 @@ $('save-draft').addEventListener('click', async () => {
   finally { draftBusy = false; $('save-draft').disabled = actionBusy; }
 });
 function showKnownSource() {
+  $('advanced-editor').open = true;
   sourceMode = true; $('body').value = state.source; $('person-fields').hidden = true; $('contacts').hidden = true; $('contact-add').disabled = true; $('source-mode').textContent = '返回正文编辑';
   for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = true;
   for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = true;
@@ -377,20 +382,11 @@ $('crop-apply').addEventListener('click', async () => {
     edited(); await settle();
   } catch (error) { if (state.resumeId === photo.resumeId && ($('crop-dialog').open || tick === savedTick)) errorUI?.image('portrait', error, $('crop-dialog').open); }
 });
-const entryLabels = {
-  education: ['添加教育经历','学校名称','专业 / 学历','课程、成绩或奖项，每行一条'],
-  internship: ['添加实习经历','公司名称','岗位 / 职责','负责的工作、关键做法和结果，每行一条'],
-  work: ['添加工作经历','公司名称','岗位 / 职责','负责的工作、关键做法和结果，每行一条'],
-  project: ['添加项目经历','项目名称','负责角色','项目目标、技术做法和结果，每行一条'],
-};
-for (const kind of Object.keys(entryLabels)) $(`entry-${kind}`).addEventListener('click', () => {
+for (const kind of ['education', 'internship', 'work', 'project']) $(`entry-${kind}`).addEventListener('click', () => {
   if (sourceMode) { toast('请先返回正文编辑'); return; }
   entryKind = kind;
-  $('entry-dialog').dataset.mode = 'add'; $('entry-submit').textContent = '添加到正文'; $('entry-content-help').hidden = true;
-  $('entry-details').maxLength = 10000; $('entry-details').rows = 4; $('entry-details').placeholder = '填写负责的工作、关键做法和结果；支持加粗与链接。';
-  const labels = entryLabels[kind];
-  $('entry-dialog-title').textContent = labels[0]; $('entry-title-label').textContent = labels[1]; $('entry-subtitle-label').textContent = labels[2]; $('entry-details-label').textContent = labels[3];
-  $('entry-stack-field').hidden = kind === 'education';
+  $('entry-dialog').dataset.mode = 'add'; $('entry-submit').textContent = '添加经历';
+  configureEntryForm(kind);
   for (const id of ['entry-title','entry-subtitle','entry-date','entry-stack','entry-details']) $(id).value = '';
   $('entry-error').hidden = true; $('entry-dialog').showModal(); $('entry-title').focus();
 });
@@ -401,7 +397,9 @@ $('entry-submit').addEventListener('click', async () => {
     const result = insertResumeEntry($('body').value, { kind: entryKind, title: $('entry-title').value, subtitle: $('entry-subtitle').value, date: $('entry-date').value, stack: entryKind === 'education' ? '' : $('entry-stack').value, details: $('entry-details').value }, state.layout);
     $('body').value = result.body; if (result.sectionOrder) state.layout.sectionOrder = result.sectionOrder;
     $('entry-dialog').close(); edited();
-    $('body').focus(); $('body').setSelectionRange(result.selectionStart, result.selectionStart); await settle();
+    $('entry-manager').open = true;
+    $('entry-manager').scrollIntoView({ block: 'start', behavior: 'smooth' }); $('entry-manager-summary').focus({ preventScroll: true });
+    await settle();
   } catch (error) { errorUI?.dialog('entry', error); }
 });
 entryManager = wireEntries({ request, managed, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast, errorUI: { dialog: (...args) => errorUI.dialog(...args) } });

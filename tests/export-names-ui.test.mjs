@@ -1,3 +1,4 @@
+import { openAdvancedEditor } from './helpers/advanced-editor.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
@@ -131,9 +132,9 @@ test('a PDF export rejected after an external edit shows the conflict and restor
 
 test('editing a name in full Markdown gives PDF and Markdown downloads the saved source name', async t => {
   const { page, errors } = await exportFixture(t);
-  await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'hidden' }); await page.locator('#source-mode:not([disabled])').waitFor();
+  await openAdvancedEditor(page); await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'hidden' }); await page.locator('#source-mode:not([disabled])').waitFor();
   const source = await page.locator('#body').inputValue(), changed = source.replace('奶龙', '源文件样张');
-  assert.notEqual(changed, source); await page.locator('#body').fill(changed);
+  assert.notEqual(changed, source); await openAdvancedEditor(page); await page.locator('#body').fill(changed);
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   const [pdf] = await Promise.all([page.waitForEvent('download'), page.locator('#pdf-download').click()]);
   assert.equal(pdf.suggestedFilename(), '源文件样张-我的简历.pdf');
@@ -147,14 +148,14 @@ test('editing a name in full Markdown gives PDF and Markdown downloads the saved
 
 test('source-mode switching protects input while loading and restores controls after success or failure', async t => {
   const { page, errors, app } = await exportFixture(t);
-  await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'hidden' });
+  await openAdvancedEditor(page); await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'hidden' });
   const source = await page.locator('#body').inputValue(), changed = source.replace('奶龙', '模式切换样张');
-  await page.locator('#body').fill(changed);
+  await openAdvancedEditor(page); await page.locator('#body').fill(changed);
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   let releaseState, enteredState;
   const entered = new Promise(resolve => enteredState = resolve), gate = new Promise(resolve => releaseState = resolve);
   await page.route('**/api/state', async route => { const response = await route.fetch(); enteredState(); await gate; await route.fulfill({ response }); });
-  await page.locator('#source-mode').click(); await entered;
+  await openAdvancedEditor(page); await page.locator('#source-mode').click(); await entered;
   try {
     for (const id of ['body', 'source-mode', 'pdf-download', 'markdown-download', 'resume-select']) assert.equal(await page.locator('#' + id).isDisabled(), true, id + ' must stay disabled during mode loading');
     await page.keyboard.press('Control+s');
@@ -166,7 +167,7 @@ test('source-mode switching protects input while loading and restores controls a
   assert.equal(await page.locator('#body').isDisabled(), false);
   await page.unroute('**/api/state');
   await page.route('**/api/state', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { message: '模式载入暂时失败' } }) }));
-  await page.locator('#source-mode').click();
+  await openAdvancedEditor(page); await page.locator('#source-mode').click();
   await page.locator('#toast').filter({ hasText: '模式载入暂时失败' }).waitFor({ state: 'visible' });
   await page.locator('#source-mode:not([disabled])').waitFor();
   assert.equal(await page.locator('#person-fields').isVisible(), true);
@@ -179,25 +180,25 @@ test('source-mode switching protects input while loading and restores controls a
 
 test('editing during a delayed draft checkpoint prevents mode switching from replacing newer input', async t => {
   const { page, app, errors } = await exportFixture(t);
-  await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'hidden' });
+  await openAdvancedEditor(page); await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'hidden' });
   let releaseClear, enteredClear, first = true;
   const entered = new Promise(resolve => enteredClear = resolve), gate = new Promise(resolve => releaseClear = resolve);
   await page.route('**/api/drafts/clear', async route => { if (first) { first = false; enteredClear(); await gate; } await route.continue(); });
   const source = await page.locator('#body').inputValue(), saved = source.replace('奶龙', '已保存样张');
-  await page.locator('#body').fill(saved); await entered;
+  await openAdvancedEditor(page); await page.locator('#body').fill(saved); await entered;
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   assert.equal((await app.project.read()).source, saved);
   const newer = saved.replace('已保存样张', '等待期间的新姓名');
   try {
-    await page.locator('#source-mode').click();
-    await page.locator('#body').fill(newer);
+    await openAdvancedEditor(page); await page.locator('#source-mode').click();
+    await openAdvancedEditor(page); await page.locator('#body').fill(newer);
   } finally { releaseClear(); }
   await page.waitForFunction(() => !document.getElementById('person-fields').hidden || document.getElementById('toast').textContent.includes('内容尚未保存'));
   assert.equal(await page.locator('#body').inputValue(), newer, 'a delayed draft checkpoint must not let mode switching overwrite newer source');
   assert.equal(await page.locator('#person-fields').isVisible(), false);
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   assert.equal((await app.project.read()).source, newer);
-  await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'visible' });
+  await openAdvancedEditor(page); await page.locator('#source-mode').click(); await page.locator('#person-fields').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#name').inputValue(), '等待期间的新姓名');
   assert.deepEqual(errors, []);
 });
@@ -217,7 +218,7 @@ test('mode switching includes a school logo selected while waiting for an earlie
   await page.locator('#name').fill('图片等待样张'); await clearEntered;
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   try {
-    await page.locator('#source-mode').click();
+    await openAdvancedEditor(page); await page.locator('#source-mode').click();
     await page.locator('#schoolLogo-upload').setInputFiles({ name: '等待期间的新校徽.png', mimeType: 'image/png', buffer: logo });
     await uploadEntered;
     const cleared = page.waitForResponse(response => response.url().endsWith('/api/drafts/clear'));

@@ -101,7 +101,7 @@ try {
   const draftZip = await download('#save-draft', '未保存草稿.zip'); assert.match(decodeBackup(await readFile(draftZip)).source, /页面仍未保存的申请岗位/); assert.equal(await readFile(sourceFile, 'utf8'), externalSource);
   await page.close(); await stop(); await start(); await openPage(); await page.locator('#draft-recovery:not([hidden])').waitFor(); await capture('07-recovery', '重新打开程序后提供独立草稿恢复选择');
   await page.locator('#draft-resume').click(); await page.locator('#save-status').filter({ hasText: '保存失败' }).waitFor(); assert.equal(await page.locator('#target').inputValue(), '页面仍未保存的申请岗位'); assert.equal(await readFile(sourceFile, 'utf8'), externalSource);
-  await page.locator('#reload').click(); await page.waitForFunction(() => document.querySelector('#target').value === '外部另一个已保存岗位');
+  await page.locator('#advanced-editor > summary').click(); await page.locator('#reload').click(); await page.waitForFunction(() => document.querySelector('#target').value === '外部另一个已保存岗位');
   await page.locator('#history-open').click(); await page.locator('#history-dialog[open]').waitFor(); await page.locator('#backup-import').setInputFiles(draftZip);
   await page.locator('#restore-dialog[open]').waitFor(); await page.locator('#restore-confirm').click(); await page.locator('#restore-dialog').waitFor({ state: 'hidden' }); await page.getByRole('button', { name: '关闭备份与恢复' }).click();
   await rendered(); assert.equal((await state()).front.person.target, '页面仍未保存的申请岗位'); await exportPdf('journey-recovered'); await capture('08-recovered', '明确从 ZIP 恢复草稿后，文字和两张独立图片仍可导出');

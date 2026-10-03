@@ -1,3 +1,4 @@
+import { openAdvancedEditor } from './helpers/advanced-editor.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, mkdir, rm, realpath } from 'node:fs/promises';
@@ -49,7 +50,7 @@ test('a new user chooses a starter, navigates form sections and downloads the ac
   await page.locator('#guide-entries').click(); await page.locator('#entry-list [data-action=edit]').first().waitFor();
   assert.equal(await page.locator('#entry-manager').getAttribute('open'), '');
   await page.locator('#entry-list [data-action=edit]').first().click();
-  assert.equal(await page.locator('#entry-dialog').isVisible(), true); await page.getByRole('button', { name: '关闭添加经历' }).click();
+  assert.equal(await page.locator('#entry-dialog').isVisible(), true); await page.getByRole('button', { name: '关闭经历编辑' }).click();
   await page.locator('#guide-content').click(); await page.locator('#content-list [data-section-id=skills]').waitFor();
   assert.equal(await page.locator('#content-manager').getAttribute('open'), '');
   await page.locator('#guide-layout').click(); assert.equal(await page.locator('#settings').isVisible(), true);
@@ -78,9 +79,9 @@ test('direct filling and blank starter choices persist across restarts, and full
   await direct.page.locator('#start-direct').click(); await direct.page.locator('#start-banner').waitFor({ state: 'hidden' });
   assert.equal(await direct.page.locator('#name').inputValue(), '你的姓名');
   await direct.restart(); assert.equal(await direct.page.locator('#start-banner').isVisible(), false);
-  await direct.page.locator('#source-mode').click(); await direct.page.locator('#guide-person:disabled').waitFor();
+  await openAdvancedEditor(direct.page); await direct.page.locator('#source-mode').click(); await direct.page.locator('#guide-person:disabled').waitFor();
   assert.equal(await direct.page.locator('#guide-entries').isDisabled(), true); assert.equal(await direct.page.locator('#guide-content').isDisabled(), true);
-  await direct.page.locator('#source-mode').click(); await direct.page.locator('#guide-person:not([disabled])').waitFor();
+  await openAdvancedEditor(direct.page); await direct.page.locator('#source-mode').click(); await direct.page.locator('#guide-person:not([disabled])').waitFor();
   const blank = await fixture(t);
   const original = await readFile(path.join(blank.root, 'resume.md'), 'utf8');
   await blank.page.locator('#start-choose').click(); await blank.page.locator('#start-submit').click();
