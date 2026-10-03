@@ -100,7 +100,7 @@ function populate() {
   for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
   for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
   entryManager?.refresh(); contentManager?.refresh();
-  libraryManager?.render(); gettingStarted?.refresh(); if ($('settings').open) sectionOrder?.refresh();
+  libraryManager?.render(); gettingStarted?.refresh(); sectionOrder?.invalidate(); if ($('settings').open) sectionOrder?.refresh();
 }
 async function refreshPreview(revision, expectedTick = tick) {
   $('preview-actions').hidden = true;
@@ -141,7 +141,7 @@ async function save() {
     const result = await request('/api/save', payload); state.revision = result.revision; state.source = result.source; state.gettingStarted = result.gettingStarted; gettingStarted?.refresh(); savedTick = captured; draftRecovery?.saved(draftToken);
     if (tick === captured) { if (savingSourceMode) state.front = result.front; clearSaveError(); $('save-status').textContent = '已自动保存'; refreshPreview(result.revision, captured); entryManager?.refresh(); contentManager?.refresh(); } else pending = true;
   } catch (error) { showUnsavedError(error); pending = false; }
-  finally { busy = false; $('save-retry').disabled = actionBusy; draftRecovery?.render(); if (!actionBusy && pending && tick !== savedTick) { pending = false; save(); } }
+  finally { busy = false; $('save-retry').disabled = actionBusy; draftRecovery?.render(); if (!actionBusy && pending && tick !== savedTick) { pending = false; save(); } if (!actionBusy && tick === savedTick && $('settings').open && sectionOrder?.needsRefresh()) sectionOrder.refresh({ saveFirst: false }); }
 }
 async function settle() {
   do {
@@ -173,6 +173,7 @@ async function managed(action, { saveFirst = true } = {}) {
     for (const id of ['content-skill-add','content-lines-add']) $(id).disabled = sourceMode;
     entryManager?.refresh(); contentManager?.refresh();
     libraryManager?.render(); gettingStarted?.refresh();
+    if (tick === savedTick && $('settings').open && sectionOrder?.needsRefresh()) sectionOrder.refresh({ saveFirst: false });
   }
 }
 function acceptState(result) { errorUI?.clearAll(); for (const key of Object.keys(imageEpoch)) imageEpoch[key]++; draftRecovery?.abandon(); state = result; tick = savedTick = 0; previewSequence++; viewerReference = undefined; $('pdf-frame').hidden = true; $('pdf-frame').removeAttribute('src'); populate(); $('save-status').textContent = '已载入本地文件'; $('pdf-download').disabled = true; refreshPreview(state.revision); draftRecovery?.review(); }
@@ -213,7 +214,7 @@ $('source-mode').addEventListener('click', async () => {
   } catch (error) { toast(error.message); }
 });
 $('contact-add').addEventListener('click', () => { state.front.person.contacts.push({ text: '', href: 'mailto:' }); renderContacts(); edited(); });
-function openSettings(refreshSections = true) { if (!$('settings').open) $('settings').showModal(); if (refreshSections) sectionOrder?.refresh(); }
+function openSettings(saveFirst = true) { if (!$('settings').open) $('settings').showModal(); sectionOrder?.refresh({ saveFirst: saveFirst !== false }); }
 $('settings-open').addEventListener('click', openSettings);
 $('preview-layout').addEventListener('click', openSettings);
 $('preview-two-pages').addEventListener('click', async () => {
@@ -407,7 +408,7 @@ entryManager = wireEntries({ request, managed, operationPayload, acceptState, ge
 contentManager = wireContent({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, isClean: () => tick === savedTick, toast, errorUI: { dialog: (...args) => errorUI.dialog(...args) } });
 libraryManager = wireLibrary({ request, managed, settle, operationPayload, acceptState, getState: () => state, toast });
 wireSystem({ request, managed, settle, operationPayload, acceptState });
-sectionOrder = wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState: () => state, errorUI: { dialog: (...args) => errorUI.dialog(...args) } });
+sectionOrder = wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState: () => state, isClean: () => tick === savedTick && !busy && !actionBusy, errorUI: { dialog: (...args) => errorUI.dialog(...args) } });
 
 gettingStarted = wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, toast, openSettings, themePreview });
 draftRecovery = wireDraftRecovery({ request, getState: () => state, getPayload: () => ({ layout: state.layout, ...(sourceMode ? { source: $('body').value } : { baseSource: state.source, front: state.front, body: $('body').value }) }), isClean: () => tick === savedTick && !busy && !actionBusy, toast, applyDraft: record => {

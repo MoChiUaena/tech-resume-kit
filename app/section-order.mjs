@@ -1,7 +1,13 @@
 const $ = id => document.getElementById(id);
 
-export function wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState, errorUI }) {
-  let sequence = 0, sections = [], order = [], renameChoice;
+export function wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState, isClean, errorUI }) {
+  let sequence = 0, sections = [], order = [], renameChoice, cache;
+  function invalidate() {
+    sequence++; cache = undefined; sections = []; order = [];
+    $('order-list').replaceChildren(); $('order-reset').disabled = true;
+    $('order-status').textContent = '打开设置后读取当前简历的章节…';
+  }
+  function needsRefresh() { const state = getState(); return !cache || cache.resumeId !== state?.resumeId || cache.source !== state?.source; }
   function render() {
     $('order-list').replaceChildren();
     for (const [index, id] of order.entries()) {
@@ -36,21 +42,23 @@ export function wireSectionOrder({ request, settle, edited, managed, operationPa
     $('order-reset').disabled = !getState()?.layout?.sectionOrder;
     $('order-status').textContent = '改名保留章节内容；使用箭头调整顺序，更换信息编排会恢复预设顺序。';
   }
-  async function refresh() {
-    const requested = ++sequence;
-    $('order-list').replaceChildren(); $('order-reset').disabled = !getState()?.layout?.sectionOrder;
+  async function refresh({ saveFirst = true } = {}) {
+    invalidate(); const requested = sequence;
     $('order-status').textContent = '正在读取章节…';
     try {
-      await settle();
+      if (saveFirst) await settle();
+      if (requested !== sequence || !$('settings').open) return;
+      if (!isClean()) { $('order-status').textContent = '请先修正并保存当前修改，再调整章节。'; return; }
       const state = getState(); if (!state) return;
       const result = await request(`/api/section-order?resumeId=${state.resumeId}&revision=${state.revision}`);
       if (requested !== sequence || !$('settings').open) return;
-      if (getState().resumeId !== result.resumeId || getState().revision !== result.revision) { refresh(); return; }
-      sections = result.sections; order = result.order; render();
+      if (!isClean()) { $('order-status').textContent = '请先修正并保存当前修改，再调整章节。'; return; }
+      if (getState().resumeId !== result.resumeId || getState().revision !== result.revision) { refresh({ saveFirst }); return; }
+      sections = result.sections; order = result.order; cache = { resumeId: state.resumeId, source: state.source }; render();
     } catch (error) {
       if (requested !== sequence) return;
       $('order-status').textContent = `暂时无法调整章节：${error.message}`;
-      $('order-reset').disabled = !getState()?.layout?.sectionOrder;
+      $('order-reset').disabled = !isClean() || !getState()?.layout?.sectionOrder;
     }
   }
   $('order-reset').addEventListener('click', async () => {
@@ -72,5 +80,5 @@ export function wireSectionOrder({ request, settle, edited, managed, operationPa
       $('section-title-dialog').close();
     } catch (error) { errorUI.dialog('section', error); }
   });
-  return { refresh };
+  return { refresh, invalidate, needsRefresh };
 }

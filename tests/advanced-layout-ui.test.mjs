@@ -103,6 +103,7 @@ test('chosen layout values persist across restart and resume switching; all six 
 
 test('layout validation errors locate and unfold their controls on a narrow screen', async t => {
   const f = await fixture(t), { page } = f;
+  await page.setViewportSize({ width: 390, height: 820 });
   await page.getByText('更多排版选项', { exact: true }).click();
   for (const [id, label, field, original, valid] of controls) {
     let active = true;
@@ -121,7 +122,6 @@ test('layout validation errors locate and unfold their controls on a narrow scre
     await page.locator('#save-status').filter({ hasText: '已自动保存' }).waitFor();
     assert.equal(await page.locator('#' + id).getAttribute('aria-invalid'), null);
   }
-  await page.setViewportSize({ width: 390, height: 820 });
   for (const [id] of controls) {
     await page.locator('#' + id).scrollIntoViewIfNeeded();
     const bounds = await page.locator('#' + id).boundingBox();
@@ -130,6 +130,38 @@ test('layout validation errors locate and unfold their controls on a narrow scre
   const qa = path.join(kitRoot, 'tmp/ui/layout-options'); await mkdir(qa, { recursive: true });
   await page.screenshot({ path: path.join(qa, 'settings-mobile.png') });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  assert.deepEqual(await readFile(path.join(f.directory, 'resume.md')), f.source);
+  assert.deepEqual(f.errors, []); assert.deepEqual(f.remote, []);
+});
+
+test('image error navigation after switching resumes loads the current chapters and cannot save another resume chapter IDs', async t => {
+  const f = await fixture(t), { page } = f;
+  await page.getByRole('button', { name: '关闭设置', exact: true }).click();
+  await page.locator('#resume-create').click(); await page.locator('#resume-name').fill('独立空白简历');
+  await page.locator('#resume-template').selectOption('blank'); await page.locator('#resume-submit').click();
+  await page.locator('#resume-dialog').waitFor({ state: 'hidden' });
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  const blank = await f.app.project.read(), front = structuredClone(blank.front), layout = structuredClone(blank.layout);
+  front.assets.portrait = { src: 'missing-portrait.jpg', alt: '缺失照片验证' }; layout.images.portrait.enabled = true;
+  await f.app.project.save({ resumeId: blank.resumeId, revision: blank.revision, front, body: blank.body, layout });
+  await page.reload(); await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 });
+  await page.locator('#resume-select').selectOption(f.original.resumeId);
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.locator('#settings-open').click();
+  await page.waitForFunction(() => document.querySelectorAll('#order-list .order-row').length === 5);
+  await page.getByRole('button', { name: '关闭设置', exact: true }).click();
+  await page.locator('#resume-select').selectOption(blank.resumeId);
+  await page.locator('#preview-error:not([hidden])').waitFor({ timeout: 30000 });
+  await page.locator('#preview-locate').click();
+  await page.locator('#order-list .order-row').first().waitFor();
+  assert.deepEqual(await page.locator('#order-list .order-row').evaluateAll(rows => rows.map(row => row.dataset.sectionId)), ['education', 'skills', 'projects', 'additional']);
+  await page.locator('#portrait-enabled').uncheck();
+  await page.locator('#save-status').filter({ hasText: '已自动保存' }).waitFor();
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.locator('#order-list [data-section-id="education"] [data-action="down"]').click();
+  await page.locator('#save-status').filter({ hasText: '已自动保存' }).waitFor();
+  assert.deepEqual((await f.app.project.read()).layout.sectionOrder, ['skills', 'education', 'projects', 'additional']);
+  assert.equal((await f.app.project.preview()).metrics.pageCount, 1);
   assert.deepEqual(await readFile(path.join(f.directory, 'resume.md')), f.source);
   assert.deepEqual(f.errors, []); assert.deepEqual(f.remote, []);
 });
