@@ -20,7 +20,7 @@ for filename in sorted(tracked):
         if basename not in allowed:
             raise SystemExit(f'Unexpected public PDF output: {filename}')
 
-source_files = [root / 'resume.md', root / 'examples/ai-intern/resume.md', root / 'examples/experienced/resume.md', root / 'templates/blank/resume.md']
+source_files = [root / 'resume.md', root / 'examples/ai-intern/resume.md', root / 'examples/experienced/resume.md', *sorted((root / 'templates').glob('*/resume.md'))]
 for source in source_files:
     text = source.read_text(encoding='utf-8')
     if 'example.com' not in text:
@@ -40,4 +40,4 @@ for stem in ('campus-ink-blue', 'ai-intern-ink-blue', 'experienced-ink-blue'):
         raise SystemExit(f'Unexpected phone number in published sample: {stem}')
     if not (directory / f'{stem}.pdf').exists():
         raise SystemExit(f'Missing reviewed anonymous PDF: {stem}')
-print(f'Public-file audit passed: {len(tracked)} tracked paths, three anonymous sources and PDFs.')
+print(f'Public-file audit passed: {len(tracked)} tracked paths, {len(source_files)} anonymous sources and three reviewed PDFs.')

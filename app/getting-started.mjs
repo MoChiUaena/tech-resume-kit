@@ -1,6 +1,9 @@
+import { fillStarterChoices } from './template-picker.mjs';
+
 const $ = id => document.getElementById(id);
 
 export function wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState, isSourceMode, toast, openSettings }) {
+  fillStarterChoices(document.querySelector('#start-dialog .starter-options'));
   let choice;
   function refresh() {
     $('start-banner').hidden = !getState()?.gettingStarted?.welcome;

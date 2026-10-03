@@ -11,10 +11,11 @@ import { ResumeError } from './errors.mjs';
 import { ensureNewOutput, savePdf, saveFile, initializeProject } from './files.mjs';
 import { assetPath } from './assets.mjs';
 import { startPreview } from './preview.mjs';
+import { starterTemplates } from './starter-templates.mjs';
 
 const help = `tech-resume-kit - 本地中文简历
 
-  tech-resume init --dir personal/my-resume [--template campus|experience|blank]
+  tech-resume init --dir personal/my-resume [--template <模板 ID>]
   tech-resume check [resume.md] [--config layout.yaml] [--json]
   tech-resume preview [resume.md] [--config layout.yaml] [--port 4173]
   tech-resume build [resume.md] [--config layout.yaml] [--out resume.pdf] [--force] [--json]
@@ -22,6 +23,9 @@ const help = `tech-resume-kit - 本地中文简历
   tech-resume check-json resume.json [--assets directory] [--json]
   tech-resume build-json resume.json [--assets directory] [--out resume.pdf] [--force] [--json]
   tech-resume convert-workbench workbench.json --options conversion.json --out resume.json [--assets directory] [--force] [--json]
+
+起步模板：
+${starterTemplates.map(template => '  ' + template.id.padEnd(16) + template.label).join('\n')}
 
 源码目录也可使用 node src/cli.mjs <命令>，或 npm run check / preview / build -- <参数>。
 Markdown 默认读取 resume.md 和同目录 layout.yaml。

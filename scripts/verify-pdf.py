@@ -12,7 +12,10 @@ import pdfplumber
 from pypdf import PdfReader
 
 ROOT = Path(__file__).resolve().parents[1]
-compact = lambda text: re.sub(r'\s+', '', text)
+# PDF text extraction may retain standard Latin ligature code points (e.g. fi in Retrofit).
+# Expand only these presentation glyphs; all other characters remain exact.
+latin_ligatures = str.maketrans({'ﬀ': 'ff', 'ﬁ': 'fi', 'ﬂ': 'fl', 'ﬃ': 'ffi', 'ﬄ': 'ffl', 'ﬅ': 'st', 'ﬆ': 'st'})
+compact = lambda text: re.sub(r'\s+', '', text.translate(latin_ligatures))
 
 
 def verify(directory, stem):

@@ -5,6 +5,8 @@ import { wireEntries } from './entry-manager.mjs';
 import { wireLibrary } from './library-manager.mjs';
 import { wireContent } from './content-manager.mjs';
 import { wireGettingStarted } from './getting-started.mjs';
+import { fillTemplateSelect } from './template-picker.mjs';
+fillTemplateSelect(document.getElementById('resume-template'));
 import { wireSectionOrder } from './section-order.mjs';
 import { resumeFilename, safeFilenamePart } from './filename.mjs';
 import { wireDraftRecovery } from './draft-recovery.mjs';

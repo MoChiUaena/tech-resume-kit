@@ -92,4 +92,5 @@ export function renderResume(document: ResumeDocument, layout: LayoutConfig, opt
 export function inspectAndExport(rendered: RenderedResume, options: { pdf: true }): Promise<PdfExportResult>;
 export function inspectAndExport(rendered: RenderedResume, options?: { pdf?: false }): Promise<ExportResult>;
 export function inspectAndExport(rendered: RenderedResume, options: { pdf: boolean }): Promise<ExportResult | PdfExportResult>;
-export function initializeProject(directory: string, template?: 'campus' | 'experience' | 'blank'): Promise<string>;
+export type StarterTemplateId = 'blank' | 'campus' | 'experience' | 'frontend' | 'java-backend' | 'python-backend' | 'ai-intern' | 'data-analyst' | 'qa-engineer' | 'android';
+export function initializeProject(directory: string, template?: StarterTemplateId): Promise<string>;
