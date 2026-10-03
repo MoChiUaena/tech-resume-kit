@@ -105,6 +105,7 @@ for (const outcome of ['failure', 'success']) test(`reload uses the final file s
 
 test('a failed reload before the autosave timer fires exposes a recoverable unsaved draft', async t => {
   const { page, directory, errors } = await fixture(t), sourceFile = path.join(directory, 'resume.md');
+  await openAdvancedEditor(page);
   const original = await readFile(sourceFile, 'utf8');
   await page.route('**/api/state', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { message: '暂时无法读取资料' } }) }));
   page.once('dialog', dialog => dialog.accept());
