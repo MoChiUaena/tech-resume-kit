@@ -68,6 +68,16 @@ function renderContacts() {
   }
   $('contact-add').disabled = sourceMode || (state.front?.person?.contacts?.length || 0) >= 6;
 }
+function fillLayoutChoices(id, value, choices, unit) {
+  const select = $(id);
+  select.replaceChildren();
+  for (const choice of choices.includes(value) ? choices : [...choices, value]) {
+    const option = document.createElement('option'); option.value = String(choice);
+    option.textContent = `${choice} ${unit}${choices.includes(choice) ? '' : '（自定义）'}`;
+    select.append(option);
+  }
+  select.value = String(value);
+}
 function populate() {
   clearSaveError();
   $('resume-select').replaceChildren();
@@ -82,6 +92,9 @@ function populate() {
   $('body').setSelectionRange(0, 0); $('body').scrollTop = 0;
   $('source-mode').textContent = sourceMode ? '返回正文编辑' : '完整 Markdown';
   $('visual-theme').value = state.layout.theme; $('preset').value = state.layout.preset; $('max-pages').value = state.layout.page.maxPages; $('body-size').value = state.layout.bodyPt; $('margin').value = state.layout.page.marginMm; $('accent').value = state.layout.accent;
+  fillLayoutChoices('name-size', state.layout.namePt, [20, 21, 22, 23, 24], 'pt');
+  fillLayoutChoices('line-height', state.layout.lineHeight, [1.25, 1.3, 1.36, 1.4, 1.45, 1.5], '倍');
+  fillLayoutChoices('section-spacing', state.layout.spacing.sectionMm, [3, 3.5, 4, 4.5, 5], 'mm');
   for (const key of ['portrait', 'schoolLogo']) { const asset = state.front?.assets?.[key]; $(`${key}-enabled`).checked = state.layout.images[key].enabled; $(`${key}-enabled`).disabled = !asset; $(`${key}-file`).textContent = asset ? asset.src.split('/').at(-1) : '尚未选择'; }
   $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
   for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
@@ -200,7 +213,7 @@ $('source-mode').addEventListener('click', async () => {
   } catch (error) { toast(error.message); }
 });
 $('contact-add').addEventListener('click', () => { state.front.person.contacts.push({ text: '', href: 'mailto:' }); renderContacts(); edited(); });
-function openSettings() { if (!$('settings').open) $('settings').showModal(); sectionOrder?.refresh(); }
+function openSettings(refreshSections = true) { if (!$('settings').open) $('settings').showModal(); if (refreshSections) sectionOrder?.refresh(); }
 $('settings-open').addEventListener('click', openSettings);
 $('preview-layout').addEventListener('click', openSettings);
 $('preview-two-pages').addEventListener('click', async () => {
@@ -209,7 +222,7 @@ $('preview-two-pages').addEventListener('click', async () => {
   edited();
   try { await settle(); } catch (error) { toast(error.message); }
 });
-for (const [id, apply] of Object.entries({ preset: value => { state.layout.preset = value; delete state.layout.sectionOrder; }, 'max-pages': value => state.layout.page.maxPages = Number(value), 'body-size': value => state.layout.bodyPt = Number(value), margin: value => state.layout.page.marginMm = Number(value), accent: value => state.layout.accent = value })) $(id).addEventListener('change', event => { apply(event.target.value); edited(); });
+for (const [id, apply] of Object.entries({ preset: value => { state.layout.preset = value; delete state.layout.sectionOrder; }, 'max-pages': value => state.layout.page.maxPages = Number(value), 'body-size': value => state.layout.bodyPt = Number(value), margin: value => state.layout.page.marginMm = Number(value), accent: value => state.layout.accent = value, 'name-size': value => state.layout.namePt = Number(value), 'line-height': value => state.layout.lineHeight = Number(value), 'section-spacing': value => state.layout.spacing.sectionMm = Number(value) })) $(id).addEventListener('change', event => { apply(event.target.value); edited(); });
 $('preset').addEventListener('change', () => sectionOrder?.refresh());
 $('visual-theme').addEventListener('change', event => { state.layout = applyResumeTheme(state.layout, event.target.value); $('accent').value = state.layout.accent; edited(); });
 for (const key of ['portrait', 'schoolLogo']) {
@@ -403,4 +416,4 @@ draftRecovery = wireDraftRecovery({ request, getState: () => state, getPayload: 
   try { populate(); } catch (error) { state = previous; populate(); throw error; }
   edited(); $('body').focus();
 } });
-errorUI = wireErrorGuidance({ getContext: () => ({ resumeId: state?.resumeId, revision: state?.revision, tick, source: state?.source, body: $('body').value, sourceMode, clean: tick === savedTick && !busy && !actionBusy, actionBusy }), openSettings, showSource: showKnownSource });
+errorUI = wireErrorGuidance({ getContext: () => ({ resumeId: state?.resumeId, revision: state?.revision, tick, source: state?.source, body: $('body').value, sourceMode, clean: tick === savedTick && !busy && !actionBusy, actionBusy }), openSettings: () => openSettings(false), showSource: showKnownSource });

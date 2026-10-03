@@ -59,6 +59,8 @@ Linux 可能需要用 `npx playwright install --with-deps chromium` 安装系统
 
 `npm run app` 打开同一套本地编辑页面，默认使用独立数据目录；Windows 为 `%LOCALAPPDATA%\TechResumeKit\data`。“数据与更新”显示实际路径，可迁移整库或打开已有简历库。指定位置可用 `npm run app -- --dir personal/my-resume`。macOS 默认保存在 `~/Library/Application Support/TechResumeKit/data`，Linux 为 `~/.local/share/TechResumeKit/data`（支持 `XDG_DATA_HOME`）。
 
+源码已提供“版式与图片 → 更多排版选项”，可调整姓名字号、行距和章节间距，设置随每份简历独立保存。这项功能将在下一次集中发布时加入启动包。
+
 完整变更见[变更记录](docs/changelog.md)，数据位置与更新方式见[数据与更新](docs/data-and-updates.md)。日常改动先同步源码和 CI，积累一组功能后集中发布，见[维护说明](docs/maintaining.md)。
 
 自 v0.9.0 起提供工作台模型 2、3、4 的显式转换 API 与 JSON 命令，返回章节映射和版式差异报告，见[工作台接入](docs/workbench-handoff.md)。接口与示例随正式 TGZ 提供。
