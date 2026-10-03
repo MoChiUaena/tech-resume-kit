@@ -28,6 +28,7 @@ jobs:
           python scripts/audit-public-files.py
           python scripts/test-macos-bundle.py
           python scripts/test-release-proofs.py
+          python scripts/test-qa-report.py
       - name: Install locked Node dependencies and Chromium
         run: |
           npm ci
