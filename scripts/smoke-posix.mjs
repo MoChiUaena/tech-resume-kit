@@ -10,6 +10,7 @@ import { initializeProject } from '../src/files.mjs';
 import { openLibrary } from '../src/library.mjs';
 import { inventory } from '../src/storage.mjs';
 import { pdfExpectations } from './pdf-expectations.mjs';
+import { waitForCanvasPreview } from './pdf-preview-check.mjs';
 
 assert.ok(['darwin', 'linux'].includes(process.platform));
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), exec = promisify(execFile);
@@ -30,34 +31,6 @@ const post = async (endpoint, payload) => {
   const response = await fetch(url + endpoint, { method: 'POST', headers: { Origin: url.slice(0, -1), 'X-Resume-Token': token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   const state = await response.json(); assert.equal(response.status, 200, JSON.stringify(state)); return state;
 };
-async function waitForCanvasPreview(page, expectedText = '') {
-  const snapshot = () => page.evaluate(text => {
-    const frame = document.querySelector('#pdf-frame'), viewer = frame?.contentDocument;
-    const layers = [...(viewer?.querySelectorAll('.textLayer') || [])];
-    return {
-      ready: !!viewer?.querySelector('.pdf-page[data-rendered=true]') && (!text || layers.some(layer => layer.textContent.includes(text))),
-      parentStatus: document.querySelector('#page-status')?.textContent,
-      parentError: document.querySelector('#preview-error:not([hidden])')?.textContent || '',
-      viewerUrl: viewer?.URL || '',
-      viewerStatus: viewer?.querySelector('#page-number')?.textContent || '',
-      viewerError: viewer?.querySelector('#viewer-error:not([hidden]) #error-message')?.textContent || '',
-      renderedPages: viewer?.querySelectorAll('.pdf-page[data-rendered=true]').length || 0,
-      textLayers: layers.length,
-    };
-  }, expectedText);
-  try {
-    const result = await page.waitForFunction(text => {
-      const frame = document.querySelector('#pdf-frame'), viewer = frame?.contentDocument;
-      if (document.querySelector('#preview-error:not([hidden])') || viewer?.querySelector('#viewer-error:not([hidden])')) return true;
-      return !!viewer?.querySelector('.pdf-page[data-rendered=true]') && (!text || [...viewer.querySelectorAll('.textLayer')].some(layer => layer.textContent.includes(text)));
-    }, expectedText, { timeout: 90000 });
-    await result.dispose();
-  } catch (error) {
-    throw new Error(`Portable PDF preview timed out: ${JSON.stringify(await snapshot())}`, { cause: error });
-  }
-  const result = await snapshot();
-  if (!result.ready || result.parentError || result.viewerError) throw new Error(`Portable PDF preview failed: ${JSON.stringify(result)}`);
-}
 async function stop() {
   await post('api/exit', {});
   if (child.exitCode === null) await new Promise((resolve, reject) => { const timer = setTimeout(() => reject(new Error('Shutdown timed out')), 10000); child.once('exit', code => { clearTimeout(timer); assert.equal(code, 0); resolve(); }); });
