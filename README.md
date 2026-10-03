@@ -8,20 +8,20 @@
 
 [校招样张 PDF](output/pdf/campus-ink-blue.pdf) · [AI 实习样张 PDF](output/pdf/ai-intern-ink-blue.pdf) · [两页经验样张 PDF](output/pdf/experienced-ink-blue.pdf) · [可直接填写的 resume.md](resume.md) · [版式配置](layout.yaml)
 
-**版本 v0.11.1。** 发布包采用墨蓝主风格，提供校招与工作经验编排；源码中的六种新外观见下方“外观模板”。支持照片裁剪、经历管理、章节排序与改名、草稿保护与恢复、多份简历、回收站、整库 ZIP、数据目录迁移，以及可翻页和缩放的离线 PDF 预览。
+**版本 v0.12.0。** 提供六种独立外观与十种起步内容，可查看完整效果并缩放比较，详见下方“外观模板”。支持照片裁剪、经历管理、章节排序与改名、草稿保护与恢复、多份简历、回收站、整库 ZIP、数据目录迁移，以及可翻页和缩放的离线 PDF 预览。
 
 校招样张使用“奶龙”姓名和白底竖版头像。图片来源与许可信息集中记录在[素材说明](assets/README.md)。
 
 ## 下载使用
 
-[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-windows-x64-0.11.1.zip) · Windows 10 / 11 x64
+[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-windows-x64-0.12.0.zip) · Windows 10 / 11 x64
 
 | 其他系统 | 下载 | 启动入口 |
 | --- | --- | --- |
-| macOS Apple Silicon | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-macos-app-arm64-0.11.1.zip) | 双击 TechResumeKit.app |
-| macOS Intel | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-macos-app-x64-0.11.1.zip) | 双击 TechResumeKit.app |
-| Linux x64 | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-linux-x64-0.11.1.tar.gz) | ./启动简历.sh |
-| Linux ARM64 | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-linux-arm64-0.11.1.tar.gz) | ./启动简历.sh |
+| macOS Apple Silicon | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-macos-app-arm64-0.12.0.zip) | 双击 TechResumeKit.app |
+| macOS Intel | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-macos-app-x64-0.12.0.zip) | 双击 TechResumeKit.app |
+| Linux x64 | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-linux-x64-0.12.0.tar.gz) | ./启动简历.sh |
+| Linux ARM64 | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-linux-arm64-0.12.0.tar.gz) | ./启动简历.sh |
 
 macOS 打开方式与 Linux 系统依赖见[跨平台使用说明](docs/portable.md)。
 
@@ -33,7 +33,7 @@ macOS 打开方式与 Linux 系统依赖见[跨平台使用说明](docs/portable
 
 保存失败时，页面保留输入并显示原因，可重试或下载包含图片的未保存草稿 ZIP。主编辑区的修改会按简历和窗口独立暂存，刷新或重新打开程序后可选择恢复到编辑区；恢复后仍检查正式文件冲突。弹窗中尚未提交到编辑区的内容不在自动草稿范围内。
 
-首次打开提供空白、奶龙校招和两页经验起步选择，也可直接填写。填写导航可展开基本信息、经历、技能与补充区域，并打开版式设置；已有资料从模板新建独立简历。引导关闭或开始填写后，重启不再重复显示。另支持工作经历表单、“技能与补充信息”中的技能编辑与排序、补充章节填写。普通文字即可填写常用内容；原 Markdown、加粗、链接和段落顺序继续保留。超出一页时，预览区可直接选择“允许两页继续预览”，或打开版式设置。
+首次打开先选择外观，再选择空白、奶龙校招、两页经验或岗位样张内容；“查看完整效果”支持离线 PDF 缩放，关闭预览不会改变当前简历。也可直接填写。填写导航可展开基本信息、经历、技能与补充区域，并打开版式设置；已有资料从模板新建独立简历。引导关闭或开始填写后，重启不再重复显示。另支持工作经历表单、“技能与补充信息”中的技能编辑与排序、补充章节填写。普通文字即可填写常用内容；原 Markdown、加粗、链接和段落顺序继续保留。超出一页时，预览区可直接选择“允许两页继续预览”，或打开版式设置。
 
 “当前简历”支持新建、复制、重命名和切换，每份简历有独立正文、版式、图片与历史。“备份与恢复”可以立即备份、下载包含图片的完整 ZIP，以及恢复历史版本或备份文件；恢复前先保留当前内容。有修改时每 5 分钟生成自动版本，切换或退出前也会保存。
 
@@ -41,7 +41,7 @@ macOS 打开方式与 Linux 系统依赖见[跨平台使用说明](docs/portable
 
 “检查正式版本”可以下载并核验新版安装包，支持暂停、断线续传和重启后继续。点击“保存并打开新版”才切换程序，切换前会保存整库副本，启动失败时尝试返回原程序。
 
-运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.11.1/tech-resume-kit-0.11.1.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
+运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-kit-0.12.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
 
 ## 从源码开始
 
@@ -149,7 +149,7 @@ page:
 
 ## 外观模板
 
-源码版提供六种外观，与空白、校招、经验和岗位内容独立组合。首次选择时用真实 PDF 缩略图比较版式；也可在“＋新建”中选择外观，或通过“版式与图片 → 外观风格”切换当前简历。切换外观保留正文、图片设置与章节顺序。
+提供六种外观，与空白、校招、经验和岗位内容独立组合。首次选择时用真实 PDF 缩略图比较版式，也可打开完整效果进行缩放；也可在“＋新建”中选择外观，或通过“版式与图片 → 外观风格”切换当前简历。切换外观保留正文、图片设置与章节顺序。
 
 | 风格 ID | 外观 | 版式特点 |
 | --- | --- | --- |
@@ -160,7 +160,7 @@ page:
 | `warm-labels` | 暖橙标签 | 暖色标题标签、技术栈底色 |
 | `graphite-grid` | 灰阶商务 | 灰底标题、分行元信息、日期底色 |
 
-同一份内容可套用任意外观。内容较长时仍需按提示允许两页，正文不会自动缩小。当前 v0.11.1 下载包只有墨蓝风格，新增外观随后续集中发布分发；旧程序不识别新的风格 ID，如需用旧程序打开资料，先在新版切回墨蓝。
+同一份内容可套用任意外观。内容较长时仍需按提示允许两页，正文不会自动缩小。v0.11.1 及更早的程序不识别新的风格 ID，如需用旧程序打开资料，先在新版切回墨蓝。
 
 ```sh
 npm run init -- --dir personal/my-style --template java-backend --theme forest-rail
@@ -168,7 +168,7 @@ npm run init -- --dir personal/my-style --template java-backend --theme forest-r
 
 ## 示例与命令
 
-源码版本提供 **10 种起步内容**，“起步模板”和“新建简历”使用同一份目录，也可通过下列模板 ID 初始化。当前 v0.11.1 下载包仍提供空白、校招和两页经验三种起点；新增岗位模板随后续集中发布进入启动包。
+提供 **10 种起步内容**，“起步模板”和“新建简历”使用同一份目录，也可通过下列模板 ID 初始化。空白内容使用中性填写提示，其余样张用于参考写法。
 
 | 模板 ID | 起步内容 | 重点 |
 | --- | --- | --- |
@@ -196,7 +196,7 @@ npm run init -- --dir personal/my-style --template java-backend --theme forest-r
 # 从空白提示开始
 npm run init -- --dir personal/new-resume --template blank
 
-# 从前端岗位样张开始（源码版本）
+# 从前端岗位样张开始
 npm run init -- --dir personal/frontend-resume --template frontend
 
 # 从两页工作经验示例开始
@@ -236,7 +236,7 @@ python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
 
 阶段 C 的历史验收包含三份正式样张（共 4 页）、9 份边界 PDF（共 13 页）和当时的 26 项自动测试，详见 [阶段 C 核验](docs/phase-c-review.md)。
 
-当前 CI 验证解析、编辑与草稿恢复、PDF 导出、独立安装，以及 Windows / macOS / Linux 包的启动与离线使用；测试数量与具体安装包摘要读取每次发布的 `release-validation.json`。维护版验收见 [v0.11.1 发布验收记录](docs/release-0.11.1-readiness.md)。PDF 检查覆盖嵌入字体、正文阅读顺序、链接、独立图片、页面边界和标题跟随，不宣称所有 ATS 都能正确解析。
+当前 CI 验证解析、编辑与草稿恢复、PDF 导出、独立安装，以及 Windows / macOS / Linux 包的启动与离线使用；测试数量与具体安装包摘要读取每次发布的 `release-validation.json`。维护版验收见 [v0.12.0 发布验收记录](docs/release-0.12-readiness.md)。PDF 检查覆盖嵌入字体、正文阅读顺序、链接、独立图片、页面边界和标题跟随，不宣称所有 ATS 都能正确解析。
 
 数据链路为 `Markdown/YAML → ResumeDocument + LayoutConfig → HTML/CSS → Chromium PDF`。模型版本为 `0.2.0`；解析器与渲染器独立，工作台可直接生成相同结构，见 [模型与接口](docs/content-model.md)。阶段 A 的 JSON 留作回归基准，不再是默认编辑入口。
 

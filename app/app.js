@@ -8,6 +8,7 @@ import { wireGettingStarted } from './getting-started.mjs';
 import { fillTemplateSelect } from './template-picker.mjs';
 import { fillThemeSelect } from './theme-picker.mjs';
 import { applyResumeTheme } from './resume-themes.mjs';
+import { wireThemePreview } from './theme-preview.mjs';
 fillTemplateSelect(document.getElementById('resume-template'));
 fillTemplateSelect(document.getElementById('template'), '选择起步内容…');
 for (const id of ['visual-theme', 'resume-theme']) fillThemeSelect(document.getElementById(id));
@@ -16,6 +17,8 @@ import { resumeFilename, safeFilenamePart } from './filename.mjs';
 import { wireDraftRecovery } from './draft-recovery.mjs';
 import { wireErrorGuidance } from './error-guidance.mjs';
 const $ = id => document.getElementById(id), token = document.querySelector('meta[name=resume-token]').content;
+const themePreview = wireThemePreview();
+$('resume-theme-preview').addEventListener('click', () => themePreview.open($('resume-theme').value, id => { $('resume-theme').value = id; }));
 let state, tick = 0, savedTick = 0, busy = false, pending = false, timer, previewSequence = 0, sourceMode = false, actionBusy = false, resumeAction, restoreChoice, previewReady = false;
 const pendingUploads = new Set();
 let cropSession, cropDrag, entryKind;
@@ -393,7 +396,7 @@ libraryManager = wireLibrary({ request, managed, settle, operationPayload, accep
 wireSystem({ request, managed, settle, operationPayload, acceptState });
 sectionOrder = wireSectionOrder({ request, settle, edited, managed, operationPayload, acceptState, getState: () => state, errorUI: { dialog: (...args) => errorUI.dialog(...args) } });
 
-gettingStarted = wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, toast, openSettings });
+gettingStarted = wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState: () => state, isSourceMode: () => sourceMode, toast, openSettings, themePreview });
 draftRecovery = wireDraftRecovery({ request, getState: () => state, getPayload: () => ({ layout: state.layout, ...(sourceMode ? { source: $('body').value } : { baseSource: state.source, front: state.front, body: $('body').value }) }), isClean: () => tick === savedTick && !busy && !actionBusy, toast, applyDraft: record => {
   const snapshot = record.payload, previous = state; errorUI?.clearAll();
   state = { ...state, revision: record.baseRevision, layout: snapshot.layout, ...(typeof snapshot.source === 'string' ? { source: snapshot.source, front: null, body: snapshot.source } : { source: snapshot.baseSource, front: snapshot.front, body: snapshot.body }) };

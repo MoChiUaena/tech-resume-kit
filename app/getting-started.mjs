@@ -3,8 +3,8 @@ import { fillThemeGallery } from './theme-picker.mjs';
 
 const $ = id => document.getElementById(id);
 
-export function wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState, isSourceMode, toast, openSettings }) {
-  fillThemeGallery(document.querySelector('#start-dialog .theme-options'));
+export function wireGettingStarted({ request, managed, settle, operationPayload, acceptState, getState, isSourceMode, toast, openSettings, themePreview }) {
+  fillThemeGallery(document.querySelector('#start-dialog .theme-options'), themePreview.open);
   fillTemplateSelect($('start-content'));
   let choice;
   function refresh() {

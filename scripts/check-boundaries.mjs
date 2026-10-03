@@ -5,6 +5,7 @@ import { loadResume } from '../src/input.mjs';
 import { renderResume, kitRoot } from '../src/render.mjs';
 import { inspectAndExport } from '../src/export.mjs';
 import { pdfExpectations } from './pdf-expectations.mjs';
+import { themeBoundaryCases } from './theme-boundary-cases.mjs';
 
 const output = path.join(kitRoot, 'tmp/pdfs/boundary');
 await mkdir(output, { recursive: true });
@@ -57,24 +58,43 @@ heading.document.sections = [
 heading.extra = { firstPageMinimumBottomPt: 730 };
 cases.push(heading);
 
+const themeCases = themeBoundaryCases(await loadResume(path.join(kitRoot, 'templates/java-backend/resume.md')));
+cases.push(...themeCases.cases);
+
 const results = [];
 for (const test of cases) {
   const rendered = await renderResume(test.document, test.layout, { assetBase: test.assetBase });
   const { buffer, metrics } = await inspectAndExport(rendered, { pdf: true });
-  assert.equal(metrics.pageCount, test.pages, `${test.stem}: unexpected page count`);
-  const expected = { ...pdfExpectations(rendered, test.pages), ...test.extra };
+  if (test.pages !== undefined) assert.equal(metrics.pageCount, test.pages, `${test.stem}: unexpected page count`);
+  else assert.ok(metrics.pageCount >= 1 && metrics.pageCount <= 2, `${test.stem}: expected one or two actual pages`);
+  assert.equal(metrics.maxPages, test.layout.page.maxPages, `${test.stem}: changed page cap`);
+  assert.equal(metrics.offline, true, `${test.stem}: offline export required`);
+  assert.deepEqual(metrics.networkRequests, [], `${test.stem}: external resource request`);
+  assert.deepEqual(metrics.outOfBounds, [], `${test.stem}: content outside the sheet`);
+  assert.equal(metrics.overlap, false, `${test.stem}: header images overlap identity`);
+  const expectedImages = ['portrait', 'schoolLogo'].filter(key => test.layout.images[key].enabled && test.document.assets[key]);
+  assert.deepEqual(metrics.images.map(image => image.asset).sort(), expectedImages.sort(), `${test.stem}: changed enabled images`);
+  assert.equal(rendered.layout.page.marginMm, test.layout.page.marginMm, `${test.stem}: changed selected page margin`);
+  assert.equal(rendered.layout.bodyPt, test.layout.bodyPt, `${test.stem}: changed selected body size`);
+  assert.ok(Math.abs(parseFloat(metrics.bodySize) - test.layout.bodyPt * 96 / 72) < 0.001, `${test.stem}: shrank selected body size`);
+  const expected = { ...pdfExpectations(rendered, metrics.pageCount), ...test.extra };
   for (const [extension, value] of [['pdf', buffer], ['expected.json', JSON.stringify(expected, null, 2) + '\n'], ['metrics.json', JSON.stringify(metrics, null, 2) + '\n']]) await writeFile(path.join(output, `${test.stem}.${extension}`), value);
-  results.push({ case: test.stem, pages: metrics.pageCount, imageCount: metrics.images.length, textFields: expected.fields.length, headings: expected.headings.length, result: 'passed' });
+  results.push({ case: test.stem, themeId: rendered.layout.theme, caseId: test.caseId || test.stem, pages: metrics.pageCount, bodyPt: rendered.layout.bodyPt, marginMm: rendered.layout.page.marginMm, imageCount: metrics.images.length, textFields: expected.fields.length, headings: expected.headings.length, result: 'passed' });
   console.log(`${test.stem}: ${metrics.pageCount} 页，${metrics.images.length} 张图片，待 PDF 文本/视觉复核。`);
 }
 
 const overflow = structuredClone(entry);
 overflow.document.sections[0].entries[0].blocks[0].items.push(...Array(110).fill('额外内容：每个测试项目都需要保留，不能通过裁切或自动缩小字号隐藏超过两页的问题。'));
 await assert.rejects(inspectAndExport(await renderResume(overflow.document, overflow.layout)), error => error.code === 'OVERFLOW' && /超出2 页上限/.test(error.message));
-results.push({ case: 'over-two-pages', result: 'rejected-as-expected' });
+results.push({ case: 'over-two-pages', themeId: 'ink-blue', caseId: 'over-two-pages', result: 'rejected-as-expected' });
 const largeHeader = structuredClone(none);
 largeHeader.document.person.name = '过长姓名'.repeat(300);
 await assert.rejects(inspectAndExport(await renderResume(largeHeader.document, largeHeader.layout)), error => error.code === 'LAYOUT' && /页眉或标题过长/.test(error.message));
-results.push({ case: 'oversized-header', result: 'rejected-as-expected' });
+results.push({ case: 'oversized-header', themeId: 'ink-blue', caseId: 'oversized-header', result: 'rejected-as-expected' });
+for (const test of themeCases.rejections) {
+  await assert.rejects(inspectAndExport(await renderResume(test.document, test.layout, { assetBase: test.assetBase })), error => error.code === test.errorCode && test.errorMessage.test(error.message), `${test.stem}: must reject the invalid layout`);
+  results.push({ case: test.stem, themeId: test.themeId, caseId: test.caseId, errorCode: test.errorCode, result: 'rejected-as-expected' });
+  console.log(`${test.stem}: 已按预期拒绝（${test.errorCode}）。`);
+}
 await writeFile(path.join(output, 'summary.json'), JSON.stringify(results, null, 2) + '\n');
 console.log('边界构建通过。请继续运行 verify-pdf.py --directory tmp/pdfs/boundary，并渲染所有页面做视觉检查。');

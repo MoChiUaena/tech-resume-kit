@@ -18,6 +18,7 @@ for (const theme of resumeThemes) {
   if (result.metrics.pageCount !== 1) throw new Error('Theme preview must be one complete page: ' + theme.id);
   const stem = path.join(qa, theme.id + '-single');
   await writeFile(stem + '.pdf', result.buffer);
+  await writeFile(path.join(thumbnails, theme.id + '.pdf'), result.buffer);
   await writeFile(stem + '.expected.json', JSON.stringify(pdfExpectations(rendered, 1), null, 2));
   await run('pdftoppm', ['-singlefile', '-scale-to-x', '380', '-scale-to-y', '-1', '-png', stem + '.pdf', path.join(thumbnails, theme.id)], { windowsHide: true });
   console.log(theme.label + ': actual one-page PDF preview generated');
