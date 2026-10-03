@@ -1,3 +1,4 @@
+import { configureEntryForm, entryKindForSection } from './entry-form.mjs';
 const $ = id => document.getElementById(id);
 
 export function wireEntries({ request, managed, operationPayload, acceptState, getState, isSourceMode, isClean, toast, errorUI }) {
@@ -22,11 +23,8 @@ export function wireEntries({ request, managed, operationPayload, acceptState, g
     try { checkChoice(choice); } catch (error) { toast(error.message); return; }
     editChoice = choice; const entry = choice.entry;
     $('entry-dialog').dataset.mode = 'edit';
-    $('entry-dialog-title').textContent = '编辑经历'; $('entry-title-label').textContent = '名称'; $('entry-subtitle-label').textContent = '专业 / 岗位 / 职责';
-    $('entry-details-label').textContent = '经历正文 · Markdown'; $('entry-stack-field').hidden = false;
+    configureEntryForm(entryKindForSection(entry.sectionId), { editing: true, stack: entry.stack });
     for (const [id, value] of Object.entries({ title: entry.title, subtitle: entry.subtitle, date: entry.date, stack: entry.stack, details: entry.content })) $(`entry-${id}`).value = value || '';
-    $('entry-details').maxLength = 200000; $('entry-details').rows = 8;
-    $('entry-details').placeholder = '用普通段落、- 列表或编号列表填写经历。';
     $('entry-content-help').hidden = false; $('entry-error').hidden = true; $('entry-submit').textContent = '保存修改';
     $('entry-dialog').showModal(); $('entry-title').focus();
   }
@@ -74,7 +72,7 @@ export function wireEntries({ request, managed, operationPayload, acceptState, g
     } catch (error) {
       if (current !== sequence) return;
       $('entry-list').replaceChildren(); $('entry-manager-summary').textContent = '管理已有经历';
-      $('entry-list-status').textContent = `暂时无法读取经历：${error.message}。修正 Markdown 后自动更新。`;
+      $('entry-list-status').textContent = `暂时无法读取经历：${error.message}。展开“高级编辑”修正后自动更新。`;
     }
   }
   $('entry-submit').addEventListener('click', async () => {

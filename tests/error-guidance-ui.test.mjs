@@ -1,3 +1,4 @@
+import { openAdvancedEditor } from './helpers/advanced-editor.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, realpath, rm, mkdir } from 'node:fs/promises';
@@ -45,7 +46,7 @@ test('invalid contact links locate their address input rather than another conta
 });
 for (const prefix of ['', '\n\n\n']) test(`body errors select the source line with ${prefix.length} extra blank lines and CRLF metadata`, async t => {
   const { page, app } = await fixture(t, source => '\uFEFF' + source.replace(/\n/g, '\r\n')); await ready(page);
-  const body = await page.locator('#body').inputValue(), invalid = '## 缺少章节标记'; await page.locator('#body').fill(prefix + body + '\n' + invalid + '\n'); await issue(page);
+  const body = await page.locator('#body').inputValue(), invalid = '## 缺少章节标记'; await openAdvancedEditor(page); await page.locator('#body').fill(prefix + body + '\n' + invalid + '\n'); await issue(page);
   const before = (await app.project.read()).source, expected = (await page.locator('#body').inputValue()).indexOf(invalid);
   await page.locator('#preview-locate').click();
   assert.equal(await page.locator('#body').evaluate(element => element.selectionStart), expected); assert.equal(await page.locator('#body').evaluate(element => element.selectionEnd), expected + invalid.length);
@@ -59,9 +60,9 @@ test('unknown metadata locates full Markdown as a view change without saving or 
   assert.equal(saves, 0); assert.equal((await app.project.read()).source, before);
 });
 test('a YAML syntax error in full-source mode selects the exact line without rewriting the document', async t => {
-  const { page, app } = await fixture(t); await ready(page); await page.locator('#source-mode').click();
+  const { page, app } = await fixture(t); await ready(page); await openAdvancedEditor(page); await page.locator('#source-mode').click();
   await page.waitForFunction(() => document.querySelector('#person-fields').hidden);
-  const source = '\uFEFF---\nperson: [\n---\n待完成的正文\n'; await page.locator('#body').fill(source); await issue(page);
+  const source = '\uFEFF---\nperson: [\n---\n待完成的正文\n'; await openAdvancedEditor(page); await page.locator('#body').fill(source); await issue(page);
   const before = (await app.project.read()).source; await page.locator('#preview-locate').click();
   assert.equal(await page.locator('#body').evaluate(element => element.value.slice(element.selectionStart, element.selectionEnd)), 'person: [');
   assert.equal((await app.project.read()).source, before); assert.equal(await page.locator('#body').inputValue(), source);
@@ -92,7 +93,7 @@ test('entry and skill validation focus their own fields while keeping typed cont
   const { page } = await fixture(t); await ready(page); await page.locator('#entry-project').click();
   await page.locator('#entry-title').fill('保留项目名'); await page.locator('#entry-details').fill('保留经历正文'); await page.locator('#entry-submit').click();
   await page.locator('#entry-error:not([hidden])').waitFor(); assert.equal(await page.evaluate(() => document.activeElement.id), 'entry-date'); assert.equal(await page.locator('#entry-title').inputValue(), '保留项目名');
-  await page.getByRole('button', { name: '关闭添加经历' }).click(); await page.locator('#content-manager > summary').click(); await page.locator('#content-skill-add').click(); await page.locator('#content-text').fill('保留技能描述'); await page.locator('#content-submit').click();
+  await page.getByRole('button', { name: '关闭经历编辑' }).click(); await page.locator('#content-manager > summary').click(); await page.locator('#content-skill-add').click(); await page.locator('#content-text').fill('保留技能描述'); await page.locator('#content-submit').click();
   await page.locator('#content-error:not([hidden])').waitFor(); assert.equal(await page.evaluate(() => document.activeElement.id), 'content-label'); assert.equal(await page.locator('#content-text').inputValue(), '保留技能描述');
 });
 test('a validation response after closing a dialog does not mark a newly opened entry', async t => {
@@ -119,11 +120,11 @@ test('a late failed image request does not replace guidance for a newer successf
   assert.equal(await page.locator('#schoolLogo-error').isVisible(), false); assert.deepEqual((await app.project.read()).front.assets.schoolLogo, chosen);
 });
 test('an empty document locates the body or full-source end rather than unrelated metadata', async t => {
-  const { page, app } = await fixture(t); await ready(page); await page.locator('#body').fill(''); await issue(page);
+  const { page, app } = await fixture(t); await ready(page); await openAdvancedEditor(page); await page.locator('#body').fill(''); await issue(page);
   const before = (await app.project.read()).source; await page.locator('#preview-locate').click();
   assert.equal(await page.evaluate(() => document.activeElement.id), 'body'); assert.equal(await page.locator('#person-fields').isVisible(), true);
   assert.equal((await app.project.read()).source, before);
-  await page.locator('#source-mode').click(); await page.waitForFunction(() => document.querySelector('#person-fields').hidden);
+  await openAdvancedEditor(page); await page.locator('#source-mode').click(); await page.waitForFunction(() => document.querySelector('#person-fields').hidden);
   await page.locator('#preview-locate').click();
   assert.equal(await page.locator('#body').evaluate(element => element.selectionStart === element.value.length && element.selectionEnd === element.value.length), true);
   assert.equal((await app.project.read()).source, before);

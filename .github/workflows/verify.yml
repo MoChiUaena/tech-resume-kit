@@ -75,6 +75,8 @@ jobs:
           python scripts/render-pdfs.py --directory tmp/pdfs/frontmatter-save
           python scripts/verify-pdf.py --directory tmp/pdfs/layout-options
           python scripts/render-pdfs.py --directory tmp/pdfs/layout-options --dpi 110
+          python scripts/verify-pdf.py --directory tmp/pdfs/form-filling
+          python scripts/render-pdfs.py --directory tmp/pdfs/form-filling --dpi 110
       - name: Build and check only anonymous samples
         run: |
           npm run sample

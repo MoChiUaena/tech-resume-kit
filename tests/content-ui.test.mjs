@@ -1,3 +1,4 @@
+import { openAdvancedEditor } from './helpers/advanced-editor.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, mkdir, realpath, rm } from 'node:fs/promises';
@@ -96,8 +97,8 @@ test('forms retain invalid input, refuse stale edits and disable content tools i
   await page.waitForFunction(() => !document.querySelector('#content-error').hidden && /变化|修改|载入/.test(document.querySelector('#content-error').textContent));
   assert.match(await page.locator('#content-error').innerText(), /变化|修改|载入/);
   assert.equal(await readFile(path.join(directory, 'resume.md'), 'utf8'), current.replace('英语与协作', '英语与协作（外部修改）'));
-  await page.getByRole('button', { name: '关闭内容编辑' }).click(); await page.locator('#reload').click();
-  await page.locator('#source-mode').click(); await page.locator('#content-skill-add:disabled').waitFor();
+  await page.getByRole('button', { name: '关闭内容编辑' }).click(); await openAdvancedEditor(page); await page.locator('#reload').click();
+  await openAdvancedEditor(page); await page.locator('#source-mode').click(); await page.locator('#content-skill-add:disabled').waitFor();
   assert.equal(await page.locator('#entry-work').isDisabled(), true);
   assert.deepEqual(errors, []);
 });

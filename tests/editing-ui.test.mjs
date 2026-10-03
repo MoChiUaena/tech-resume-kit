@@ -1,3 +1,4 @@
+import { openAdvancedEditor } from './helpers/advanced-editor.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile, realpath, rm } from 'node:fs/promises';
@@ -73,7 +74,7 @@ test('entry dialogs create education, internship and project content without dup
   await page.locator('#entry-project').click(); await page.locator('#entry-title').fill('未填写时间'); await page.locator('#entry-details').fill('测试要点');
   const revision = (await app.project.read()).revision; await page.locator('#entry-submit').click(); await page.locator('#entry-error:not([hidden])').waitFor(); assert.equal((await app.project.read()).revision,revision);
   await page.locator('#entry-date').fill('2026.01 - 至今'); await page.screenshot({path:path.join(qa,'entry-form.png')});
-  await page.getByRole('button',{name:'关闭添加经历'}).click();
+  await page.getByRole('button',{name:'关闭经历编辑'}).click();
   await writeFile(path.join(qa,'quick-entries.pdf'),result.buffer); await writeFile(path.join(qa,'quick-entries.expected.json'),JSON.stringify(pdfExpectations({...result,images:{}},1)));
   assert.deepEqual(errors,[]);
 });
@@ -154,13 +155,13 @@ test('entry forms refuse invalid edits and stale external changes and refresh af
   await page.locator('#entry-title').fill('不应覆盖外部修改'); await page.locator('#entry-submit').click();
   await page.locator('#entry-error:not([hidden])').waitFor(); assert.match(await page.locator('#entry-error').textContent(), /切换或修改/);
   assert.equal((await app.project.read()).source, external.source);
-  await page.getByRole('button', { name: '关闭添加经历' }).click(); await page.locator('#reload').click();
+  await page.getByRole('button', { name: '关闭经历编辑' }).click(); await openAdvancedEditor(page); await page.locator('#reload').click();
   await row.locator('[data-action=edit]:not([disabled])').waitFor(); await row.locator('[data-action=edit]').click();
-  assert.match(await page.locator('#entry-details').inputValue(), /外部编辑保留/); await page.getByRole('button', { name: '关闭添加经历' }).click();
-  const body = await page.locator('#body').inputValue(); await page.locator('#body').fill(body.replace('外部编辑保留。', '手动修改后保留。'));
+  assert.match(await page.locator('#entry-details').inputValue(), /外部编辑保留/); await page.getByRole('button', { name: '关闭经历编辑' }).click();
+  const body = await page.locator('#body').inputValue(); await openAdvancedEditor(page); await page.locator('#body').fill(body.replace('外部编辑保留。', '手动修改后保留。'));
   await row.locator('[data-action=edit]:not([disabled])').waitFor(); await row.locator('[data-action=edit]').click();
-  assert.match(await page.locator('#entry-details').inputValue(), /手动修改后保留/); await page.getByRole('button', { name: '关闭添加经历' }).click();
-  await page.locator('#source-mode').click(); await row.locator('[data-action=edit]:disabled').waitFor();
-  await page.locator('#source-mode').click(); await row.locator('[data-action=edit]:not([disabled])').waitFor();
+  assert.match(await page.locator('#entry-details').inputValue(), /手动修改后保留/); await page.getByRole('button', { name: '关闭经历编辑' }).click();
+  await openAdvancedEditor(page); await page.locator('#source-mode').click(); await row.locator('[data-action=edit]:disabled').waitFor();
+  await openAdvancedEditor(page); await page.locator('#source-mode').click(); await row.locator('[data-action=edit]:not([disabled])').waitFor();
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 }); assert.deepEqual(errors, []);
 });

@@ -1,3 +1,4 @@
+import { openAdvancedEditor } from './helpers/advanced-editor.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile, realpath, rm } from 'node:fs/promises';
@@ -58,10 +59,10 @@ test('two windows keep independent drafts and deleting one leaves the other reco
   await a.reload(); await a.locator('#draft-recovery:not([hidden])').waitFor(); assert.equal((await candidates(f)).length, 1);
 });
 test('full-source drafts survive restart even when browser storage is unavailable', async t => {
-  const f = await fixture(t, true), page = await f.page(); await page.locator('#source-mode').click();
+  const f = await fixture(t, true), page = await f.page(); await openAdvancedEditor(page); await page.locator('#source-mode').click();
   await page.waitForFunction(() => document.querySelector('#person-fields').hidden); await failSave(page);
   const source = '\uFEFF---\r\nperson: [\r\n---\r\n未完成源文件\r\n';
-  const persisted = page.waitForResponse(response => response.url().endsWith('/api/drafts/write') && response.status() === 200); await page.locator('#body').fill(source); await persisted;
+  const persisted = page.waitForResponse(response => response.url().endsWith('/api/drafts/write') && response.status() === 200); await openAdvancedEditor(page); await page.locator('#body').fill(source); await persisted;
   const enteredSource = await page.locator('#body').inputValue();
   await page.locator('#save-status').filter({ hasText: '保存失败' }).waitFor(); await page.close(); await f.restart();
   const target = await f.page(); await target.locator('#draft-recovery:not([hidden])').waitFor(); await failSave(target); await target.locator('#draft-resume').click();

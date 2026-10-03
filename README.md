@@ -1,6 +1,6 @@
 # tech-resume-kit
 
-在本地页面填写中文技术简历，用 Markdown 编辑经历，实时预览并下载 PDF。Windows / macOS / Linux 启动包随包提供运行组件。
+在本地页面用表单或 Markdown 填写中文技术简历，实时预览并下载 PDF。Windows / macOS / Linux 启动包随包提供运行组件。
 
 [![Verify anonymous samples](https://github.com/MoChiUaena/tech-resume-kit/actions/workflows/verify.yml/badge.svg)](https://github.com/MoChiUaena/tech-resume-kit/actions/workflows/verify.yml)
 
@@ -26,7 +26,7 @@
 macOS 打开方式与 Linux 系统依赖见[跨平台使用说明](docs/portable.md)。
 
 1. 完整解压，运行对应系统的启动入口；Windows 双击 **启动简历.exe**。
-2. 在打开的页面填写基本信息和 Markdown 经历，右侧自动更新实际 PDF 预览。
+2. 在打开的页面填写基本信息、经历与技能，右侧自动更新实际 PDF 预览。
 3. 点击 **下载 PDF**。
 
 照片、校徽和版式通过“版式与图片”设置，照片可裁剪为 23:31；章节可在同一界面调整顺序与名称。正文上方可用表单添加教育、实习和项目经历，“管理已有经历”支持编辑、复制、上下移动和删除。修改自动保存，重启后可以继续编辑。
@@ -45,6 +45,8 @@ macOS 打开方式与 Linux 系统依赖见[跨平台使用说明](docs/portable
 
 ## 从源码开始
 
+当前源码默认通过表单填写，“高级编辑”按需展开 Markdown；教育、实习、工作和项目分别显示对应字段。此填写界面与“更多排版选项”将在下一次集中发布时进入启动包，现有 v0.12.0 下载保持不变。
+
 需要 Node.js 22.13 或更高版本。首次安装需要联网下载 npm 依赖和 Chromium；准备好后预览和导出可断网运行。
 
 ```sh
@@ -58,8 +60,6 @@ npm run app
 Linux 可能需要用 `npx playwright install --with-deps chromium` 安装系统依赖。
 
 `npm run app` 打开同一套本地编辑页面，默认使用独立数据目录；Windows 为 `%LOCALAPPDATA%\TechResumeKit\data`。“数据与更新”显示实际路径，可迁移整库或打开已有简历库。指定位置可用 `npm run app -- --dir personal/my-resume`。macOS 默认保存在 `~/Library/Application Support/TechResumeKit/data`，Linux 为 `~/.local/share/TechResumeKit/data`（支持 `XDG_DATA_HOME`）。
-
-源码已提供“版式与图片 → 更多排版选项”，可调整姓名字号、行距和章节间距，设置随每份简历独立保存。这项功能将在下一次集中发布时加入启动包。
 
 完整变更见[变更记录](docs/changelog.md)，数据位置与更新方式见[数据与更新](docs/data-and-updates.md)。日常改动先同步源码和 CI，积累一组功能后集中发布，见[维护说明](docs/maintaining.md)。
 

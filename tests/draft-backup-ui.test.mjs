@@ -1,3 +1,4 @@
+import { openAdvancedEditor } from './helpers/advanced-editor.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
@@ -37,7 +38,7 @@ test('a conflicting page downloads a restorable draft without saving or overwrit
   await page.getByLabel('姓名', { exact: true }).fill('页面未保存草稿');
   await page.locator('#settings-open').click(); await page.locator('#max-pages').selectOption('2'); await page.locator('#margin').selectOption('16');
   await page.getByRole('button', { name: '关闭设置' }).click();
-  await page.locator('#body').fill(original.body + '\r\n未保存的项目复盘说明。\r\n');
+  await openAdvancedEditor(page); await page.locator('#body').fill(original.body + '\r\n未保存的项目复盘说明。\r\n');
   await page.locator('#save-status').filter({ hasText: '保存失败' }).waitFor();
   await page.locator('#save-retry:not([disabled])').waitFor();
   assert.equal(await page.locator('#save-draft').count(), 1);
@@ -74,11 +75,11 @@ test('a conflicting page downloads a restorable draft without saving or overwrit
 
 test('full-source mode exports an unfinished Markdown draft exactly when saving fails', async t => {
   const { outer, directory, page, original, errors } = await fixture(t);
-  await page.locator('#source-mode').click();
+  await openAdvancedEditor(page); await page.locator('#source-mode').click();
   await page.waitForFunction(() => document.querySelector('#body').value.startsWith('\uFEFF---') || document.querySelector('#body').value.startsWith('---'));
   await page.route('**/api/save', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { message: '保存暂时不可用' } }) }));
   const source = '\uFEFF---\nperson: [\n---\n未完成的正文。\n';
-  await page.locator('#body').fill(source); await page.locator('#save-status').filter({ hasText: '保存失败' }).waitFor();
+  await openAdvancedEditor(page); await page.locator('#body').fill(source); await page.locator('#save-status').filter({ hasText: '保存失败' }).waitFor();
   const before = await inventory(directory);
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#save-draft').click()]);
   const archive = path.join(outer, '完整源文件草稿.zip'); await download.saveAs(archive);

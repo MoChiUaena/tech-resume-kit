@@ -1,3 +1,4 @@
+import { openAdvancedEditor } from './helpers/advanced-editor.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
@@ -70,7 +71,7 @@ test('retrying a conflict preserves the local input and the externally changed f
   assert.equal(await page.getByLabel('姓名', { exact: true }).inputValue(), '本页未保存姓名');
   assert.equal(await readFile(sourceFile, 'utf8'), externalSource);
   assert.equal(await page.locator('#save-error').isVisible(), true);
-  page.once('dialog', dialog => dialog.accept()); await page.locator('#reload').click();
+  page.once('dialog', dialog => dialog.accept()); await openAdvancedEditor(page); await page.locator('#reload').click();
   await page.waitForFunction(() => document.querySelector('#name').value === '其他窗口姓名');
   assert.equal(await page.locator('#save-error').isVisible(), false);
   assert.equal(await readFile(sourceFile, 'utf8'), externalSource);
@@ -87,7 +88,7 @@ for (const outcome of ['failure', 'success']) test(`reload uses the final file s
     return outcome === 'failure' ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { message: '延迟返回的保存失败' } }) }) : route.continue();
   });
   await page.getByLabel('姓名', { exact: true }).fill('在途保存姓名'); await entered;
-  page.once('dialog', dialog => dialog.accept()); await page.locator('#reload').click();
+  page.once('dialog', dialog => dialog.accept()); await openAdvancedEditor(page); await page.locator('#reload').click();
   await page.waitForFunction(name => document.querySelector('#reload').disabled || document.querySelector('#name').value === name, original.front.person.name);
   const response = page.waitForResponse(result => result.url().endsWith('/api/save') && result.status() === (outcome === 'failure' ? 503 : 200));
   releaseSave(); await response; await page.locator('#save-retry:not([disabled])').waitFor({ state: 'attached' });

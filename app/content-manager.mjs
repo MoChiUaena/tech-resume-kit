@@ -84,7 +84,7 @@ export function wireContent({ request, managed, settle, operationPayload, accept
     } catch (error) {
       if (current !== sequence) return;
       listed = undefined; $('content-list').replaceChildren(); $('content-manager-summary').textContent = '技能与补充信息';
-      $('content-list-status').textContent = `暂时无法读取：${error.message}。修正正文后自动更新。`;
+      $('content-list-status').textContent = `暂时无法读取：${error.message}。展开“高级编辑”修正后自动更新。`;
     }
   }
   for (const [id, kind] of [['content-skill-add','skills'],['content-lines-add','lines']]) $(id).addEventListener('click', async () => {
