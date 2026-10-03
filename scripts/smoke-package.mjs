@@ -30,7 +30,10 @@ import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { initializeProject, loadResume, loadWorkbenchResume, renderResume, inspectAndExport } from 'tech-resume-kit';
-for (const [template, pages] of [['campus',1],['blank',1],['experience',2]]) {
+const { starterTemplates } = await import('./node_modules/tech-resume-kit/src/starter-templates.mjs');
+assert.equal(starterTemplates.length, 10);
+for (const { id: template } of starterTemplates) {
+  const pages = template === 'experience' ? 2 : 1;
   await initializeProject(template, template);
   const loaded = await loadResume(template + '/resume.md');
   const rendered = await renderResume(loaded.document, loaded.layout, loaded);
@@ -51,6 +54,7 @@ try {
   assert.equal(state.gettingStarted.welcome, true);
   const module = await fetch(editor.url + 'getting-started.mjs');
   assert.equal(module.status, 200); assert.match(await module.text(), /wireGettingStarted/);
+  for (const resource of ['starter-templates.mjs', 'template-picker.mjs']) assert.equal((await fetch(editor.url + resource)).status, 200);
   const naming = await fetch(editor.url + 'filename.mjs');
   assert.equal(naming.status, 200); assert.match(await naming.text(), /resumeFilename/);
   const ordering = await fetch(editor.url + 'section-order.mjs');
@@ -81,7 +85,9 @@ try {
 `);
   await run(process.execPath, [path.join(outside, 'probe.mjs')]);
   await writeFile(path.join(outside, 'types.mts'), `
-import { renderResume, inspectAndExport, parseResumeJson, convertWorkbenchResume, loadWorkbenchResume, ResumeError, type ResumeDocument, type LayoutConfig, type WorkbenchDocument, type WorkbenchConversionReport } from 'tech-resume-kit';
+import { initializeProject, type StarterTemplateId, renderResume, inspectAndExport, parseResumeJson, convertWorkbenchResume, loadWorkbenchResume, ResumeError, type ResumeDocument, type LayoutConfig, type WorkbenchDocument, type WorkbenchConversionReport } from 'tech-resume-kit';
+const starter: StarterTemplateId = 'frontend';
+const initialization: Promise<string> = initializeProject('typecheck-only', starter);
 const document: ResumeDocument = { schemaVersion: '0.2.0', person: { name: '填写姓名', target: '开发', contacts: [{text:'a@example.com', href:'mailto:a@example.com'}] }, sections: [{id:'skills',title:'技能',kind:'skills',items:[{label:'Java',text:'测试'}]}] };
 const layout: LayoutConfig = {schemaVersion:'0.2.0'};
 const rendered = await renderResume(document, layout);
@@ -107,7 +113,7 @@ const bad: ResumeDocument = {schemaVersion:2};
   await copyFile(jsonPdf, path.join(qa, 'installed-json.pdf'));
   const apiModel = JSON.parse(await readFile(path.join(outside, 'api-result.json'), 'utf8'));
   await writeFile(path.join(qa, 'installed-json.expected.json'), JSON.stringify(pdfExpectations(apiModel, 1)));
-  console.log('Installed TGZ: CLI bin, ESM API, TypeScript, all three starters, getting-started editor and JSON PDF passed.');
+  console.log('Installed TGZ: CLI bin, ESM API, TypeScript, all ten starters, getting-started editor and JSON PDF passed.');
   const zipPath = path.join(packages, `tech-resume-starter-${pkg.version}.zip`);
   await run(process.env.TECH_RESUME_PYTHON || 'python', ['-X', 'utf8', '-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert all(".." not in n.split("/") and not n.startswith("/") for n in z.namelist()); z.extractall(sys.argv[2])', zipPath, outside]);
   const starter = path.join(outside, `tech-resume-starter-${pkg.version}`), runner = path.join(starter, 'toolkit/starter/runner.mjs');

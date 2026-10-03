@@ -149,19 +149,42 @@ page:
 
 ## 示例与命令
 
+源码版本提供 **10 种起步内容**，“起步模板”和“新建简历”使用同一份目录，也可通过下列模板 ID 初始化。当前 v0.11.1 下载包仍提供空白、校招和两页经验三种起点；新增岗位模板随后续集中发布进入启动包。
+
+| 模板 ID | 起步内容 | 重点 |
+| --- | --- | --- |
+| `blank` | 空白填写模板 | 保留填写提示，从自己的信息开始。 |
+| `campus` | 奶龙校招样张 | 教育、实习、项目与技能的完整校招示例。 |
+| `experience` | 两页工作经验 | 参考多段工作与项目成果的编排。 |
+| `frontend` | 前端开发样张 | 页面交互、组件测试与前端性能优化。 |
+| `java-backend` | Java 后端样张 | 接口、事务、缓存与并发一致性。 |
+| `python-backend` | Python 后端样张 | 异步接口、后台任务与数据处理。 |
+| `ai-intern` | AI 应用开发样张 | RAG、工具调用与效果评估。 |
+| `data-analyst` | 数据分析样张 | SQL、指标口径、分析报告与可视化。 |
+| `qa-engineer` | 测试开发样张 | 接口自动化、浏览器回归与性能测试。 |
+| `android` | Android 开发样张 | 移动界面、离线数据与生命周期。 |
+
+
 | 输入 | 用途 |
 | --- | --- |
 | `resume.md` + `layout.yaml` | 完整 Java 校招样例，学校 Logo 与照片同时显示 |
 | `examples/ai-intern/resume.md` | 完整 AI 实习样例，无图片、11 pt 正文、不同模块顺序与正文链接 |
 | `examples/experienced/resume.md` | 两页工作经验样例，5 年后端经验、长项目续页 |
 | `templates/blank/resume.md` | 带填写提示的空白起步文件 |
+| `templates/<岗位 ID>/resume.md` + `layout.yaml` | 七份岗位样张，每份包含对应技能、实习和项目经历；Java 与 Android 带独立照片和校徽 |
 
 ```sh
 # 从空白提示开始
 npm run init -- --dir personal/new-resume --template blank
 
+# 从前端岗位样张开始（源码版本）
+npm run init -- --dir personal/frontend-resume --template frontend
+
 # 从两页工作经验示例开始
 npm run init -- --dir personal/work-resume --template experience
+
+# 查看全部模板 ID
+node src/cli.mjs --help
 
 # 不指定输入时使用根目录 resume.md
 npm run check

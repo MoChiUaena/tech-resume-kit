@@ -10,6 +10,7 @@ import { inspectAndExport } from './export.mjs';
 import { ResumeError } from './errors.mjs';
 import { assetPath } from './assets.mjs';
 import { saveStructuredSource } from './frontmatter.mjs';
+import { findStarterTemplate } from './starter-templates.mjs';
 
 export async function openProject(directory) {
   const root = path.resolve(directory);
@@ -63,9 +64,9 @@ export async function openProject(directory) {
   });
   const useTemplate = payload => mutate(async () => {
     const state = await read(); conflict(state, payload.revision);
-    const base = { blank: 'templates/blank', campus: '.', experience: 'examples/experienced' }[payload.template];
-    if (!base) throw new ResumeError('请选择填写模板、校招样张或工作经验样张');
-    const sourceRoot = path.join(kitRoot, base);
+    const starter = findStarterTemplate(payload.template);
+    if (!starter) throw new ResumeError('请选择有效的起步模板');
+    const sourceRoot = path.join(kitRoot, starter.directory);
     const [source, config] = await Promise.all([readFile(path.join(sourceRoot, 'resume.md'), 'utf8'), readFile(path.join(sourceRoot, 'layout.yaml'), 'utf8')]);
     const parsed = parseResume(source);
     for (const asset of Object.values(parsed.document.assets)) {

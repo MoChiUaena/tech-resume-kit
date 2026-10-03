@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { openProject } from './project.mjs';
 import { initializeProject, saveFile } from './files.mjs';
+import { findStarterTemplate } from './starter-templates.mjs';
 import { captureBackup, captureDraftBackup, decodeBackup, applyBackup } from './backup.mjs';
 import { ResumeError } from './errors.mjs';
 import { assetPath } from './assets.mjs';
@@ -142,7 +143,7 @@ export async function openLibrary(directory, { historyIntervalMs = 300000 } = {}
   });
   const startFromTemplate = payload => mutate(async () => {
     const current = await checkLibrary(payload);
-    if (!['blank', 'campus', 'experience'].includes(payload.template)) throw new ResumeError('请选择空白、校招或工作经验模板');
+    if (!findStarterTemplate(payload.template)) throw new ResumeError('请选择有效的起步模板');
     if (payload.mode === 'initial') {
       if (!current.gettingStarted.welcome) throw new ResumeError('已经开始填写或简历库发生变化，请重新载入；可从模板新建一份简历', { code: 'CONFLICT' });
       if (payload.template !== 'blank') {

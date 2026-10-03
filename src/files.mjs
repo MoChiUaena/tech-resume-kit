@@ -5,6 +5,7 @@ import { kitRoot } from './render.mjs';
 import { ResumeError } from './errors.mjs';
 import { loadResume } from './input.mjs';
 import { assetPath } from './assets.mjs';
+import { starterTemplates, findStarterTemplate } from './starter-templates.mjs';
 
 export async function ensureNewOutput(filename, force = false) {
   try { await access(filename); }
@@ -26,10 +27,11 @@ export async function saveFile(filename, buffer, force = false) {
 }
 export const savePdf = saveFile;
 export async function initializeProject(directory, template = 'campus') {
-  if (!['campus', 'experience', 'blank'].includes(template)) throw new ResumeError('template 只支持 campus、experience 或 blank');
+  const starter = findStarterTemplate(template);
+  if (!starter) throw new ResumeError('未知起步模板；template 支持 ' + starterTemplates.map(item => item.id).join('、'));
   const target = path.resolve(directory);
   await ensureNewOutput(target);
-  const source = template === 'campus' ? kitRoot : path.join(kitRoot, template === 'experience' ? 'examples/experienced' : 'templates/blank');
+  const source = path.join(kitRoot, starter.directory);
   const loaded = await loadResume(path.join(source, 'resume.md'));
   const files = [
     { relative: 'resume.md', bytes: await readFile(loaded.inputFile) },

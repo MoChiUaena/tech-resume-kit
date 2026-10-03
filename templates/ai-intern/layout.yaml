@@ -1,0 +1,25 @@
+schemaVersion: 0.2.0
+theme: ink-blue
+preset: campus
+page:
+  size: A4
+  marginMm: 15
+  maxPages: 1
+bodyPt: 10.5
+lineHeight: 1.36
+namePt: 23
+accent: "#233e54"
+sectionOrder: [skills, projects, internship, education, additional]
+images:
+  schoolLogo:
+    enabled: false
+    widthMm: 34
+    heightMm: 25
+    slot: end
+    align: top
+  portrait:
+    enabled: false
+    widthMm: 23
+    heightMm: 31
+    slot: start
+    align: top

@@ -1,0 +1,54 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, rm, realpath } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { chromium } from 'playwright';
+import { startEditor } from '../src/app.mjs';
+import { kitRoot } from '../src/render.mjs';
+
+test('all ten starters are selectable on desktop and mobile; both creation entries preserve existing resumes across restart', async t => {
+  const outer = await mkdtemp(path.join(tmpdir(), 'tech-resume-role-ui-')), directory = path.join(outer, 'data');
+  let app = await startEditor(directory);
+  const browser = await chromium.launch({ channel: 'chromium' }), page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
+  const errors = [], external = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/*', route => {
+    if (!['127.0.0.1', 'localhost'].includes(new URL(route.request().url()).hostname)) { external.push(route.request().url()); return route.abort(); }
+    return route.continue();
+  });
+  t.after(async () => { await browser.close(); await app.close(); const actual = await realpath(outer); assert.ok(actual.startsWith(path.join(await realpath(tmpdir()), 'tech-resume-role-ui-'))); await rm(actual, { recursive: true, force: true, maxRetries: 3 }); });
+  const qa = path.join(kitRoot, 'tmp/pdfs/starter-templates'); await mkdir(qa, { recursive: true });
+  await page.goto(app.url); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  await page.locator('#start-choose').click();
+  assert.equal(await page.locator('input[name=start-template]').count(), 10);
+  assert.equal(await page.locator('#resume-template option').count(), 10);
+  assert.deepEqual(await page.locator('input[name=start-template]').evaluateAll(inputs => inputs.map(input => input.value)), await page.locator('#resume-template option').evaluateAll(options => options.map(option => option.value)));
+  await page.screenshot({ path: path.join(qa, 'choices-desktop.png') });
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.locator('#start-frontend').check(); await page.screenshot({ path: path.join(qa, 'choices-mobile.png') });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  await page.locator('#start-android').check(); await page.locator('#start-submit').scrollIntoViewIfNeeded();
+  const bounds = await page.locator('#start-submit').boundingBox(); assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 390);
+  await page.locator('#start-frontend').check(); await page.locator('#start-submit').click();
+  await page.locator('#start-dialog').waitFor({ state: 'hidden' });
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  assert.match(await page.locator('#target').inputValue(), /前端/);
+  const original = await app.project.read();
+  await page.setViewportSize({ width: 1440, height: 1050 });
+  await page.locator('#resume-create').click(); await page.locator('#resume-template').selectOption('data-analyst');
+  await page.locator('#resume-name').fill('数据分析投递'); await page.locator('#resume-submit').click();
+  await page.locator('#resume-dialog').waitFor({ state: 'hidden' });
+  await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  assert.match(await page.locator('#target').inputValue(), /数据分析/);
+  await page.locator('#start-open').click(); await page.locator('#start-ai-intern').check();
+  await page.locator('#start-name').fill('AI 应用投递'); await page.locator('#start-submit').click();
+  await page.locator('#start-dialog').waitFor({ state: 'hidden' }); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  assert.match(await page.locator('#target').inputValue(), /Agent/);
+  await page.locator('#resume-select').selectOption(original.resumeId); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  assert.equal((await app.project.read()).source, original.source);
+  await app.close(); app = await startEditor(directory); await page.goto(app.url); await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
+  assert.equal((await app.project.read()).resumes.length, 3);
+  assert.equal((await app.project.read()).source, original.source);
+  assert.deepEqual(errors, []); assert.deepEqual(external, []);
+});
