@@ -157,9 +157,9 @@ export function convertWorkbenchResume(input, options, context = {}) {
   const normalized = validate(layoutSchema, layout, optionLocations, 'layout');
   normalized.sectionOrder = resolveSectionOrder(document, normalized);
   const changed = (field, from, to) => { if (JSON.stringify(from) !== JSON.stringify(to)) report.layoutChanges.push({ field, from, to }); };
-  for (const [key, target] of [['template', normalized.theme], ['font', 'ResumeSansSC'], ['fontSize', normalized.bodyPt], ['lineHeight', normalized.lineHeight], ['sectionGapMm', normalized.spacing.sectionMm], ['marginMm', normalized.page.marginMm]]) changed(`layout.${key}`, source.layout[key], target);
+  for (const [key, target] of [['template', normalized.theme], ['font', normalized.fontFamily], ['fontSize', normalized.bodyPt], ['lineHeight', normalized.lineHeight], ['sectionGapMm', normalized.spacing.sectionMm], ['marginMm', normalized.page.marginMm]]) changed(`layout.${key}`, source.layout[key], target);
   if (source.layout.presentation) {
-    const values = { language: 'zh', accentColor: normalized.accent, alignment: 'left', contactStyle: 'plain', headingStyle: 'line', marginHorizontalMm: normalized.page.marginMm, marginTopMm: normalized.page.marginMm, marginBottomMm: normalized.page.marginMm, entryGapMm: normalized.spacing.entryMm, paragraphGapMm: 'template' };
+    const values = { language: 'zh', accentColor: normalized.accent, alignment: normalized.header.align === 'theme' ? 'left' : normalized.header.align === 'spread' ? 'justify' : normalized.header.align, contactStyle: normalized.header.contactStyle === 'labeled' ? 'labels' : 'plain', headingStyle: 'line', marginHorizontalMm: normalized.page.marginHorizontalMm ?? normalized.page.marginMm, marginTopMm: normalized.page.marginTopMm ?? normalized.page.marginMm, marginBottomMm: normalized.page.marginBottomMm ?? normalized.page.marginMm, entryGapMm: normalized.spacing.entryMm, paragraphGapMm: 'template' };
     for (const [key, target] of Object.entries(values)) changed(`layout.presentation.${key}`, source.layout.presentation[key], target);
   }
   for (const [key, sourceKey] of [['portrait', 'photo'], ['schoolLogo', 'logo']]) {

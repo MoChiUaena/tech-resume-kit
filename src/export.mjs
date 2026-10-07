@@ -18,22 +18,22 @@ export async function inspectAndExport(rendered, { pdf = false } = {}) {
     const requests = [];
     page.on('request', request => { if (/^https?:/.test(request.url())) requests.push(request.url()); });
     const { layout } = rendered;
-    const contentWidthPx = (210 - layout.page.marginMm * 2) * 96 / 25.4;
-    const contentHeightPx = (297 - layout.page.marginMm * 2) * 96 / 25.4;
+    const contentWidthPx = (210 - (layout.page.marginHorizontalMm ?? layout.page.marginMm) * 2) * 96 / 25.4;
+    const contentHeightPx = (297 - (layout.page.marginTopMm ?? layout.page.marginMm) - (layout.page.marginBottomMm ?? layout.page.marginMm)) * 96 / 25.4;
     await page.setViewportSize({ width: Math.ceil(contentWidthPx), height: Math.ceil(contentHeightPx) });
     await page.emulateMedia({ media: 'print' });
     temporaryDirectory = await mkdtemp(path.join(tmpdir(), 'tech-resume-'));
     const htmlFile = path.join(temporaryDirectory, 'resume.html');
     await writeFile(htmlFile, rendered.html, { mode: 0o600 });
     await page.goto(pathToFileURL(htmlFile).href, { waitUntil: 'load' });
-    const broken = await page.evaluate(async () => {
+    const broken = await page.evaluate(async (selectedFont) => {
       await document.fonts.ready;
-      if (![400, 600, 700].every(weight => document.fonts.check(`${weight} 14px "Resume Sans"`))) return 'font';
+      if (selectedFont === 'sans' && ![400, 600, 700].every(weight => document.fonts.check(`${weight} 14px "Resume Sans"`))) return 'font';
       for (const image of document.images) {
         try { await image.decode(); } catch { return image.dataset.asset; }
       }
       return null;
-    });
+    }, layout.fontFamily);
     if (broken) throw new ResumeError(broken === 'font' ? '中文字体未加载' : `${imageLabels[broken]}图片解码失败，请重新保存为 PNG/JPEG`, { field: broken === 'font' ? 'font' : `assets.${broken}` });
     const metrics = await page.evaluate(() => {
       const sheet = document.querySelector('.sheet');

@@ -36,7 +36,7 @@ export async function prepareImages(document, layout, { assetBase, locations = n
     files.push(filename);
   }
   const enabled = Object.values(images);
-  const identityWidth = 210 - 2 * layout.page.marginMm - enabled.reduce((sum, image) => sum + image.widthMm, 0) - enabled.length * layout.header.gapMm;
+  const identityWidth = 210 - 2 * (layout.page.marginHorizontalMm ?? layout.page.marginMm) - enabled.reduce((sum, image) => sum + image.widthMm, 0) - enabled.length * layout.header.gapMm;
   if (identityWidth < 76) throw new ResumeError(`页眉图片与间距占位过大，姓名和联系方式仅剩 ${identityWidth.toFixed(1)} mm；请减小图片宽度或 header.gapMm，至少保留 76 mm`, { ...locationFor(layoutLocations, 'images'), field: 'images' });
   return { images, warnings, files };
 }

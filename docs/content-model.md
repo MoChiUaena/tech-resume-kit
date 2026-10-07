@@ -54,18 +54,20 @@ type ImageLayout = {
 
 type LayoutConfig = {
   schemaVersion: '0.2.0';
-  theme: 'ink-blue';
+  theme: 'ink-blue' | 'minimal-mono' | 'slate-banner' | 'forest-rail' | 'warm-labels' | 'graphite-grid';
   preset: 'campus' | 'experience';
-  page: { size: 'A4'; marginMm: number; maxPages: 1 | 2 };
+  page: { size: 'A4'; marginMm: number; marginHorizontalMm?: number; marginTopMm?: number; marginBottomMm?: number; maxPages: 1 | 2 };
+  density: 'standard' | 'compact';
+  fontFamily: 'sans' | 'serif';
   bodyPt: number; lineHeight: number; namePt: number; accent: string;
   sectionOrder?: string[];
-  header: { gapMm: number };
+  header: { gapMm: number; align: 'theme' | 'left' | 'center' | 'spread'; contactStyle: 'plain' | 'labeled' };
   spacing: { sectionMm: number; entryMm: number };
   images: { schoolLogo: ImageLayout; portrait: ImageLayout };
 };
 ```
 
-上面展示归一化后的完整模型；YAML 中可省略有默认值的参数。阶段 C 新增可选 `page.maxPages`，省略时为 1；内容模型仍使用 0.2.0，既有输入不必修改。Zod 校验定义位于 `src/schema.mjs`，是字段和取值范围的实现来源。显式章节顺序优先于预设，且必须包含全部 ID。
+上面展示归一化后的完整模型；YAML 中可省略有默认值的参数。三个独立页边距省略时继承 `page.marginMm`。`density` 默认 `standard`，`fontFamily` 默认 `sans`，页眉对齐默认跟随模板；`page.maxPages` 省略时为 1。内容模型仍使用 0.2.0，既有输入不必修改。Zod 校验定义位于 `src/schema.mjs`，是字段和取值范围的实现来源。显式章节顺序优先于预设，且必须包含全部 ID。
 
 ## 本地调用
 

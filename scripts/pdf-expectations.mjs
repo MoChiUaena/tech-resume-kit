@@ -27,5 +27,13 @@ export function pdfExpectations(rendered, pages) {
     if (section.blocks) addBlocks(section.blocks);
   }
   add(document.notice);
-  return { pages, fields, headings, links: [...links], imageCount: Object.keys(rendered.images).length, marginMm: layout.page.marginMm, sectionOrder: [document.person.name, ...layout.sectionOrder.map(id => document.sections.find(section => section.id === id).title)] };
+  return {
+    pages, fields, headings, links: [...links], imageCount: Object.keys(rendered.images).length,
+    marginMm: layout.page.marginMm,
+    marginHorizontalMm: layout.page.marginHorizontalMm ?? layout.page.marginMm,
+    marginTopMm: layout.page.marginTopMm ?? layout.page.marginMm,
+    marginBottomMm: layout.page.marginBottomMm ?? layout.page.marginMm,
+    pageNumberVisible: layout.page.maxPages > 1,
+    sectionOrder: [document.person.name, ...layout.sectionOrder.map(id => document.sections.find(section => section.id === id).title)],
+  };
 }

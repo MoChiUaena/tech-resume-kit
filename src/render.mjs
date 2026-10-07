@@ -61,18 +61,25 @@ export async function renderResume(inputDocument, inputLayout, options = {}) {
   layout.sectionOrder = resolveSectionOrder(document, layout, layoutLocations);
   const prepared = await prepareImages(document, layout, { ...options, assetBase: options.assetBase || kitRoot, locations, layoutLocations });
   const person = document.person;
-  const contacts = person.contacts.map(item => `<a href="${escape(validateLink(item.href))}">${escape(item.text)}</a>`).join('');
+  const contacts = person.contacts.map(item => {
+    const href = validateLink(item.href);
+    const label = href.startsWith('tel:') ? '电话' : href.startsWith('mailto:') ? '邮箱' : '链接';
+    return `<a href="${escape(href)}">${layout.header.contactStyle === 'labeled' ? `<span class="contact-label">${label}</span>` : ''}${escape(item.text)}</a>`;
+  }).join('');
   const slots = { start: '', end: '' };
   for (const key of ['portrait', 'schoolLogo']) if (prepared.images[key]?.slot === 'start') slots.start += image(key, prepared.images[key]);
   for (const key of ['schoolLogo', 'portrait']) if (prepared.images[key]?.slot === 'end') slots.end += image(key, prepared.images[key]);
+  const imageHeight = Math.max(0, ...Object.entries(prepared.images).map(([key, asset]) => layout.density === 'compact' && key === 'schoolLogo' ? Math.min(asset.heightMm, 15) : asset.heightMm));
   const css = await templateCss();
   const body = layout.sectionOrder.map(id => section(document.sections.find(item => item.id === id), layout.theme)).join('');
+  const identity = layout.header.align === 'spread'
+    ? `<div class="identity"><div class="name-row"><h1>${escape(person.name)}</h1></div><div class="contacts">${contacts}</div><div class="details-row">${person.label ? `<span class="graduate-label">${escape(person.label)}</span>` : ''}<p class="target">${escape(person.target)}</p>${person.availability ? `<span class="availability">${escape(person.availability)}</span>` : ''}</div></div>`
+    : `<div class="identity"><div class="name-row"><h1>${escape(person.name)}</h1>${person.label ? `<span class="graduate-label">${escape(person.label)}</span>` : ''}</div><p class="target">${escape(person.target)}</p>${person.availability ? `<p class="availability">${escape(person.availability)}</p>` : ''}<div class="contacts">${contacts}</div></div>`;
   const html = `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>${escape(person.name)} - 简历</title>
-<style>${css}\n:root{--accent:${layout.accent};--body-pt:${layout.bodyPt}pt;--leading:${layout.lineHeight};--page-margin:${layout.page.marginMm}mm;--name-pt:${layout.namePt}pt;--header-gap:${layout.header.gapMm}mm;--section-gap:${layout.spacing.sectionMm}mm;--entry-gap:${layout.spacing.entryMm}mm;}@page{margin:${layout.page.marginMm}mm;}</style></head>
-<body class="theme-${layout.theme}"><main class="sheet"><header class="resume-header">
-  ${slots.start}<div class="identity"><div class="name-row"><h1>${escape(person.name)}</h1>${person.label ? `<span class="graduate-label">${escape(person.label)}</span>` : ''}</div>
-  <p class="target">${escape(person.target)}</p>${person.availability ? `<p class="availability">${escape(person.availability)}</p>` : ''}<div class="contacts">${contacts}</div></div>${slots.end}
+<style>${css}\n:root{--accent:${layout.accent};--body-pt:${layout.bodyPt}pt;--leading:${layout.lineHeight};--page-margin:${layout.page.marginMm}mm;--page-margin-x:${layout.page.marginHorizontalMm ?? layout.page.marginMm}mm;--page-margin-top:${layout.page.marginTopMm ?? layout.page.marginMm}mm;--page-margin-bottom:${layout.page.marginBottomMm ?? layout.page.marginMm}mm;--name-pt:${layout.namePt}pt;--header-gap:${layout.header.gapMm}mm;--section-gap:${layout.spacing.sectionMm}mm;--entry-gap:${layout.spacing.entryMm}mm;}@page{margin:${layout.page.marginTopMm ?? layout.page.marginMm}mm ${layout.page.marginHorizontalMm ?? layout.page.marginMm}mm ${layout.page.marginBottomMm ?? layout.page.marginMm}mm;}${layout.page.maxPages === 1 ? '@page{@bottom-right{content:none}}' : ''}</style></head>
+<body class="theme-${layout.theme} density-${layout.density} font-${layout.fontFamily} header-align-${layout.header.align} contact-style-${layout.header.contactStyle}"><main class="sheet"><header class="resume-header" style="--header-image-height:${imageHeight}mm">
+  ${slots.start ? `<div class="header-images-start">${slots.start}</div>` : ''}${identity}${slots.end ? `<div class="header-images-end">${slots.end}</div>` : ''}
 </header>${body}${document.notice ? `<footer class="sample-note">${escape(document.notice)}</footer>` : ''}</main></body></html>`;
   return { html, document, layout, ...prepared };
 }
