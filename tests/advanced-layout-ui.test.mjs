@@ -51,6 +51,8 @@ test('more layout options start folded, preserve existing fractional values and 
   assert.equal(await page.locator('#advanced-layout').evaluate(element => element.open), false);
   await page.getByText('更多排版选项', { exact: true }).click();
   for (const [id, , , value] of controls) assert.equal(await page.locator('#' + id).inputValue(), value);
+  assert.equal(await page.locator('#line-height-range').inputValue(), '1.333');
+  assert.equal(await page.locator('#section-spacing-range').inputValue(), '4.15');
   await page.getByRole('button', { name: '关闭设置', exact: true }).click();
   assert.equal((await f.app.project.read()).revision, f.original.revision);
   assert.deepEqual(await readFile(path.join(f.directory, 'resume.md')), f.source);

@@ -1,6 +1,6 @@
 const fields = { 'person.name': ['name', '姓名'], 'person.target': ['target', '目标岗位'], 'person.label': ['label', '毕业届别 / 学历'], 'person.availability': ['availability', '城市 / 到岗时间'] };
-const layoutFields = { theme: 'visual-theme', preset: 'preset', 'page.maxPages': 'max-pages', bodyPt: 'body-size', 'page.marginMm': 'margin', accent: 'accent', namePt: 'name-size', lineHeight: 'line-height', 'spacing.sectionMm': 'section-spacing' };
-const layoutLabels = { namePt: '姓名字号', lineHeight: '行距', 'spacing.sectionMm': '章节间距' };
+const layoutFields = { theme: 'visual-theme', preset: 'preset', 'page.maxPages': 'max-pages', bodyPt: 'body-size', 'page.marginMm': 'margin', 'page.marginHorizontalMm': 'margin-horizontal', 'page.marginTopMm': 'margin-top', 'page.marginBottomMm': 'margin-bottom', accent: 'accent', namePt: 'name-size', lineHeight: 'line-height', 'spacing.sectionMm': 'section-spacing', 'spacing.entryMm': 'entry-spacing', density: 'density', fontFamily: 'font-family', 'header.align': 'header-align', 'header.contactStyle': 'contact-style', 'images.portrait.slot': 'portrait-slot', 'images.portrait.widthMm': 'portrait-size', 'images.portrait.heightMm': 'portrait-size', 'images.schoolLogo.widthMm': 'schoolLogo-size', 'images.schoolLogo.heightMm': 'schoolLogo-size' };
+const layoutLabels = { namePt: '姓名字号', lineHeight: '行距', 'spacing.sectionMm': '章节间距', 'spacing.entryMm': '条目间距', bodyPt: '正文大小', 'page.marginMm': '统一页边距', 'page.marginHorizontalMm': '左右页边距', 'page.marginTopMm': '上边距', 'page.marginBottomMm': '下边距', density: '版面密度', fontFamily: '字体', 'header.align': '姓名与联系信息对齐', 'header.contactStyle': '联系方式展示', 'images.portrait.slot': '照片位置', 'images.portrait.widthMm': '照片宽度', 'images.portrait.heightMm': '照片宽度', 'images.schoolLogo.widthMm': '校徽宽度', 'images.schoolLogo.heightMm': '校徽宽度' };
 const causes = { ENOSPC: '先尝试下载未保存草稿，释放磁盘空间后再重试。', EACCES: '先保留当前输入，检查数据目录的访问权限后再重试。', EPERM: '先保留当前输入，检查数据目录的访问权限或文件占用后再重试。', EROFS: '数据目录是只读的，请检查目录权限后再重试。', EBUSY: '关闭占用资料文件的程序后再重试；当前输入可先尝试下载为草稿。', ENOENT: '请确认资料文件和数据目录仍在原位置，当前输入先保留为草稿。' };
 const own = (object, key) => typeof key === 'string' && Object.hasOwn(object, key) ? object[key] : undefined;
 export function lineSelection(text, line) {
@@ -21,7 +21,7 @@ export function describeEditorError(error, context = {}) {
   if (file === 'layout.yaml' || !file && setting) {
     if (setting) target = { type: 'layout', id: setting };
     label = own(layoutLabels, field) || label;
-    hint = own(layoutLabels, field) ? '请到“更多排版选项”调整对应设置，选择后会自动保存。' : '请检查版式配置中的对应设置，再尝试预览。';
+    hint = own(layoutLabels, field) ? '请到“版式与图片”调整对应设置，选择后会自动保存。' : '请检查版式配置中的对应设置，再尝试预览。';
   } else if (!file || file === 'resume.md') {
     if (context.sourceMode && line) target = { type: 'line', line };
     else if (person) target = { type: 'control', id: person[0] };

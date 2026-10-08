@@ -25,7 +25,10 @@ def verify(directory, stem):
     expected = json.loads((directory / f'{stem}.expected.json').read_text(encoding='utf8'))
     reader = PdfReader(pdf_file)
     assert len(reader.pages) == expected['pages'], f'{stem}: expected {expected["pages"]} pages, got {len(reader.pages)}'
-    margin = expected['marginMm'] * 72 / 25.4
+    margin_x = expected.get('marginHorizontalMm', expected['marginMm']) * 72 / 25.4
+    margin_top = expected.get('marginTopMm', expected['marginMm']) * 72 / 25.4
+    margin_bottom = expected.get('marginBottomMm', expected['marginMm']) * 72 / 25.4
+    page_number_visible = expected.get('pageNumberVisible', True)
     bodies, fonts, links, image_count, page_reports = [], {}, [], 0, []
     with pdfplumber.open(pdf_file) as visual:
         for index, page in enumerate(reader.pages):
@@ -35,12 +38,17 @@ def verify(directory, stem):
             # This pinned Chromium writes page-margin boxes before body text.
             # Remove exactly that verified prefix; visitor coordinates for
             # delayed inline-text flushes on page 2 are not reliable in pypdf.
-            prefix = (r'个人简历\s*·\s*续页\s*' if index else '') + rf'{index + 1}\s*/\s*{len(reader.pages)}\s*'
+            prefix = (r'个人简历\s*·\s*续页\s*' if index else '')
+            if page_number_visible:
+                prefix += rf'{index + 1}\s*/\s*{len(reader.pages)}\s*'
             match = re.match(prefix, full_text)
             assert match, f'{stem}: unexpected margin-text order on page {index + 1}'
             body = full_text[match.end():]
             assert compact(body), f'{stem}: empty body on page {index + 1}'
-            assert f'{index + 1}/{len(reader.pages)}' in compact(full_text), 'Missing/wrong page number'
+            if page_number_visible:
+                assert f'{index + 1}/{len(reader.pages)}' in compact(full_text), 'Missing/wrong page number'
+            else:
+                assert f'{index + 1}/{len(reader.pages)}' not in compact(full_text), 'Unexpected page number'
             if index:
                 assert '个人简历·续页' in compact(full_text), 'Missing continuation header'
             bodies.append(body)
@@ -50,20 +58,21 @@ def verify(directory, stem):
                 descendant = font.get('/DescendantFonts', [font])[0].get_object()
                 descriptor = descendant['/FontDescriptor'].get_object()
                 name = str(font['/BaseFont'])
-                assert 'ResumeSansSC-' in name, f'Unexpected fallback font: {name}'
+                family = 'ResumeSerifSC-' if expected.get('fontFamily') == 'serif' else 'ResumeSansSC-'
+                assert family in name, f'Unexpected fallback font: {name}'
                 fonts[name] = {'name': name, 'embedded': any(key in descriptor for key in ['/FontFile', '/FontFile2', '/FontFile3']), 'toUnicode': '/ToUnicode' in font}
             links.extend(str(annotation.get_object()['/A']['/URI']) for annotation in page.get('/Annots', []) if '/A' in annotation.get_object() and '/URI' in annotation.get_object()['/A'])
             vp = visual.pages[index]
             # Margin labels are expected; check body geometry independently.
-            content = vp.crop((0, margin - 2, width, height - margin + 2))
+            content = vp.crop((0, margin_top - 2, width, height - margin_bottom + 2))
             chars = content.chars
             assert chars, f'{stem}: visually empty body on page {index + 1}'
-            assert all(c['x0'] >= margin - 2 and c['x1'] <= width - margin + 2 for c in chars), f'{stem}: horizontal overflow on page {index + 1}'
+            assert all(c['x0'] >= margin_x - 2 and c['x1'] <= width - margin_x + 2 for c in chars), f'{stem}: horizontal overflow on page {index + 1}'
             assert all(c['x0'] >= 8 and c['x1'] <= width - 8 and c['top'] >= 8 and c['bottom'] <= height - 8 for c in vp.chars), f'{stem}: text outside paper safe area'
-            assert not any(margin + 2 < c['bottom'] and c['top'] < margin - 2 or height - margin - 2 < c['bottom'] and c['top'] < height - margin - 2 for c in vp.chars), f'{stem}: text crosses a content boundary'
+            assert not any(margin_top + 2 < c['bottom'] and c['top'] < margin_top - 2 or height - margin_bottom - 2 < c['bottom'] and c['top'] < height - margin_bottom - 2 for c in vp.chars), f'{stem}: text crosses a content boundary'
             image_count += len(vp.images)
             for image in vp.images:
-                assert image['x0'] >= margin - 2 and image['x1'] <= width - margin + 2 and image['top'] >= margin - 2 and image['bottom'] <= height - margin + 2, 'Image outside body'
+                assert image['x0'] >= margin_x - 2 and image['x1'] <= width - margin_x + 2 and image['top'] >= margin_top - 2 and image['bottom'] <= height - margin_bottom + 2, 'Image outside body'
             page_reports.append({'page': index + 1, 'bodyCharacters': len(body), 'bodyBoundsPt': {'left': min(c['x0'] for c in chars), 'right': max(c['x1'] for c in chars), 'top': min(c['top'] for c in chars), 'bottom': max(c['bottom'] for c in chars)}, 'imageCount': len(vp.images)})
 
     text = '\n'.join(bodies)

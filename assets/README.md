@@ -46,6 +46,12 @@ python -m pip install fonttools==4.61.1
 python scripts/prepare-fonts.py path/to/NotoSansSC-VF.ttf
 ```
 
+可选宋体的上游为 Noto Serif SC，可变字体版本 `2.02;241114204558;non-release`，源文件 SHA-256 为 `A4AED9985A5916FBF6690456F8732A9FCCD517938E353165D4142B4F11A39280`。该字体元数据声明 SIL OFL 1.1，许可文本见 `fonts/OFL-NotoSerifSC.txt`。用 `scripts/prepare-serif-font.py` 将它生成 400、600、700 三个固定字重、重命名为 **Resume Serif SC**，并删除与常用汉字共用字形的兼容部首 cmap 别名；字形轮廓不变。具体输入、输出校验值见 `fonts/provenance-serif.json`。正常构建只需要三个成品字体，只有选择宋体时才嵌入离线排版页面。固定字重避免 Chromium 把可变字体输出为 Type3 PDF 字体。
+
+## 页眉图标
+
+`icons/` 中的电话、邮箱、链接、日期、目标和位置图标取自 `lucide-static@1.52.0`，保留原始 SVG 文件。该包使用 ISC 许可；版本、包校验值和许可文本见 `icons/SOURCES.md` 与 `icons/LICENSE`。选择图标展示时，图标直接嵌入本地 PDF，不请求图标服务。
+
 字体文件始终按 OFL 分发；代码的 MIT 许可不会替换或扩张字体、人像及奶龙头像的许可范围。
 
 离线 PDF 预览使用 PDF.js `6.3.289`，按 Apache-2.0 分发；上游文件及 `LICENSE` 随 npm 依赖保留。预览在本机读取 PDF，字体、CMap 和解码资源不依赖在线服务。

@@ -14,14 +14,17 @@ export interface ImageConfig { enabled?: boolean; widthMm?: number; heightMm?: n
 export type ResumeThemeId = 'ink-blue' | 'minimal-mono' | 'slate-banner' | 'forest-rail' | 'warm-labels' | 'graphite-grid';
 export interface LayoutConfig {
   schemaVersion: '0.2.0'; theme?: ResumeThemeId; preset?: 'campus' | 'experience';
-  page?: { size?: 'A4'; marginMm?: number; maxPages?: 1 | 2 };
+  page?: { size?: 'A4'; marginMm?: number; marginHorizontalMm?: number; marginTopMm?: number; marginBottomMm?: number; maxPages?: 1 | 2 };
+  density?: 'standard' | 'compact'; fontFamily?: 'sans' | 'serif';
   bodyPt?: number; lineHeight?: number; namePt?: number; accent?: string; sectionOrder?: string[];
-  header?: { gapMm?: number }; spacing?: { sectionMm?: number; entryMm?: number };
+  header?: { gapMm?: number; align?: 'theme' | 'left' | 'center' | 'spread'; contactStyle?: 'plain' | 'labeled' | 'icons' };
+  spacing?: { sectionMm?: number; entryMm?: number };
   images?: { schoolLogo?: ImageConfig; portrait?: ImageConfig };
 }
 export type NormalizedDocument = ResumeDocument & { locale: 'zh-CN'; assets: NonNullable<ResumeDocument['assets']> };
 export type NormalizedLayout = Required<Omit<LayoutConfig, 'page' | 'images' | 'header' | 'spacing'>> & {
-  page: Required<NonNullable<LayoutConfig['page']>>; header: Required<NonNullable<LayoutConfig['header']>>;
+  page: Required<Pick<NonNullable<LayoutConfig['page']>, 'size' | 'marginMm' | 'maxPages'>> & Pick<NonNullable<LayoutConfig['page']>, 'marginHorizontalMm' | 'marginTopMm' | 'marginBottomMm'>;
+  header: Required<NonNullable<LayoutConfig['header']>>;
   spacing: Required<NonNullable<LayoutConfig['spacing']>>; images: { schoolLogo: Required<ImageConfig>; portrait: Required<ImageConfig> };
 };
 export interface SourceLocation { file?: string; line?: number }
