@@ -17,7 +17,7 @@ export interface LayoutConfig {
   page?: { size?: 'A4'; marginMm?: number; marginHorizontalMm?: number; marginTopMm?: number; marginBottomMm?: number; maxPages?: 1 | 2 };
   density?: 'standard' | 'compact'; fontFamily?: 'sans' | 'serif';
   bodyPt?: number; lineHeight?: number; namePt?: number; accent?: string; sectionOrder?: string[];
-  header?: { gapMm?: number; align?: 'theme' | 'left' | 'center' | 'spread'; contactStyle?: 'plain' | 'labeled' };
+  header?: { gapMm?: number; align?: 'theme' | 'left' | 'center' | 'spread'; contactStyle?: 'plain' | 'labeled' | 'icons' };
   spacing?: { sectionMm?: number; entryMm?: number };
   images?: { schoolLogo?: ImageConfig; portrait?: ImageConfig };
 }

@@ -61,7 +61,7 @@ type LayoutConfig = {
   fontFamily: 'sans' | 'serif';
   bodyPt: number; lineHeight: number; namePt: number; accent: string;
   sectionOrder?: string[];
-  header: { gapMm: number; align: 'theme' | 'left' | 'center' | 'spread'; contactStyle: 'plain' | 'labeled' };
+  header: { gapMm: number; align: 'theme' | 'left' | 'center' | 'spread'; contactStyle: 'plain' | 'labeled' | 'icons' };
   spacing: { sectionMm: number; entryMm: number };
   images: { schoolLogo: ImageLayout; portrait: ImageLayout };
 };

@@ -53,6 +53,17 @@ for (const theme of resumeThemes) {
   const result = await inspectAndExport(await renderResume(loaded.document, loaded.layout, loaded), { pdf: true });
   assert.equal(result.metrics.pageCount, 1); assert.equal(result.metrics.networkRequests.length, 0);
 }
+const iconResume = await loadResume('campus/resume.md');
+const iconLayout = {
+  ...iconResume.layout, fontFamily: 'serif', density: 'compact',
+  page: { ...iconResume.layout.page, maxPages: 2 },
+  header: { ...iconResume.layout.header, align: 'spread', contactStyle: 'icons' },
+};
+const iconRender = await renderResume(iconResume.document, iconLayout, iconResume);
+assert.match(iconRender.html, /lucide-phone/);
+const iconPdf = await inspectAndExport(iconRender, {pdf:true});
+assert.equal(iconPdf.metrics.networkRequests.length, 0);
+assert.equal(iconPdf.metrics.images.length, 2);
 const converted = await loadWorkbenchResume('node_modules/tech-resume-kit/examples/workbench/resume.json', undefined, {optionsFile:'node_modules/tech-resume-kit/examples/workbench/conversion.json'});
 const convertedPdf = await inspectAndExport(await renderResume(converted.document, converted.layout, converted), {pdf:true});
 assert.equal(convertedPdf.metrics.pageCount,1); assert.equal(convertedPdf.metrics.images.length,2);
@@ -103,7 +114,7 @@ const starter: StarterTemplateId = 'frontend';
 const theme: ResumeThemeId = 'forest-rail';
 const initialization: Promise<string> = initializeProject('typecheck-only', starter, { theme });
 const document: ResumeDocument = { schemaVersion: '0.2.0', person: { name: '填写姓名', target: '开发', contacts: [{text:'a@example.com', href:'mailto:a@example.com'}] }, sections: [{id:'skills',title:'技能',kind:'skills',items:[{label:'Java',text:'测试'}]}] };
-const layout: LayoutConfig = {schemaVersion:'0.2.0'};
+const layout: LayoutConfig = {schemaVersion:'0.2.0',fontFamily:'serif',header:{align:'spread',contactStyle:'icons'},page:{marginMm:15,marginHorizontalMm:12}};
 const rendered = await renderResume(document, layout);
 const result = await inspectAndExport(rendered, {pdf:true});
 const bytes: Uint8Array = result.buffer;

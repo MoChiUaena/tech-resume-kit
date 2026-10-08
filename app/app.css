@@ -75,7 +75,16 @@ input[aria-invalid=true],select[aria-invalid=true],textarea[aria-invalid=true],b
 .settings-group{padding:15px 0 21px;border-bottom:1px solid #e3eaf0;scroll-margin-top:92px}
 .settings-group:first-child{padding-top:10px}
 .settings-group h3{font-size:15px;color:#243f52;margin:0 0 13px}
+.setting-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:13px}
+.setting-heading h3{margin:0}
+.setting-heading button{flex:none;font-size:11px}
 .settings-group .fields-grid{margin-top:0}
+.slider-caption{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.slider-caption output{color:#3478f6;font-size:12px;font-weight:700;white-space:nowrap}
+#settings input[type=range]{height:22px;padding:0;border:0;background:transparent;accent-color:#3478f6}
+.type-quick,.density-quick{display:flex;gap:8px;margin-top:12px}
+.type-quick button,.density-quick button{font-size:12px;flex:1;padding:8px 10px;background:#fff;border-color:#dbe3e9}
+.type-quick button[aria-pressed=true],.density-quick button[aria-pressed=true]{color:#1959ae;background:#eaf2ff;border-color:#9bc3ff;font-weight:700}
 .setting-note{font-size:11px;color:#8293a0;line-height:1.6;margin:11px 0 0}
 .color-controls{margin-top:18px}
 .color-controls>label{display:block;color:#607382;font-size:12px;margin-bottom:9px}

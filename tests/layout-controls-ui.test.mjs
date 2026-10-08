@@ -5,10 +5,13 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { startEditor } from '../src/app.mjs';
+import { initializeProject } from '../src/files.mjs';
 
 test('web layout controls save locally and change the actual PDF without changing resume text', async t => {
   const outer = await mkdtemp(path.join(tmpdir(), 'tech-resume-layout-ui-'));
-  const app = await startEditor(path.join(outer, 'data'));
+  const directory = path.join(outer, 'data');
+  await initializeProject(directory, 'campus');
+  const app = await startEditor(directory);
   const browser = await chromium.launch({ channel: 'chromium' });
   const page = await browser.newPage({ viewport: { width: 1400, height: 950 } });
   const external = [];
@@ -33,8 +36,10 @@ test('web layout controls save locally and change the actual PDF without changin
   await page.locator('#font-family').selectOption('serif');
   await page.locator('#body-size').selectOption('9.75');
   await page.locator('#header-align').selectOption('spread');
-  await page.locator('#contact-style').selectOption('labeled');
+  await page.locator('#contact-style').selectOption('icons');
   await page.locator('#portrait-slot').selectOption('end');
+  await page.locator('#portrait-size').selectOption('21', { timeout: 3000 });
+  await page.locator('#schoolLogo-size').selectOption('16', { timeout: 3000 });
   await page.locator('#margin-horizontal').selectOption('9');
   await page.locator('#margin-top').selectOption('10');
   await page.locator('#margin-bottom').selectOption('8');
@@ -48,8 +53,11 @@ test('web layout controls save locally and change the actual PDF without changin
   assert.equal(state.layout.fontFamily, 'serif');
   assert.equal(state.layout.bodyPt, 9.75);
   assert.equal(state.layout.header.align, 'spread');
-  assert.equal(state.layout.header.contactStyle, 'labeled');
+  assert.equal(state.layout.header.contactStyle, 'icons');
   assert.equal(state.layout.images.portrait.slot, 'end');
+  assert.equal(state.layout.images.portrait.widthMm, 21);
+  assert.ok(Math.abs(state.layout.images.portrait.heightMm / 21 - 31 / 23) < 0.001);
+  assert.equal(state.layout.images.schoolLogo.widthMm, 16);
   assert.equal(state.layout.page.marginHorizontalMm, 9);
   assert.equal(state.layout.page.marginTopMm, 10);
   assert.equal(state.layout.page.marginBottomMm, 8);
@@ -61,6 +69,7 @@ test('web layout controls save locally and change the actual PDF without changin
   const preview = await app.project.preview();
   assert.equal(preview.metrics.pageCount, 1);
   assert.equal(preview.metrics.outOfBounds.length, 0);
+  assert.ok(Math.abs(preview.metrics.images.find(image => image.asset === 'schoolLogo').width - 16 * 96 / 25.4) < 1);
   await page.reload();
   await page.locator('#pdf-download:not([disabled])').waitFor({ timeout: 30000 });
   await page.locator('#settings-open').click();

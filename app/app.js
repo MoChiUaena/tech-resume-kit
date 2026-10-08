@@ -83,6 +83,46 @@ function fillLayoutChoices(id, value, choices, unit) {
 function syncAccentSwatches() {
   for (const button of document.querySelectorAll('[data-accent]')) button.setAttribute('aria-pressed', String(button.dataset.accent.toLowerCase() === state.layout.accent.toLowerCase()));
 }
+function syncImageSizeChoices() {
+  fillLayoutChoices('portrait-size', state.layout.images.portrait.widthMm, [20, 21, 22, 23, 24, 25, 26], 'mm');
+  const compact = state.layout.density === 'compact' || state.layout.header.align === 'spread';
+  const logoWidth = state.layout.images.schoolLogo.widthMm;
+  fillLayoutChoices('schoolLogo-size', compact ? Math.min(logoWidth, 20) : logoWidth, compact ? [14, 16, 18, 20] : [14, 16, 18, 20, 24, 28, 34], 'mm');
+}
+const rangeSpecs = {
+  'body-size': { choices: [9.5, 9.75, 10, 10.25, 10.5, 10.75, 11, 11.25, 11.5], unit: 'pt' },
+  'line-height': { choices: [1.15, 1.2, 1.25, 1.3, 1.36, 1.4, 1.45, 1.5], unit: '倍' },
+  'section-spacing': { choices: [1.2, 1.4, 1.6, 2, 2.5, 3, 3.5, 4, 4.5, 5], unit: 'mm' },
+  'entry-spacing': { choices: [1.2, 1.5, 2, 2.5, 3, 3.2, 3.5, 4, 4.5, 5], unit: 'mm' },
+  'margin-horizontal': { choices: Array.from({ length: 18 }, (_, index) => index + 8), unit: 'mm' },
+  'margin-top': { choices: Array.from({ length: 18 }, (_, index) => index + 8), unit: 'mm' },
+  'margin-bottom': { choices: Array.from({ length: 18 }, (_, index) => index + 8), unit: 'mm' },
+};
+function syncLayoutSliders() {
+  for (const [id, { unit }] of Object.entries(rangeSpecs)) {
+    const value = $(id).value;
+    $(`${id}-range`).value = value;
+    $(`${id}-output`).textContent = `${value} ${unit}`;
+  }
+  for (const button of document.querySelectorAll('[data-density-choice]')) button.setAttribute('aria-pressed', String(button.dataset.densityChoice === state.layout.density));
+  for (const button of document.querySelectorAll('[data-body-size-choice]')) button.setAttribute('aria-pressed', String(Number(button.dataset.bodySizeChoice) === state.layout.bodyPt));
+}
+function syncLayoutControls() {
+  $('visual-theme').value = state.layout.theme; $('preset').value = state.layout.preset; $('max-pages').value = state.layout.page.maxPages; $('accent').value = state.layout.accent;
+  fillLayoutChoices('body-size', state.layout.bodyPt, rangeSpecs['body-size'].choices, 'pt');
+  fillLayoutChoices('margin', state.layout.page.marginMm, Array.from({ length: 10 }, (_, index) => index + 9), 'mm');
+  $('density').value = state.layout.density; $('font-family').value = state.layout.fontFamily;
+  $('header-align').value = state.layout.header.align; $('contact-style').value = state.layout.header.contactStyle;
+  $('portrait-slot').value = state.layout.images.portrait.slot;
+  syncImageSizeChoices();
+  for (const [id, value] of [['margin-horizontal', state.layout.page.marginHorizontalMm ?? state.layout.page.marginMm], ['margin-top', state.layout.page.marginTopMm ?? state.layout.page.marginMm], ['margin-bottom', state.layout.page.marginBottomMm ?? state.layout.page.marginMm]]) fillLayoutChoices(id, value, rangeSpecs[id].choices, 'mm');
+  syncAccentSwatches();
+  fillLayoutChoices('name-size', state.layout.namePt, [20, 21, 22, 23, 24], 'pt');
+  fillLayoutChoices('line-height', state.layout.lineHeight, rangeSpecs['line-height'].choices, '倍');
+  fillLayoutChoices('section-spacing', state.layout.spacing.sectionMm, rangeSpecs['section-spacing'].choices, 'mm');
+  fillLayoutChoices('entry-spacing', state.layout.spacing.entryMm, rangeSpecs['entry-spacing'].choices, 'mm');
+  syncLayoutSliders();
+}
 function populate() {
   clearSaveError();
   $('resume-select').replaceChildren();
@@ -98,18 +138,7 @@ function populate() {
   $('body').value = sourceMode ? state.source : state.body; renderContacts();
   $('body').setSelectionRange(0, 0); $('body').scrollTop = 0;
   $('source-mode').textContent = sourceMode ? '返回正文编辑' : '完整 Markdown';
-  $('visual-theme').value = state.layout.theme; $('preset').value = state.layout.preset; $('max-pages').value = state.layout.page.maxPages; $('accent').value = state.layout.accent;
-  fillLayoutChoices('body-size', state.layout.bodyPt, [9.5, 9.75, 10, 10.25, 10.5, 10.75, 11, 11.25, 11.5], 'pt');
-  fillLayoutChoices('margin', state.layout.page.marginMm, Array.from({ length: 10 }, (_, index) => index + 9), 'mm');
-  $('density').value = state.layout.density; $('font-family').value = state.layout.fontFamily;
-  $('header-align').value = state.layout.header.align; $('contact-style').value = state.layout.header.contactStyle;
-  $('portrait-slot').value = state.layout.images.portrait.slot;
-  for (const [id, value] of [['margin-horizontal', state.layout.page.marginHorizontalMm ?? state.layout.page.marginMm], ['margin-top', state.layout.page.marginTopMm ?? state.layout.page.marginMm], ['margin-bottom', state.layout.page.marginBottomMm ?? state.layout.page.marginMm]]) fillLayoutChoices(id, value, Array.from({ length: 18 }, (_, index) => index + 8), 'mm');
-  syncAccentSwatches();
-  fillLayoutChoices('name-size', state.layout.namePt, [20, 21, 22, 23, 24], 'pt');
-  fillLayoutChoices('line-height', state.layout.lineHeight, [1.15, 1.2, 1.25, 1.3, 1.36, 1.4, 1.45, 1.5], '倍');
-  fillLayoutChoices('section-spacing', state.layout.spacing.sectionMm, [1.2, 1.4, 1.6, 2, 2.5, 3, 3.5, 4, 4.5, 5], 'mm');
-  fillLayoutChoices('entry-spacing', state.layout.spacing.entryMm, [1.2, 1.5, 2, 2.5, 3, 3.2, 3.5, 4, 4.5, 5], 'mm');
+  syncLayoutControls();
   for (const key of ['portrait', 'schoolLogo']) { const asset = state.front?.assets?.[key]; $(`${key}-enabled`).checked = state.layout.images[key].enabled; $(`${key}-enabled`).disabled = !asset; $(`${key}-file`).textContent = asset ? asset.src.split('/').at(-1) : '尚未选择'; }
   $('crop-existing').disabled = !state.front?.assets?.portrait || sourceMode;
   for (const key of ['education','internship','work','project']) $(`entry-${key}`).disabled = sourceMode;
@@ -243,11 +272,13 @@ for (const [id, apply] of Object.entries({
   preset: value => { state.layout.preset = value; delete state.layout.sectionOrder; },
   'max-pages': value => state.layout.page.maxPages = Number(value),
   'body-size': value => state.layout.bodyPt = Number(value),
-  density: value => state.layout.density = value,
+  density: value => { state.layout.density = value; syncImageSizeChoices(); },
   'font-family': value => state.layout.fontFamily = value,
-  'header-align': value => state.layout.header.align = value,
+  'header-align': value => { state.layout.header.align = value; syncImageSizeChoices(); },
   'contact-style': value => state.layout.header.contactStyle = value,
   'portrait-slot': value => state.layout.images.portrait.slot = value,
+  'portrait-size': value => { state.layout.images.portrait.widthMm = Number(value); state.layout.images.portrait.heightMm = Number((Number(value) * 31 / 23).toFixed(2)); },
+  'schoolLogo-size': value => { state.layout.images.schoolLogo.widthMm = Number(value); state.layout.images.schoolLogo.heightMm = Number((Number(value) * 25 / 34).toFixed(2)); },
   margin: value => {
     state.layout.page.marginMm = Number(value);
     delete state.layout.page.marginHorizontalMm; delete state.layout.page.marginTopMm; delete state.layout.page.marginBottomMm;
@@ -261,7 +292,29 @@ for (const [id, apply] of Object.entries({
   'line-height': value => state.layout.lineHeight = Number(value),
   'section-spacing': value => state.layout.spacing.sectionMm = Number(value),
   'entry-spacing': value => state.layout.spacing.entryMm = Number(value),
-})) $(id).addEventListener('change', event => { apply(event.target.value); if (id === 'accent') syncAccentSwatches(); edited(); });
+})) $(id).addEventListener('change', event => { apply(event.target.value); if (id === 'accent') syncAccentSwatches(); syncLayoutSliders(); edited(); });
+for (const [id, { choices, unit }] of Object.entries(rangeSpecs)) {
+  const range = $(`${id}-range`);
+  range.addEventListener('input', event => {
+    const value = Number(Number(event.target.value).toFixed(id === 'line-height' ? 3 : 2));
+    fillLayoutChoices(id, value, choices, unit);
+    $(`${id}-output`).textContent = `${value} ${unit}`;
+  });
+  range.addEventListener('change', () => $(id).dispatchEvent(new Event('change', { bubbles: true })));
+}
+for (const button of document.querySelectorAll('[data-density-choice]')) button.addEventListener('click', () => {
+  $('density').value = button.dataset.densityChoice;
+  $('density').dispatchEvent(new Event('change', { bubbles: true }));
+});
+for (const button of document.querySelectorAll('[data-body-size-choice]')) button.addEventListener('click', () => {
+  $('body-size').value = button.dataset.bodySizeChoice;
+  $('body-size').dispatchEvent(new Event('change', { bubbles: true }));
+});
+const resetLayoutGroup = update => { update(); syncLayoutControls(); edited(); };
+$('text-reset').addEventListener('click', () => resetLayoutGroup(() => { state.layout.fontFamily = 'sans'; state.layout.bodyPt = 10.5; state.layout.namePt = 23; }));
+$('style-reset').addEventListener('click', () => resetLayoutGroup(() => { state.layout = applyResumeTheme(state.layout, 'ink-blue'); state.layout.density = 'standard'; state.layout.header.align = 'theme'; state.layout.header.contactStyle = 'plain'; }));
+$('spacing-reset').addEventListener('click', () => resetLayoutGroup(() => { state.layout.page.marginMm = 15; delete state.layout.page.marginHorizontalMm; delete state.layout.page.marginTopMm; delete state.layout.page.marginBottomMm; state.layout.lineHeight = 1.36; state.layout.spacing.sectionMm = 3.5; state.layout.spacing.entryMm = 3.2; }));
+$('images-reset').addEventListener('click', () => resetLayoutGroup(() => { Object.assign(state.layout.images.portrait, { slot: 'start', widthMm: 23, heightMm: 31 }); Object.assign(state.layout.images.schoolLogo, { slot: 'end', widthMm: 34, heightMm: 25 }); }));
 for (const button of document.querySelectorAll('[data-accent]')) button.addEventListener('click', () => {
   state.layout.accent = button.dataset.accent; $('accent').value = state.layout.accent;
   syncAccentSwatches();

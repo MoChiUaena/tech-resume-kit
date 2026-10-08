@@ -28,7 +28,8 @@ export async function inspectAndExport(rendered, { pdf = false } = {}) {
     await page.goto(pathToFileURL(htmlFile).href, { waitUntil: 'load' });
     const broken = await page.evaluate(async (selectedFont) => {
       await document.fonts.ready;
-      if (selectedFont === 'sans' && ![400, 600, 700].every(weight => document.fonts.check(`${weight} 14px "Resume Sans"`))) return 'font';
+      const family = selectedFont === 'serif' ? 'Resume Serif' : 'Resume Sans';
+      if (![400, 600, 700].every(weight => document.fonts.check(`${weight} 14px "${family}"`))) return 'font';
       for (const image of document.images) {
         try { await image.decode(); } catch { return image.dataset.asset; }
       }

@@ -106,6 +106,9 @@ test('blank starter is valid with both images disabled', async t => {
 });
 
 test('preview updates in an actual browser and recovers from an input error', async t => {
+  // Each transition builds a real offline Chromium PDF; the final test in a
+  // serial suite may take longer than a cold standalone run on Windows.
+  const renderTimeout = 45000;
   const root = await temporary(t);
   const project = await initializeProject(path.join(root, 'preview'), 'blank');
   const input = path.join(project, 'resume.md');
@@ -126,23 +129,23 @@ test('preview updates in an actual browser and recovers from an input error', as
   await page.goto(preview.url);
   await page.getByRole('heading', { name: '你的姓名', exact: true }).waitFor();
   await writeFile(input, source.replace('你的姓名', '预览刷新成功'));
-  await page.getByRole('heading', { name: '预览刷新成功', exact: true }).waitFor({ timeout: 15000 });
+  await page.getByRole('heading', { name: '预览刷新成功', exact: true }).waitFor({ timeout: renderTimeout });
   await writeFile(input, source.replace('schemaVersion: 0.2.0', 'schemaVersion: 9.9.9'));
-  await page.locator('.preview-error').waitFor({ timeout: 15000 });
+  await page.locator('.preview-error').waitFor({ timeout: renderTimeout });
   assert.match(await page.locator('.preview-error').innerText(), /schemaVersion/);
   await writeFile(input, source);
-  await page.getByRole('heading', { name: '你的姓名', exact: true }).waitFor({ timeout: 15000 });
+  await page.getByRole('heading', { name: '你的姓名', exact: true }).waitFor({ timeout: renderTimeout });
   assert.equal((await (await fetch(preview.url + '/__status')).json()).valid, true);
   assert.match(await page.locator('iframe').getAttribute('src'), /__document\.pdf/);
   const config = path.join(project, 'layout.yaml');
   await writeFile(config, (await readFile(config, 'utf8')) + '\npage:\n  maxPages: 2\n');
   const added = Array.from({ length: 30 }, (_, i) => `预览分页段落 ${i + 1}：保存内容后，应显示实际 PDF 的分页和文字。`).join('\n\n');
   await writeFile(input, source + '\n\n' + added);
-  await page.waitForFunction(() => document.querySelector('#preview-status')?.textContent.startsWith('2 页'), undefined, { timeout: 20000 });
+  await page.waitForFunction(() => document.querySelector('#preview-status')?.textContent.startsWith('2 页'), undefined, { timeout: renderTimeout });
   const pdfResponse = await fetch(preview.url + '/__document.pdf');
   assert.equal(pdfResponse.headers.get('content-type'), 'application/pdf');
   assert.equal((await PDFDocument.load(await pdfResponse.arrayBuffer())).getPageCount(), 2);
-  await page.frameLocator('iframe').locator('.pdf-page[data-page="2"][data-rendered="true"]').waitFor({ timeout: 20000 });
+  await page.frameLocator('iframe').locator('.pdf-page[data-page="2"][data-rendered="true"]').waitFor({ timeout: renderTimeout });
   await page.screenshot({ path: path.join(kitRoot, 'tmp/pdfs/preview-two-pages.png') });
   await writeFile(input, source + '\n\n' + Array(5).fill(added).join('\n\n'));
   await page.locator('.preview-error').waitFor({ timeout: 30000 });

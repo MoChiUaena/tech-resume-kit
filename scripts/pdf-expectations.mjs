@@ -33,7 +33,8 @@ export function pdfExpectations(rendered, pages) {
     marginHorizontalMm: layout.page.marginHorizontalMm ?? layout.page.marginMm,
     marginTopMm: layout.page.marginTopMm ?? layout.page.marginMm,
     marginBottomMm: layout.page.marginBottomMm ?? layout.page.marginMm,
-    pageNumberVisible: layout.page.maxPages > 1,
+    pageNumberVisible: layout.page.maxPages > 1 || layout.density !== 'compact',
+    fontFamily: layout.fontFamily,
     sectionOrder: [document.person.name, ...layout.sectionOrder.map(id => document.sections.find(section => section.id === id).title)],
   };
 }

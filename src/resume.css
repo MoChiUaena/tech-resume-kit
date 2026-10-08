@@ -128,7 +128,10 @@ p, li, .target, .availability, .stack { overflow-wrap: anywhere; }
 .theme-graphite-grid strong, .theme-graphite-grid .skill-label { color: #37424a; }
 
 /* These controls are independent of the visual theme and keep legacy layouts unchanged. */
-.font-serif { font-family: "Noto Serif SC", "Source Han Serif SC", "SimSun", serif; }
+.font-serif { font-family: "Resume Serif", serif; }
+.resume-icon { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; flex: none; line-height: 1; }
+.resume-icon svg { display: block; width: 100%; height: 100%; stroke: currentColor; }
+.contact-style-icons .contacts a, .contact-style-icons .graduate-label, .contact-style-icons .target, .contact-style-icons .availability { display: inline-flex; align-items: center; gap: 1mm; }
 .header-align-center .identity { text-align: center; }
 .header-align-center .name-row, .header-align-center .contacts { justify-content: center; }
 .header-align-left .identity { text-align: left; }
@@ -136,7 +139,7 @@ p, li, .target, .availability, .stack { overflow-wrap: anywhere; }
 .contact-label { font-size: .82em; color: var(--accent); font-weight: 600; margin-right: 1.2mm; }
 .density-compact .resume-header { align-items: flex-start; padding-bottom: 1.2mm; }
 .density-compact .school-logo { max-width: 20mm; max-height: 15mm; }
-.density-compact.header-align-center .resume-header { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 80mm) minmax(0, 1fr); min-height: max(26mm, var(--header-image-height)); }
+.density-compact.header-align-center .resume-header { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 80mm) minmax(0, 1fr); column-gap: 0; min-height: max(26mm, var(--header-image-height)); }
 .density-compact.header-align-center .header-images-start, .density-compact.header-align-center .header-images-end { display: flex; align-self: start; gap: var(--header-gap); }
 .density-compact.header-align-center .header-images-start { grid-column: 1; justify-content: flex-start; }
 .density-compact.header-align-center .header-images-end { grid-column: 3; justify-content: flex-end; }
@@ -163,17 +166,23 @@ p, li, .target, .availability, .stack { overflow-wrap: anywhere; }
 .density-compact .skill + .skill { margin-top: .3mm; }
 .density-compact.theme-minimal-mono h2 { color: #16191c; letter-spacing: 0; border-bottom: 1pt solid var(--accent); padding-bottom: .35mm; }
 .density-compact.theme-minimal-mono .target { color: #16191c; font-weight: 400; }
-.header-align-spread .resume-header { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 80mm) minmax(0, 1fr); min-height: max(31mm, var(--header-image-height)); }
+.density-compact.theme-minimal-mono .entry-subtitle, .density-compact.theme-minimal-mono .date { color: #25282b; }
+.density-compact.theme-minimal-mono section[aria-labelledby="projects"] .entry-subtitle { font-weight: 700; }
+.density-compact.theme-minimal-mono li::marker, .density-compact.theme-minimal-mono .skill::before { color: #16191c; }
+.header-align-spread .resume-header { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 80mm) minmax(0, 1fr); column-gap: 0; min-height: max(31mm, var(--header-image-height)); }
 .header-align-spread .header-images-start, .header-align-spread .header-images-end { display: flex; align-self: start; gap: var(--header-gap); }
 .header-align-spread .header-images-start { grid-column: 1; justify-content: flex-start; }
 .header-align-spread .header-images-end { grid-column: 3; justify-content: flex-end; }
 .header-align-spread .school-logo { max-width: 20mm; max-height: 15mm; }
+.header-align-spread .header-images-start .school-logo, .density-compact.header-align-center .header-images-start .school-logo { max-width: min(20mm, calc(100% - var(--header-start-other-width))); }
+.header-align-spread .header-images-end .school-logo, .density-compact.header-align-center .header-images-end .school-logo { max-width: min(20mm, calc(100% - var(--header-end-other-width))); }
 .header-align-spread .identity { grid-column: 2; grid-row: 1; text-align: center; }
 .header-align-spread .name-row, .header-align-spread .contacts { justify-content: center; }
 .header-align-spread .contacts { margin-top: 1.8mm; }
 .header-align-spread .details-row { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; column-gap: 3mm; margin-top: 1.5mm; }
 .header-align-spread .details-row .target { color: #262e34; font-size: 9.5pt; line-height: 1.25; font-weight: 500; margin: 0; }
 .header-align-spread .details-row .graduate-label, .header-align-spread .details-row .availability { color: #262e34; font-size: 9.5pt; line-height: 1.25; margin: 0; }
+.theme-slate-banner.header-align-spread .details-row .target, .theme-slate-banner.header-align-spread .details-row .graduate-label, .theme-slate-banner.header-align-spread .details-row .availability { color: #f1f6fa; }
 
 @page {
   size: A4;

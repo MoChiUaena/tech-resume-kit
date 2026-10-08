@@ -58,7 +58,8 @@ def verify(directory, stem):
                 descendant = font.get('/DescendantFonts', [font])[0].get_object()
                 descriptor = descendant['/FontDescriptor'].get_object()
                 name = str(font['/BaseFont'])
-                assert 'ResumeSansSC-' in name, f'Unexpected fallback font: {name}'
+                family = 'ResumeSerifSC-' if expected.get('fontFamily') == 'serif' else 'ResumeSansSC-'
+                assert family in name, f'Unexpected fallback font: {name}'
                 fonts[name] = {'name': name, 'embedded': any(key in descriptor for key in ['/FontFile', '/FontFile2', '/FontFile3']), 'toUnicode': '/ToUnicode' in font}
             links.extend(str(annotation.get_object()['/A']['/URI']) for annotation in page.get('/Annots', []) if '/A' in annotation.get_object() and '/URI' in annotation.get_object()['/A'])
             vp = visual.pages[index]

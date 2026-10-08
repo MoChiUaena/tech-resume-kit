@@ -58,7 +58,7 @@ export const layoutSchema = z.object({
   header: z.object({
     gapMm: z.number().min(2).max(8).default(5),
     align: z.enum(['theme', 'left', 'center', 'spread']).default('theme'),
-    contactStyle: z.enum(['plain', 'labeled']).default('plain'),
+    contactStyle: z.enum(['plain', 'labeled', 'icons']).default('plain'),
   }).strict().prefault({}),
   spacing: z.object({ sectionMm: z.number().min(1.2).max(5).default(3.5), entryMm: z.number().min(1.2).max(5).default(3.2) }).strict().prefault({}),
   images: z.object({
