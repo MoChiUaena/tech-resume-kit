@@ -106,6 +106,9 @@ function syncLayoutSliders() {
   }
   for (const button of document.querySelectorAll('[data-density-choice]')) button.setAttribute('aria-pressed', String(button.dataset.densityChoice === state.layout.density));
   for (const button of document.querySelectorAll('[data-body-size-choice]')) button.setAttribute('aria-pressed', String(Number(button.dataset.bodySizeChoice) === state.layout.bodyPt));
+  const { page, spacing } = state.layout;
+  const dense = state.layout.density === 'compact' && state.layout.bodyPt === 10 && state.layout.lineHeight === 1.5 && spacing.sectionMm === 3 && spacing.entryMm === 3 && page.marginMm === 9 && page.maxPages === 1 && page.marginHorizontalMm === undefined && page.marginTopMm === undefined && page.marginBottomMm === undefined;
+  $('dense-one-page').setAttribute('aria-pressed', String(dense));
 }
 function syncLayoutControls() {
   $('visual-theme').value = state.layout.theme; $('preset').value = state.layout.preset; $('max-pages').value = state.layout.page.maxPages; $('accent').value = state.layout.accent;
@@ -311,6 +314,12 @@ for (const button of document.querySelectorAll('[data-body-size-choice]')) butto
   $('body-size').dispatchEvent(new Event('change', { bubbles: true }));
 });
 const resetLayoutGroup = update => { update(); syncLayoutControls(); edited(); };
+$('dense-one-page').addEventListener('click', () => resetLayoutGroup(() => {
+  state.layout.density = 'compact'; state.layout.bodyPt = 10; state.layout.lineHeight = 1.5;
+  state.layout.spacing.sectionMm = 3; state.layout.spacing.entryMm = 3;
+  state.layout.page.marginMm = 9; state.layout.page.maxPages = 1;
+  delete state.layout.page.marginHorizontalMm; delete state.layout.page.marginTopMm; delete state.layout.page.marginBottomMm;
+}));
 $('text-reset').addEventListener('click', () => resetLayoutGroup(() => { state.layout.fontFamily = 'sans'; state.layout.bodyPt = 10.5; state.layout.namePt = 23; }));
 $('style-reset').addEventListener('click', () => resetLayoutGroup(() => { state.layout = applyResumeTheme(state.layout, 'ink-blue'); state.layout.density = 'standard'; state.layout.header.align = 'theme'; state.layout.header.contactStyle = 'plain'; }));
 $('spacing-reset').addEventListener('click', () => resetLayoutGroup(() => { state.layout.page.marginMm = 15; delete state.layout.page.marginHorizontalMm; delete state.layout.page.marginTopMm; delete state.layout.page.marginBottomMm; state.layout.lineHeight = 1.36; state.layout.spacing.sectionMm = 3.5; state.layout.spacing.entryMm = 3.2; }));
