@@ -1,53 +1,54 @@
 # tech-resume-kit
 
-在本地页面用表单或 Markdown 填写中文技术简历，实时预览并下载 PDF。Windows / macOS / Linux 启动包随包提供运行组件。
+本地优先的中文技术简历工具。用表单填写，或直接编辑 Markdown；在网页中查看实际 PDF，选择版式后离线导出。简历文字、照片和校徽保存在自己的电脑上，无需账号。
 
-[![Verify anonymous samples](https://github.com/MoChiUaena/tech-resume-kit/actions/workflows/verify.yml/badge.svg)](https://github.com/MoChiUaena/tech-resume-kit/actions/workflows/verify.yml)
+[![CI](https://github.com/MoChiUaena/tech-resume-kit/actions/workflows/verify.yml/badge.svg)](https://github.com/MoChiUaena/tech-resume-kit/actions/workflows/verify.yml) · [下载最新版](https://github.com/MoChiUaena/tech-resume-kit/releases/latest) · [MIT 许可](LICENSE)
 
-![本地 Markdown 编辑、基本信息填写与实际 PDF 预览](docs/images/editor.png)
+![本地编辑器与实际 PDF 预览](docs/images/editor.png)
 
-[校招样张 PDF](output/pdf/campus-ink-blue.pdf) · [AI 实习样张 PDF](output/pdf/ai-intern-ink-blue.pdf) · [两页经验样张 PDF](output/pdf/experienced-ink-blue.pdf) · [可直接填写的 resume.md](resume.md) · [版式配置](layout.yaml)
+## 快速开始
 
-**版本 v0.12.0。** 提供六种独立外观与十种起步内容，可查看完整效果并缩放比较，详见下方“外观模板”。支持照片裁剪、经历管理、章节排序与改名、草稿保护与恢复、多份简历、回收站、整库 ZIP、数据目录迁移，以及可翻页和缩放的离线 PDF 预览。
+当前正式版为 **v0.12.0**。下载对应系统的启动包，完整解压后启动程序；运行组件已包含在包内，无需单独安装 Node.js。
 
-校招样张使用“奶龙”姓名和白底竖版头像。图片来源与许可信息集中记录在[素材说明](assets/README.md)。
-
-## 下载使用
-
-[下载 Windows 免安装包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-windows-x64-0.12.0.zip) · Windows 10 / 11 x64
-
-| 其他系统 | 下载 | 启动入口 |
+| 系统 | 下载 | 启动 |
 | --- | --- | --- |
-| macOS Apple Silicon | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-macos-app-arm64-0.12.0.zip) | 双击 TechResumeKit.app |
-| macOS Intel | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-macos-app-x64-0.12.0.zip) | 双击 TechResumeKit.app |
-| Linux x64 | [x64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-linux-x64-0.12.0.tar.gz) | ./启动简历.sh |
-| Linux ARM64 | [arm64 包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-linux-arm64-0.12.0.tar.gz) | ./启动简历.sh |
+| Windows 10/11 x64 | [免安装 ZIP](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-windows-x64-0.12.0.zip) | 双击 `启动简历.exe` |
+| macOS Apple Silicon | [应用 ZIP](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-macos-app-arm64-0.12.0.zip) | 打开 `TechResumeKit.app` |
+| macOS Intel | [应用 ZIP](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-macos-app-x64-0.12.0.zip) | 打开 `TechResumeKit.app` |
+| Linux x64 | [运行包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-linux-x64-0.12.0.tar.gz) | 运行 `./启动简历.sh` |
+| Linux ARM64 | [运行包](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-linux-arm64-0.12.0.tar.gz) | 运行 `./启动简历.sh` |
 
-macOS 打开方式与 Linux 系统依赖见[跨平台使用说明](docs/portable.md)。
+打开页面后选择空白模板或样张，填写基本信息、经历和技能，确认右侧预览，再点击 **下载 PDF**。macOS 首次打开及 Linux 系统依赖见[跨平台说明](docs/portable.md)。
 
-1. 完整解压，运行对应系统的启动入口；Windows 双击 **启动简历.exe**。
-2. 在打开的页面填写基本信息、经历与技能，右侧自动更新实际 PDF 预览。
-3. 点击 **下载 PDF**。
+> `main` 包含正式版之后的排版改进，包括内置宋体、图标页眉和“试用紧凑单页”；这些改动尚未进入 v0.12.0 启动包。想体验当前源码请看下方[从源码运行](#从源码运行)。
 
-照片、校徽和版式通过“版式与图片”设置，照片可裁剪为 23:31。源码版设置按文字、样式、间距、顺序和图片分组，可选内置黑体/宋体、字号、紧凑版、主题色、图标式联系方式、页眉对齐或平铺双行信息、证件照位置与尺寸，以及独立的上、下、左右页边距；字号与间距可用滑块微调，各组可单独恢复默认。右侧始终显示实际 PDF。章节可在同一界面调整顺序与名称。正文上方可用表单添加教育、实习和项目经历，“管理已有经历”支持编辑、复制、上下移动和删除。修改自动保存，重启后可以继续编辑。
+## 功能
 
-保存失败时，页面保留输入并显示原因，可重试或下载包含图片的未保存草稿 ZIP。主编辑区的修改会按简历和窗口独立暂存，刷新或重新打开程序后可选择恢复到编辑区；恢复后仍检查正式文件冲突。弹窗中尚未提交到编辑区的内容不在自动草稿范围内。
+- **表单优先，Markdown 可选**：按教育、实习、工作和项目填写；需要精细控制时展开高级编辑。
+- **六套外观、十种起步内容**：外观与内容自由组合，切换风格保留正文和图片。
+- **实际 PDF 预览**：可翻页、缩放、选择文字并检查链接；照片按 23:31 裁剪，校徽独立放置。
+- **本地资料管理**：自动保存、多份简历、未保存草稿恢复、历史版本、回收站及单份或整库 ZIP 备份。
+- **可控排版**：调整字体、字号、行距、边距、章节顺序和图片尺寸；超页时提示，不暗中删字或缩小字号。
 
-首次打开先选择外观，再选择空白、奶龙校招、两页经验或岗位样张内容；“查看完整效果”支持离线 PDF 缩放，关闭预览不会改变当前简历。也可直接填写。填写导航可展开基本信息、经历、技能与补充区域，并打开版式设置；已有资料从模板新建独立简历。引导关闭或开始填写后，重启不再重复显示。另支持工作经历表单、“技能与补充信息”中的技能编辑与排序、补充章节填写。普通文字即可填写常用内容；原 Markdown、加粗、链接和段落顺序继续保留。超出一页时，预览区可直接选择“允许两页继续预览”，或打开版式设置。
+## 看看模板
 
-“当前简历”支持新建、复制、重命名和切换，每份简历有独立正文、版式、图片与历史。“备份与恢复”可以立即备份、下载包含图片的完整 ZIP，以及恢复历史版本或备份文件；恢复前先保留当前内容。有修改时每 5 分钟生成自动版本，切换或退出前也会保存。
+![六套外观的匿名简历预览](docs/images/themes.png)
 
-数据默认保存到 `%LOCALAPPDATA%\TechResumeKit\data`，与程序分开。“数据与更新”显示实际位置，可迁移全部资料或打开已有简历库。从 v0.6.0 升级时会识别旧版 `my-resume`，迁移前保存整库副本并核对文件，原目录保留。单份备份 ZIP 对应当前简历。“简历库管理”提供回收站与整库 ZIP；整库包含全部简历、图片、历史和当前选择，恢复前保留可下载的原库副本。
+起步内容包括空白、奶龙校招、两页工作经验，以及前端、Java/Python 后端、AI 应用、数据分析、测试开发和 Android 样张。可先查看[校招 PDF](output/pdf/campus-ink-blue.pdf)、[AI 实习 PDF](output/pdf/ai-intern-ink-blue.pdf)和[两页经验 PDF](output/pdf/experienced-ink-blue.pdf)。样张文字和图片仅用于演示，请替换成自己的资料。
 
-“检查正式版本”可以下载并核验新版安装包，支持暂停、断线续传和重启后继续。点击“保存并打开新版”才切换程序，切换前会保存整库副本，启动失败时尝试返回原程序。
+## 数据保存在哪里
 
-运行所需资源随包提供，解压后可断网使用。[使用入口的参考与说明](docs/usability.md)记录了同类项目的流程比较。开发者可下载 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-kit-0.12.0.tgz)，通过 ESM API 或 JSON 命令复用排版，见[调用接口](docs/api.md)。
+| 系统 | 默认数据目录 |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%\TechResumeKit\data` |
+| macOS | `~/Library/Application Support/TechResumeKit/data` |
+| Linux | `~/.local/share/TechResumeKit/data`（支持 `XDG_DATA_HOME`） |
 
-## 从源码开始
+程序目录与数据目录分开；页面“数据与更新”可查看实际位置并迁移资料。编辑和 PDF 导出可断网使用；更新检查只读取正式 Release。请定期在“备份与恢复”下载 ZIP，迁移全部简历时使用“简历库管理”的整库 ZIP。详见[数据与更新](docs/data-and-updates.md)。
 
-当前源码默认通过表单填写，“高级编辑”按需展开 Markdown；教育、实习、工作和项目分别显示对应字段。新增的排版设置也仍在源码中，尚未进入正式启动包；现有 v0.12.0 下载保持不变。
+## 从源码运行
 
-需要 Node.js 22.13 或更高版本。首次安装需要联网下载 npm 依赖和 Chromium；准备好后预览和导出可断网运行。
+需要 Node.js **22.13+**。首次安装 npm 依赖与 Chromium 需要联网，准备好后编辑和导出可断网运行。
 
 ```sh
 git clone https://github.com/MoChiUaena/tech-resume-kit.git
@@ -57,193 +58,22 @@ npx playwright install chromium
 npm run app
 ```
 
-Linux 可能需要用 `npx playwright install --with-deps chromium` 安装系统依赖。
+Linux 可能还需 `npx playwright install --with-deps chromium`。源码版也默认使用平台数据目录；用 `npm run app -- --dir personal/my-resume` 可指定独立目录。`personal/`、`private/` 和 `*.local.*` 已被 Git 忽略。
 
-`npm run app` 打开同一套本地编辑页面，默认使用独立数据目录；Windows 为 `%LOCALAPPDATA%\TechResumeKit\data`。“数据与更新”显示实际路径，可迁移整库或打开已有简历库。指定位置可用 `npm run app -- --dir personal/my-resume`。macOS 默认保存在 `~/Library/Application Support/TechResumeKit/data`，Linux 为 `~/.local/share/TechResumeKit/data`（支持 `XDG_DATA_HOME`）。
+## Markdown、命令行与接口
 
-完整变更见[变更记录](docs/changelog.md)，数据位置与更新方式见[数据与更新](docs/data-and-updates.md)。日常改动先同步源码和 CI，积累一组功能后集中发布，见[维护说明](docs/maintaining.md)。
-
-自 v0.9.0 起提供工作台模型 2、3、4 的显式转换 API 与 JSON 命令，返回章节映射和版式差异报告，见[工作台接入](docs/workbench-handoff.md)。接口与示例随正式 TGZ 提供。
-
-macOS 原生 `.app` 随正式下载提供运行组件，使用方式见[macOS 应用包](docs/macos-app.md)。
-
-如需使用命令行，先创建独立起步目录：
+网页中可导出 Markdown。也可以在独立目录维护 `resume.md` 与 `layout.yaml`，使用命令行校验和生成 PDF：
 
 ```sh
 npm run init -- --dir personal/my-resume --template blank
-```
-
-编辑生成目录内的 `resume.md` 和 `layout.yaml`，然后运行：
-
-```sh
 npm run check -- personal/my-resume/resume.md
-npm run preview -- personal/my-resume/resume.md
 npm run build -- personal/my-resume/resume.md --out personal/my-resume/output/resume.pdf
 ```
 
-预览默认是 `http://127.0.0.1:4173`，仅本机可访问。离线预览器显示实际生成的 PDF，支持翻页、缩放、文本选择和链接，字体与图片从 PDF 中读取。保存 Markdown、配置或启用的图片后自动刷新。输入错误或超页时显示错误，修正后恢复。用 `--port 4174` 更换端口，用 Ctrl+C 停止；“打开 PDF”可以在新窗口查看原文件。
+输入语法见[Markdown 格式](docs/input-format.md)，版式与章节结构见[内容模型](docs/content-model.md)。开发者可通过 [ESM API / JSON 命令](docs/api.md)复用导出能力；工作台数据转换见[接入说明](docs/workbench-handoff.md)。项目未发布到 npm 注册表，正式版 [TGZ](https://github.com/MoChiUaena/tech-resume-kit/releases/download/v0.12.0/tech-resume-kit-0.12.0.tgz) 可直接下载。
 
-PDF 导出使用同一份 HTML/CSS，等待字体和图片加载完成。check、preview 和 build 都以实际 PDF 页数执行上限检查。输出已存在时会停止；确认要更新才加 `--force`。校验失败或超过页数上限时，原 PDF 保持不变。直接查看或保存已生成的 PDF 即可，不需要再次打印 HTML。
+## 参与开发
 
-`my-resume/`、`personal/`、`private/` 和 `*.local.*` 默认被 Git 忽略；起步目录不会覆盖现有目录。内容和图片在本机存取，中文字体随包提供。
+欢迎通过 [Issues](https://github.com/MoChiUaena/tech-resume-kit/issues) 报告可复现的问题或提出建议。提交改动前请阅读[贡献指南](CONTRIBUTING.md)；CI 会验证输入、编辑器、PDF、独立安装及各平台启动包。历史变更见[变更记录](docs/changelog.md)。
 
-## Markdown 怎么写
-
-顶部 YAML 写姓名、目标岗位、联系方式和相对图片引用；正文写经历。下面是一个条目：
-
-````markdown
-## 项目经历 {#projects .entries}
-
-### 我的项目
-
-```yaml
-subtitle: 后端负责人 · 3 人协作
-date: "2026.03 - 2026.06"
-stack: Java 21 · Spring Boot · MySQL
-```
-
-- 说明负责的模块、关键技术做法和可核实的结果。
-- 支持 **加粗**、`技术名词` 和 [项目链接](https://example.com/project)。
-````
-
-`{#projects .entries}` 指定章节 ID 和内容类型；ID 用于排序，修改中文标题不会破坏配置。日期与角色通过字段表达，不用空格对齐。段落与列表按源文件顺序保留。
-
-支持 `entries`（教育/实习/项目条目）、`skills`（技能组）、`lines`（普通段落与单层列表）三种章节。完整规则、错误示例和字段说明见 [输入格式](docs/input-format.md)。不支持原始 HTML、内嵌 Markdown 图片、嵌套列表、表格或引用式链接定义。
-
-## 调整版式
-
-`layout.yaml` 和正文分开；省略的字段使用主风格默认值。配置默认读取 Markdown 同目录的 `layout.yaml`，也可用 `--config` 指定其他文件。
-
-```yaml
-schemaVersion: 0.2.0
-preset: campus
-bodyPt: 10.5
-lineHeight: 1.36
-page:
-  marginMm: 15
-images:
-  portrait:
-    enabled: true
-    slot: start
-    widthMm: 23
-    heightMm: 31
-  schoolLogo:
-    enabled: true
-    slot: end
-    widthMm: 34
-    heightMm: 25
-```
-
-Logo 默认位于右上角，以 `contain` 保留透明背景；照片默认在左侧，以 `cover` 裁切。两张图各自开关，关闭后收回占位。`slot` 可选 `start` / `end`，`align` 可选 `top` / `center` / `bottom`，`header.gapMm` 控制间距。图片格式支持本地 PNG/JPEG，路径相对 **Markdown 所在目录**。
-
-`preset: campus` 按教育、技能、实习/工作、项目、其他排列；`preset: experience` 按技能、工作/实习、项目、教育、其他排列。它们共享同一主风格。显式 `sectionOrder: [skills, projects, ...]` 优先于 preset，必须包含全部章节 ID，不允许丢字段或重复。自定义 ID 在预设中的常见模块之后，按源文件顺序追加。
-
-源码版可调范围：正文 9.5-11.5 pt，姓名 20-24 pt，统一页边距 9-18 mm，独立的左右、上、下页边距 8-25 mm，行高 1.15-1.5；颜色用六位十六进制值；模块间距 `spacing.sectionMm` 与条目间距 `spacing.entryMm` 均为 1.2-5 mm。`density: compact` 仅在用户主动选择时收紧模板内的段落和列表间距，字号不会因溢出而自动缩小。黑体和宋体都随包提供，图标为本地 SVG；最终效果以 PDF 预览为准。
-
-默认 `page.maxPages: 1`，旧配置行为保持不变。允许两页时设置：
-
-```yaml
-page:
-  maxPages: 2
-```
-
-这是页数上限，内容少时仍生成一页。章节标题跟随下一条内容；项目和普通段落允许续页，正文保持字号和顺序。第二页带续页标识，每页有页码。稍微超过一页时会提示末页可能偏空，建议在实际预览中判断是否精简内容或缩短链接显示文字；该提示是基于内容高度的估计，不会自动改写内容。
-
-## 外观模板
-
-提供六种外观，与空白、校招、经验和岗位内容独立组合。首次选择时用真实 PDF 缩略图比较版式，也可打开完整效果进行缩放；也可在“＋新建”中选择外观，或通过“版式与图片 → 外观风格”切换当前简历。切换外观保留正文、图片设置与章节顺序。
-
-| 风格 ID | 外观 | 版式特点 |
-| --- | --- | --- |
-| `ink-blue` | 墨蓝经典 | 独立照片与校徽、细线章节 |
-| `minimal-mono` | 极简黑白 | 居中姓名、黑白层级、轻分隔 |
-| `slate-banner` | 深蓝横幅 | 深色页眉、白色信息、整行标题底色 |
-| `forest-rail` | 森林目录 | 左侧章节标题、右侧连续经历 |
-| `warm-labels` | 暖橙标签 | 暖色标题标签、技术栈底色 |
-| `graphite-grid` | 灰阶商务 | 灰底标题、分行元信息、日期底色 |
-
-同一份内容可套用任意外观。内容较长时仍需按提示允许两页，正文不会自动缩小。v0.11.1 及更早的程序不识别新的风格 ID，如需用旧程序打开资料，先在新版切回墨蓝。
-
-```sh
-npm run init -- --dir personal/my-style --template java-backend --theme forest-rail
-```
-
-## 示例与命令
-
-提供 **10 种起步内容**，“起步模板”和“新建简历”使用同一份目录，也可通过下列模板 ID 初始化。空白内容使用中性填写提示，其余样张用于参考写法。
-
-| 模板 ID | 起步内容 | 重点 |
-| --- | --- | --- |
-| `blank` | 空白填写模板 | 保留填写提示，从自己的信息开始。 |
-| `campus` | 奶龙校招样张 | 教育、实习、项目与技能的完整校招示例。 |
-| `experience` | 两页工作经验 | 参考多段工作与项目成果的编排。 |
-| `frontend` | 前端开发样张 | 页面交互、组件测试与前端性能优化。 |
-| `java-backend` | Java 后端样张 | 接口、事务、缓存与并发一致性。 |
-| `python-backend` | Python 后端样张 | 异步接口、后台任务与数据处理。 |
-| `ai-intern` | AI 应用开发样张 | RAG、工具调用与效果评估。 |
-| `data-analyst` | 数据分析样张 | SQL、指标口径、分析报告与可视化。 |
-| `qa-engineer` | 测试开发样张 | 接口自动化、浏览器回归与性能测试。 |
-| `android` | Android 开发样张 | 移动界面、离线数据与生命周期。 |
-
-
-| 输入 | 用途 |
-| --- | --- |
-| `resume.md` + `layout.yaml` | 完整 Java 校招样例，学校 Logo 与照片同时显示 |
-| `examples/ai-intern/resume.md` | 完整 AI 实习样例，无图片、11 pt 正文、不同模块顺序与正文链接 |
-| `examples/experienced/resume.md` | 两页工作经验样例，5 年后端经验、长项目续页 |
-| `templates/blank/resume.md` | 带填写提示的空白起步文件 |
-| `templates/<岗位 ID>/resume.md` + `layout.yaml` | 七份岗位样张，每份包含对应技能、实习和项目经历；Java 与 Android 带独立照片和校徽 |
-
-```sh
-# 从空白提示开始
-npm run init -- --dir personal/new-resume --template blank
-
-# 从前端岗位样张开始
-npm run init -- --dir personal/frontend-resume --template frontend
-
-# 从两页工作经验示例开始
-npm run init -- --dir personal/work-resume --template experience
-
-# 查看全部模板 ID
-node src/cli.mjs --help
-
-# 不指定输入时使用根目录 resume.md
-npm run check
-npm run build -- --out personal/output/resume.pdf
-
-# 构建第二份匿名样例
-npm run build -- examples/ai-intern/resume.md --out personal/output/ai.pdf
-
-# 维护者命令：明确更新 output/pdf/ 内三份公开匿名样张和核验输入
-npm run sample
-```
-
-通用 build 默认仅输出 PDF，不额外落盘你的结构化资料。未指定 `--out` 时写入当前工作目录的 `personal/output/resume.pdf`。`npm run sample` 专门重建仓库匿名样例，会更新固定样张路径。其独立 HTML 是内嵌字体和图片的排版中间产物，文件较大且已被忽略；多页效果以 preview 或 PDF 为准。
-
-## 验证与实现
-
-```sh
-npm test
-python -m pip install pypdf pdfplumber
-python -X utf8 scripts/verify-pdf.py
-
-# 另需安装 Poppler；渲染所有页面，不遗漏第二页
-python scripts/render-pdfs.py
-
-# 构建并核验边界内容；产物在 Git 忽略的 tmp/pdfs/boundary 中
-npm run qa:boundaries
-python -X utf8 scripts/verify-pdf.py --directory tmp/pdfs/boundary
-python scripts/render-pdfs.py --directory tmp/pdfs/boundary --dpi 110
-```
-
-阶段 C 的历史验收包含三份正式样张（共 4 页）、9 份边界 PDF（共 13 页）和当时的 26 项自动测试，详见 [阶段 C 核验](docs/phase-c-review.md)。
-
-当前 CI 验证解析、编辑与草稿恢复、PDF 导出、独立安装，以及 Windows / macOS / Linux 包的启动与离线使用；测试数量与具体安装包摘要读取每次发布的 `release-validation.json`。维护版验收见 [v0.12.0 发布验收记录](docs/release-0.12-readiness.md)。PDF 检查覆盖嵌入字体、正文阅读顺序、链接、独立图片、页面边界和标题跟随，不宣称所有 ATS 都能正确解析。
-
-数据链路为 `Markdown/YAML → ResumeDocument + LayoutConfig → HTML/CSS → Chromium PDF`。模型版本为 `0.2.0`；解析器与渲染器独立，工作台可直接生成相同结构，见 [模型与接口](docs/content-model.md)。阶段 A 的 JSON 留作回归基准，不再是默认编辑入口。
-
-## 许可与后续
-
-代码、样例文字和虚构校徽采用 [MIT](LICENSE)，中文字体按 [SIL OFL 1.1](assets/fonts/OFL.txt) 分发。图片的来源和使用说明见[素材说明](assets/README.md)。
-
-仓库 CI 使用公开样例、空白起步文件及合成边界内容，验证独立安装、导出、PDF 文字与逐页渲染。运行时依赖由 `package-lock.json` 固定，可选 PDF 复核工具由 `requirements-qa.txt` 固定。当前通过 GitHub 源码和 Release 提供 Windows 免安装包、macOS 应用与命令行包、Linux 命令行包，以及源码 ZIP / TGZ 下载，未发布到 npm 注册表。工作台接入见[交接说明](docs/workbench-handoff.md)。
+代码与匿名样例文字采用 [MIT](LICENSE)；随包字体分别遵循其 [OFL 许可](assets/README.md)，演示图片的来源与说明也列在[素材说明](assets/README.md)。
